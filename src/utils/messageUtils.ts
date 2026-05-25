@@ -3,6 +3,7 @@ import type { Attachment } from '@/types/attachment'
 import type { Message, MessageType } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
+import { formatReadAt } from '@/utils/formatters'
 
 type ApiSender = { id: number; name: string }
 
@@ -131,12 +132,28 @@ export function normalizeMessage(raw: Record<string, unknown>): Message {
     : []
 
   const readBy = raw.read_by as number[] | undefined
-  const reads: Message['reads'] =
-    readBy?.map((user_id) => ({
+  const readsRaw = raw.reads
+  const reads: Message['reads'] = Array.isArray(readsRaw)
+    ? readsRaw.map((entry) => {
+      const row = entry as Record<string, unknown>
+      const user_id = Number(row.user_id ?? 0)
+      const userRaw = row.user as Record<string, unknown> | undefined
+      const readAtRaw = String(row.read_at ?? '')
+      return {
+        user_id,
+        user: {
+          id: user_id,
+          name: String(userRaw?.name ?? ''),
+          avatar: (userRaw?.avatar as string | null | undefined) ?? null,
+        },
+        read_at: readAtRaw ? formatReadAt(readAtRaw) : '',
+      }
+    })
+    : (readBy?.map((user_id) => ({
       user_id,
       user: { id: user_id, name: '', avatar: null },
       read_at: '',
-    })) ?? []
+    })) ?? [])
 
   return {
     uuid: String(raw.uuid ?? ''),

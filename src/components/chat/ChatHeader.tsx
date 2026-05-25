@@ -4,7 +4,7 @@ import { OnlineStatus } from '@/components/chat/OnlineStatus'
 import { Avatar } from '@/components/ui/Avatar'
 import type { Conversation } from '@/types/conversation'
 import { conversationPeerAvatar, getConversationTitle } from '@/utils/messageUtils'
-import { formatRelative } from '@/utils/formatters'
+import { formatLastSeen } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { messagingUserFromParticipant } from '@/types/conversation'
 import type { UserStatus } from '@/types/user'
@@ -74,7 +74,7 @@ export function ChatHeader({
               {status === 'online'
                 ? 'Online'
                 : lastSeenAt
-                  ? `Last seen ${formatRelative(lastSeenAt)}`
+                  ? `Last seen ${formatLastSeen(lastSeenAt)}`
                   : 'Offline'}
             </span>
           </div>

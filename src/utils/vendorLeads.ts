@@ -2,6 +2,7 @@ import type { ChatMessage, Lead, LeadChannel } from '@/components/sections/vendo
 import { dayjs } from '@/lib/dayjs'
 import type { Conversation } from '@/types/conversation'
 import type { Message } from '@/types/message'
+import { formatLastSeen } from '@/utils/formatters'
 import { getConversationTitle } from '@/utils/messageUtils'
 
 export function initialsFromName(name: string): string {
@@ -20,7 +21,7 @@ function lastSeenLabel(conv: Conversation, selfUserId: number): string {
   const presence = other?.user?.presence
   if (presence?.status === 'online') return 'now'
   const raw = presence?.last_seen_at
-  if (raw) return dayjs(raw).fromNow()
+  if (raw) return formatLastSeen(raw)
   const lm = conv.last_message?.created_at
   return lm ? dayjs(lm).fromNow() : '—'
 }
