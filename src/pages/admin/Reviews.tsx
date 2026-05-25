@@ -1,7 +1,15 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, Eye, Flag, Loader2, ShieldAlert, Star, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Eye, Flag, Loader2, ShieldAlert, Star, Trash2, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { BusinessReportDetailsModal } from "@/components/Modal/BusinessReportDetailsModal";
 import { ReviewDetailsModal } from "@/components/Modal/ReviewDetailsModal";
+import {
+  adminDismissBusinessReport,
+  adminListBusinessReports,
+  adminResolveBusinessReport,
+  adminViewBusinessReport,
+} from "@/features/businessReports/adminBusinessReportApi";
+import type { BusinessReportDto, BusinessReportPagination } from "@/features/businessReports/types";
 import {
   adminDeleteReview,
   adminGetStatistics,
@@ -11,6 +19,23 @@ import {
 } from "@/features/reviews/adminReviewApi";
 import type { ReviewDto, ReviewPagination, ReviewStatistics } from "@/features/reviews/types";
 import { alert, showError, showSuccess } from "@/lib/sweetAlert";
+
+type AdminTab = "all" | "flagged" | "reports";
+
+function BusinessReportStatusBadge({ status }: { status: BusinessReportDto["status"] }) {
+  const styles =
+    status === "pending"
+      ? "bg-amber-100 text-amber-800"
+      : status === "reviewed"
+        ? "bg-[rgb(27_175_93/0.1)] text-[#1baf5d]"
+        : "bg-gray-100 text-gray-600";
+
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium lowercase ${styles}`}>
+      {status}
+    </span>
+  );
+}
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -103,14 +128,18 @@ function FlagModal({
 
 export default function Reviews() {
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
+  const [businessReports, setBusinessReports] = useState<BusinessReportDto[]>([]);
   const [stats, setStats] = useState<ReviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<ReviewPagination | null>(null);
+  const [reportPagination, setReportPagination] = useState<BusinessReportPagination | null>(null);
   const [page, setPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<"all" | "flagged">("all");
+  const [activeTab, setActiveTab] = useState<AdminTab>("all");
 
   const [selectedReview, setSelectedReview] = useState<ReviewDto | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<BusinessReportDto | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [flagTargetId, setFlagTargetId] = useState<number | null>(null);
 
@@ -130,8 +159,24 @@ export default function Reviews() {
       const result = await adminListReviews(params);
       setReviews(result.data);
       setPagination(result.pagination);
+      setReportPagination(null);
     } catch {
       setReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadBusinessReports = useCallback(async (pg: number) => {
+    setLoading(true);
+    try {
+      const result = await adminListBusinessReports({ page: pg, per_page: 15 });
+      setBusinessReports(result.data);
+      setReportPagination(result.pagination);
+      setPagination(null);
+      setReviews([]);
+    } catch {
+      setBusinessReports([]);
     } finally {
       setLoading(false);
     }
@@ -142,10 +187,14 @@ export default function Reviews() {
   }, [loadStats]);
 
   useEffect(() => {
-    void loadReviews(activeTab, page);
-  }, [activeTab, page, loadReviews]);
+    if (activeTab === "reports") {
+      void loadBusinessReports(page);
+    } else {
+      void loadReviews(activeTab, page);
+    }
+  }, [activeTab, page, loadReviews, loadBusinessReports]);
 
-  const handleTabChange = (tab: "all" | "flagged") => {
+  const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
     setPage(1);
   };
@@ -197,6 +246,46 @@ export default function Reviews() {
     }
   };
 
+  const handleViewReport = (report: BusinessReportDto) => {
+    setSelectedReport(report);
+    setReportModalOpen(true);
+    void adminViewBusinessReport(report.id)
+      .then((fresh) => setSelectedReport(fresh))
+      .catch(() => {
+        /* keep row snapshot */
+      });
+  };
+
+  const handleDismissReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminDismissBusinessReport(reportId);
+      setBusinessReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      if (selectedReport?.id === updated.id) setSelectedReport(updated);
+      void loadStats();
+      showSuccess("Report dismissed.");
+    } catch {
+      showError("Could not dismiss report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleResolveReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminResolveBusinessReport(reportId);
+      setBusinessReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      if (selectedReport?.id === updated.id) setSelectedReport(updated);
+      void loadStats();
+      showSuccess("Report marked as resolved.");
+    } catch {
+      showError("Could not resolve report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleDelete = async (reviewId: number) => {
     const confirmed = await alert.confirmDelete("this review");
     if (!confirmed) return;
@@ -219,7 +308,12 @@ export default function Reviews() {
     }
   };
 
-  const totalPages = pagination?.last_page ?? 1;
+  const totalPages =
+    activeTab === "reports" ? (reportPagination?.last_page ?? 1) : (pagination?.last_page ?? 1);
+  const listTotal =
+    activeTab === "reports" ? (reportPagination?.total ?? 0) : (pagination?.total ?? 0);
+  const listCurrentPage =
+    activeTab === "reports" ? (reportPagination?.current_page ?? 1) : (pagination?.current_page ?? 1);
 
   const positivePercent =
     stats && stats.total_reviews > 0
@@ -262,12 +356,12 @@ export default function Reviews() {
             </p>
           </article>
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Flagged Reviews</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Business Reports</p>
             <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
-              {stats ? stats.flagged_reviews : "—"}
+              {stats?.pending_business_reports != null ? stats.pending_business_reports : "—"}
             </p>
-            {stats && stats.flagged_reviews > 0 && (
-              <p className="mt-1 text-xs font-medium text-brand-red">Urgent</p>
+            {stats && (stats.pending_business_reports ?? 0) > 0 && (
+              <p className="mt-1 text-xs font-medium text-brand-red">Pending review</p>
             )}
           </article>
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
@@ -281,150 +375,261 @@ export default function Reviews() {
 
       <section className="rounded-2xl border border-border-gray bg-card p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_0px_rgba(0,0,0,0.1)]">
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-background p-2">
-          {(["all", "flagged"] as const).map((tab) => (
+          {(
+            [
+              { id: "all" as const, label: "All Reviews" },
+              { id: "flagged" as const, label: "Flagged Reviews" },
+              { id: "reports" as const, label: "Business Reports" },
+            ] as const
+          ).map((tab) => (
             <button
-              key={tab}
+              key={tab.id}
               type="button"
-              onClick={() => handleTabChange(tab)}
-              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${activeTab === tab
+              onClick={() => handleTabChange(tab.id)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeTab === tab.id
                 ? "bg-chat-accent text-ice"
                 : "bg-card text-body-secondary hover:bg-muted"
                 }`}
             >
-              {tab === "all" ? "All Reviews" : "Flagged / Reported"}
+              {tab.label}
+              {tab.id === "reports" && stats && (stats.pending_business_reports ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
+                  {stats.pending_business_reports}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse">
-            <thead>
-              <tr className="border-b border-border-gray">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reviewer</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Business</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Rating</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Review Excerpt</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-body-secondary">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
-                    <Loader2 className="mx-auto size-6 animate-spin text-chat-accent" />
-                  </td>
+          {activeTab === "reports" ? (
+            <table className="w-full min-w-[960px] border-collapse">
+              <thead>
+                <tr className="border-b border-border-gray">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reporter</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Business</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reason</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Details</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-body-secondary">Actions</th>
                 </tr>
-              ) : reviews.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-chat-meta">
-                    No reviews found for this filter.
-                  </td>
-                </tr>
-              ) : (
-                reviews.map((review) => {
-                  const isProcessing = processingId === review.id;
-                  const isNotApproved = !review.is_approved;
-                  return (
-                    <tr key={review.id} className="border-b border-border-light">
-                      <td className="px-4 py-4">
-                        <p className="text-base font-medium text-ink">{review.reviewer_name}</p>
-                        <p className="text-xs text-gray-500">{review.created_at}</p>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-ink">
-                        {review.business?.business_name ?? "—"}
-                      </td>
-                      <td className="px-4 py-4">
-                        <StarRow rating={review.rating} />
-                      </td>
-                      <td className="max-w-sm px-4 py-4">
-                        <div className="flex items-start gap-2">
-                          <p className="line-clamp-2 text-sm leading-5 text-gray-600">
-                            {review.review_text}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center">
+                      <Loader2 className="mx-auto size-6 animate-spin text-chat-accent" />
+                    </td>
+                  </tr>
+                ) : businessReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-chat-meta">
+                      No business reports yet.
+                    </td>
+                  </tr>
+                ) : (
+                  businessReports.map((report) => {
+                    const isProcessing = processingId === report.id;
+                    const isPending = report.status === "pending";
+                    return (
+                      <tr key={report.id} className="border-b border-border-light">
+                        <td className="px-4 py-4">
+                          <p className="text-base font-medium text-ink">{report.reporter?.name ?? "—"}</p>
+                          <p className="text-xs text-gray-500">{report.reporter?.email ?? ""}</p>
+                        </td>
+                        <td className="px-4 py-4 text-sm font-medium text-ink">
+                          {report.business?.business_name ?? "—"}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-ink">{report.reason_label}</td>
+                        <td className="max-w-xs px-4 py-4">
+                          <p className="line-clamp-2 text-sm text-gray-600">
+                            {report.description?.trim() || "—"}
                           </p>
-                          {isNotApproved && (
-                            <ShieldAlert
-                              className="mt-0.5 size-4 shrink-0 text-red-600"
-                              aria-label="Flagged for moderation"
-                              strokeWidth={2}
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-xs text-body-secondary">{review.created_at}</td>
-                      <td className="px-4 py-4">
-                        <StatusBadge isApproved={review.is_approved} />
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleView(review)}
-                            className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
-                            aria-label="View review"
-                            disabled={isProcessing}
-                          >
-                            <Eye className="size-4 text-emerald-600" strokeWidth={2} />
-                          </button>
-
-                          {review.is_approved ? (
+                        </td>
+                        <td className="px-4 py-4 text-xs text-body-secondary">{report.created_at}</td>
+                        <td className="px-4 py-4">
+                          <BusinessReportStatusBadge status={report.status} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => setFlagTargetId(review.id)}
+                              onClick={() => handleViewReport(report)}
                               className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
-                              aria-label="Flag review"
+                              aria-label="View report"
                               disabled={isProcessing}
                             >
-                              {isProcessing ? (
-                                <Loader2 className="size-4 animate-spin text-amber-600" />
-                              ) : (
-                                <Flag className="size-4 text-amber-600" strokeWidth={2} />
-                              )}
+                              <Eye className="size-4 text-emerald-600" strokeWidth={2} />
                             </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleApprove(review)}
-                              className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
-                              aria-label="Approve review"
-                              disabled={isProcessing}
-                            >
-                              {isProcessing ? (
-                                <Loader2 className="size-4 animate-spin text-emerald-600" />
-                              ) : (
-                                <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} aria-hidden />
-                              )}
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(review.id)}
-                            className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
-                            aria-label="Delete review"
-                            disabled={isProcessing}
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="size-4 animate-spin text-brand-red" />
-                            ) : (
-                              <Trash2 className="size-4 text-brand-red" strokeWidth={2} />
+                            {isPending && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResolveReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Resolve report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-emerald-600" />
+                                  ) : (
+                                    <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Dismiss report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-stone-500" />
+                                  ) : (
+                                    <XCircle className="size-4 text-stone-500" strokeWidth={2} />
+                                  )}
+                                </button>
+                              </>
                             )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full min-w-[960px] border-collapse">
+              <thead>
+                <tr className="border-b border-border-gray">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reviewer</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Business</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Rating</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Review Excerpt</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-body-secondary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center">
+                      <Loader2 className="mx-auto size-6 animate-spin text-chat-accent" />
+                    </td>
+                  </tr>
+                ) : reviews.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-chat-meta">
+                      No reviews found for this filter.
+                    </td>
+                  </tr>
+                ) : (
+                  reviews.map((review) => {
+                    const isProcessing = processingId === review.id;
+                    const isNotApproved = !review.is_approved;
+                    return (
+                      <tr key={review.id} className="border-b border-border-light">
+                        <td className="px-4 py-4">
+                          <p className="text-base font-medium text-ink">{review.reviewer_name}</p>
+                          <p className="text-xs text-gray-500">{review.created_at}</p>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-ink">
+                          {review.business?.business_name ?? "—"}
+                        </td>
+                        <td className="px-4 py-4">
+                          <StarRow rating={review.rating} />
+                        </td>
+                        <td className="max-w-sm px-4 py-4">
+                          <div className="flex items-start gap-2">
+                            <p className="line-clamp-2 text-sm leading-5 text-gray-600">
+                              {review.review_text}
+                            </p>
+                            {isNotApproved && (
+                              <ShieldAlert
+                                className="mt-0.5 size-4 shrink-0 text-red-600"
+                                aria-label="Flagged for moderation"
+                                strokeWidth={2}
+                              />
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-xs text-body-secondary">{review.created_at}</td>
+                        <td className="px-4 py-4">
+                          <StatusBadge isApproved={review.is_approved} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleView(review)}
+                              className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                              aria-label="View review"
+                              disabled={isProcessing}
+                            >
+                              <Eye className="size-4 text-emerald-600" strokeWidth={2} />
+                            </button>
+
+                            {review.is_approved ? (
+                              <button
+                                type="button"
+                                onClick={() => setFlagTargetId(review.id)}
+                                className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                aria-label="Flag review"
+                                disabled={isProcessing}
+                              >
+                                {isProcessing ? (
+                                  <Loader2 className="size-4 animate-spin text-amber-600" />
+                                ) : (
+                                  <Flag className="size-4 text-amber-600" strokeWidth={2} />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(review)}
+                                className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                aria-label="Approve review"
+                                disabled={isProcessing}
+                              >
+                                {isProcessing ? (
+                                  <Loader2 className="size-4 animate-spin text-emerald-600" />
+                                ) : (
+                                  <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} aria-hidden />
+                                )}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(review.id)}
+                              className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                              aria-label="Delete review"
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? (
+                                <Loader2 className="size-4 animate-spin text-brand-red" />
+                              ) : (
+                                <Trash2 className="size-4 text-brand-red" strokeWidth={2} />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {pagination && totalPages > 1 && (
+        {(pagination || reportPagination) && totalPages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tint-red/20 px-1 pb-0 pt-4">
             <p className="text-xs font-medium text-stone-700">
-              Showing page {pagination.current_page} of {pagination.last_page} ({pagination.total} total)
+              Showing page {listCurrentPage} of {totalPages} ({listTotal} total)
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -492,6 +697,23 @@ export default function Reviews() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         review={selectedReview}
+      />
+
+      <BusinessReportDetailsModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        report={selectedReport}
+        processing={selectedReport != null && processingId === selectedReport.id}
+        onDismiss={
+          selectedReport?.status === "pending"
+            ? () => handleDismissReport(selectedReport.id)
+            : undefined
+        }
+        onResolve={
+          selectedReport?.status === "pending"
+            ? () => handleResolveReport(selectedReport.id)
+            : undefined
+        }
       />
 
       <FlagModal

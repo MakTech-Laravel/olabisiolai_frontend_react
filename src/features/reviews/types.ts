@@ -50,6 +50,7 @@ export type ReviewStatistics = {
   total_reviews: number;
   approved_reviews: number;
   flagged_reviews: number;
+  pending_business_reports?: number;
   average_rating: number;
   rating_distribution: {
     '5_star': number;
