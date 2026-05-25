@@ -21,7 +21,6 @@ import { type Lead, type ChatMessage } from "./leadsData";
 export function WhatsAppChatInterface({
   selectedLead,
   selectedConversation,
-  lastVendorMessageIndex,
   newMessagesDividerAfterIndex,
   messageDraft,
   onMessageDraftChange,
@@ -38,7 +37,6 @@ export function WhatsAppChatInterface({
 }: {
   selectedLead: Lead | null;
   selectedConversation: ChatMessage[];
-  lastVendorMessageIndex: number;
   newMessagesDividerAfterIndex: number;
   messageDraft: string;
   onMessageDraftChange: (value: string) => void;
