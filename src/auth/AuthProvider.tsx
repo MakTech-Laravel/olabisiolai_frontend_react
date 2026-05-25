@@ -154,6 +154,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const logout = React.useCallback(async () => {
+    try {
+      const { setMessagingOffline } = await import('@/api/presence')
+      await setMessagingOffline().catch(() => { })
+    } catch {
+      // ignore
+    }
     resetAuthState()
     try {
       const logoutPathCandidates: string[] = []

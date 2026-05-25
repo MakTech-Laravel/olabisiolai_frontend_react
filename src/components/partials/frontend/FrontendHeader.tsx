@@ -287,6 +287,7 @@ export function FrontendHeader() {
     pathname === "/" ||
     pathname === "/trade" ||
     pathname === "/service" ||
+    pathname.startsWith("/businesses/") ||
     pathname === "/messages" ||
     pathname === "/reviews";
   const showTradeNav = pathname !== "/trade";

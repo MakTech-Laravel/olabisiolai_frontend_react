@@ -57,6 +57,7 @@ function mapFavoriteToCardProps(item: UserFavoriteBusiness) {
     verified: item.is_verified,
     phone: item.phone,
     whatsapp: item.whatsapp,
+    vendorUserUuid: item.vendor_user_uuid,
   };
 }
 

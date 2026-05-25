@@ -1,55 +1,33 @@
-import * as React from "react";
-import { showError } from "@/lib/sweetAlert";
 import {
   Navigate,
   useLocation,
   useNavigate,
-  useSearchParams,
 } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
-import { createConversation } from "@/api/conversations";
 import { useAuth } from "@/auth/useAuth";
 import {
   CUSTOMER_LOGIN_PATH,
   loginReturnFromLocation,
 } from "@/features/auth/loginReturn";
 import { MessagingLayout } from "@/features/messaging/MessagingLayout";
+import { useStartDirectConversation } from "@/hooks/useStartDirectConversation";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
 export default function DirectMessage() {
   const { user, isAuthenticated, isSessionLoading, isUserLoading } = useAuth();
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const paramC = searchParams.get("c");
-  const state = location.state as
-    | { participantUserUuid?: string; from?: string }
-    | null;
+  const state = location.state as { from?: string } | null;
   const from = state?.from;
 
-  React.useEffect(() => {
-    const peerUuid = state?.participantUserUuid?.trim().toUpperCase();
-    if (!peerUuid || paramC || !isAuthenticated) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const conv = await createConversation([peerUuid]);
-        if (cancelled) return;
-        navigate(
-          `/messages?c=${encodeURIComponent(conv.uuid)}`,
-          { replace: true, state: { from: state?.from } },
-        );
-      } catch {
-        showError("Could not start conversation");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [state?.participantUserUuid, state?.from, paramC, isAuthenticated, navigate]);
+  const { starting, pendingPeer } = useStartDirectConversation({
+    isAuthenticated,
+    conversationQueryParam: "c",
+    messagesPath: "/messages",
+  });
 
   const goBack = () => {
     if (
@@ -95,9 +73,17 @@ export default function DirectMessage() {
 
         <div
           className={cn(
-            "mt-6 flex max-h-[min(1024px,calc(100dvh-10rem))] min-h-[min(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
+            "relative mt-6 flex max-h-[min(1024px,calc(100dvh-10rem))] min-h-[min(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
           )}
         >
+          {starting || pendingPeer ? (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-chat-surface/90">
+              <Loader2 className="size-8 animate-spin text-brand" aria-hidden />
+              <p className="text-sm font-medium text-stat-muted">
+                Opening conversation…
+              </p>
+            </div>
+          ) : null}
           <MessagingLayout selfUser={user} conversationQueryParam="c" />
         </div>
       </div>

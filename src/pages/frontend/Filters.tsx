@@ -46,6 +46,10 @@ const fallbackBusiness = (
   verifiedSince: null,
   socialAccounts: [],
   isFavorite: false,
+  boostStatus: 'none',
+  isPremium: false,
+  vendorUserId: null,
+  vendorUserUuid: null,
   businessHours: [],
   businessHoursDisplay: [],
 });
@@ -585,6 +589,7 @@ export default function Filters() {
                   favorited={business.isFavorite}
                   phone={business.phone}
                   whatsapp={business.whatsapp}
+                  vendorUserUuid={business.vendorUserUuid}
                 />
               ))
             )}

@@ -46,18 +46,22 @@ export function InfiniteMessageList({
   isFetchingNextPage,
   fetchNextPage,
   selfUserId,
+  peerIsOnline = false,
   onReply,
   onEdit,
   onDelete,
+  onMarkPeerMessageRead,
 }: {
   pages: MessagesPage[]
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => void
   selfUserId: number
+  peerIsOnline?: boolean
   onReply: (m: Message) => void
   onEdit: (m: Message) => void
   onDelete: (m: Message) => void
+  onMarkPeerMessageRead?: (messageUuid: string) => void
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const initialScrollDone = React.useRef(false)
@@ -171,6 +175,18 @@ export function InfiniteMessageList({
     listSnapshot.current = { first, last }
   }, [chronological, selfUserId, isFetchingNextPage])
 
+  const lastMarkedPeerUuid = React.useRef<string | null>(null)
+
+  React.useEffect(() => {
+    if (!onMarkPeerMessageRead) return
+    const latestPeer = [...chronological]
+      .reverse()
+      .find((m) => m.sender.id !== selfUserId)
+    if (!latestPeer || latestPeer.uuid === lastMarkedPeerUuid.current) return
+    lastMarkedPeerUuid.current = latestPeer.uuid
+    onMarkPeerMessageRead(latestPeer.uuid)
+  }, [chronological, selfUserId, onMarkPeerMessageRead])
+
   return (
     <div
       ref={scrollRef}
@@ -207,6 +223,7 @@ export function InfiniteMessageList({
                 message={row.message}
                 parentMessage={resolveParentMessage(row.message)}
                 isOwn={row.message.sender.id === selfUserId}
+                peerIsOnline={peerIsOnline}
                 showAvatar={row.showAvatar}
                 highlighted={highlightUuid === row.message.uuid}
                 onReply={() => onReply(row.message)}

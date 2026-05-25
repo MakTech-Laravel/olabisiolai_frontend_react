@@ -1,9 +1,10 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Heart, MapPin, Star, CheckCircle, MessageCircle } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Heart, MapPin, Star, CheckCircle } from "lucide-react";
 
+import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
+import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
-import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
-import { encryptId } from "@/lib/encryptId";
+import { businessProfilePath } from "@/lib/businessProfile";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
 
 interface ServiceCardProps {
@@ -23,6 +24,7 @@ interface ServiceCardProps {
   favorited?: boolean;
   phone?: string | null;
   whatsapp?: string | null;
+  vendorUserUuid?: string | null;
 }
 
 export default function ServiceCard({
@@ -42,15 +44,14 @@ export default function ServiceCard({
   favorited = false,
   phone,
   whatsapp,
+  vendorUserUuid,
 }: ServiceCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { requireAuthNavigate, isAuthReady, isAuthenticated } =
-    useRequireAuthNavigate();
 
   const goToService = () => {
-    navigate(`/businesses/${encryptId(id)}`, {
+    navigate(businessProfilePath(id), {
       state: {
         from: pathname,
         business: {
@@ -70,6 +71,7 @@ export default function ServiceCard({
           isFavorite: favorited,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
+          vendorUserUuid: vendorUserUuid ?? null,
         },
       },
     });
@@ -106,7 +108,7 @@ export default function ServiceCard({
       </div>
       <div className="w-full p-6">
         <h3 className="text-lg font-inter font-semibold text-text-primary mb-1">
-          {name}
+          <BusinessProfileLink businessId={id} businessName={name} />
         </h3>
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
@@ -136,25 +138,12 @@ export default function ServiceCard({
           iconClassName="size-4 shrink-0"
         />
 
-        <Link
-          to="/messages"
-          state={{ from: pathname }}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!isAuthReady) {
-              event.preventDefault();
-              return;
-            }
-            if (!isAuthenticated) {
-              event.preventDefault();
-              requireAuthNavigate("/messages", { state: { from: pathname } });
-            }
-          }}
-          className="border border-primary text-primary lg:w-50 w-full lg:p-3 p-1 rounded-lg flex items-center justify-center font-semibold hover:bg-primary/10 transition-colors text-sm"
-        >
-          <MessageCircle className="w-4 h-4 mr-1.5" aria-hidden />
-          Direct Message
-        </Link>
+        <DirectMessageButton
+          businessInfoId={id}
+          vendorUserUuid={vendorUserUuid}
+          fromPath={pathname}
+          className="lg:w-50 w-full lg:p-3 p-1"
+        />
 
       </div>
     </div>

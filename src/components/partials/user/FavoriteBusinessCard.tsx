@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Heart, MapPin, MessageCircle, Star } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 import { removeFavorite } from '@/api/favorites'
+import { DirectMessageButton } from '@/components/business/DirectMessageButton'
 import { ShowPhoneNumberReveal } from '@/components/ShowPhoneNumberReveal'
-import { Button } from '@/components/ui/button'
-import { encryptId } from '@/lib/encryptId'
+import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveBusinessContactPhone } from '@/lib/whatsappUrl'
 
 export type FavoriteBusinessCardProps = {
@@ -22,6 +22,7 @@ export type FavoriteBusinessCardProps = {
   verified: boolean
   phone?: string | null
   whatsapp?: string | null
+  vendorUserUuid?: string | null
 }
 
 export function FavoriteBusinessCard({
@@ -36,11 +37,13 @@ export function FavoriteBusinessCard({
   verified,
   phone,
   whatsapp,
+  vendorUserUuid,
 }: FavoriteBusinessCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone)
   const queryClient = useQueryClient()
+  const { pathname } = useLocation()
   const [removing, setRemoving] = useState(false)
-  const profileTo = `/businesses/${encryptId(businessInfoId)}`
+  const profileTo = businessProfilePath(businessInfoId)
   const desc = description?.trim()
 
   const handleRemoveFavorite = async (event: React.MouseEvent) => {
@@ -111,16 +114,14 @@ export function FavoriteBusinessCard({
             className="h-11 w-full rounded-xl bg-brand-red text-base font-medium text-ice hover:bg-brand-red/90"
             iconClassName="size-4 shrink-0"
           />
-          <Button
-            variant="outline"
-            className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-xl border-brand bg-surface-soft text-base font-medium text-brand hover:bg-surface-wash"
-            asChild
-          >
-            <Link to="/user/messages">
-              <MessageCircle className="size-4" aria-hidden />
-              Direct Message
-            </Link>
-          </Button>
+          <DirectMessageButton
+            businessInfoId={businessInfoId}
+            vendorUserUuid={vendorUserUuid}
+            fromPath={pathname}
+            messagesPath="/user/messages"
+            className="h-11 w-full rounded-xl border-brand bg-surface-soft text-base font-medium text-brand hover:bg-surface-wash"
+            iconClassName="size-4 shrink-0"
+          />
         </div>
       </div>
     </article>

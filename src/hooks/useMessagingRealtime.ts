@@ -5,10 +5,16 @@ import { QUERY_KEYS } from '@/constants/queryKeys'
 import { TYPING_INDICATOR_CLEAR_MS } from '@/constants/config'
 import {
   appendOrMergeMessageInCache,
+  markAllOwnMessagesSeenInCache,
+  markOwnMessageSeenInCache,
+  markOwnSentMessagesDeliveredInCache,
   removeMessageFromCache,
   upsertOwnMessageInCache,
 } from '@/features/messaging/messageCache'
-import { applyNewMessagePreview } from '@/features/messaging/conversationCache'
+import {
+  applyNewMessagePreview,
+  setPeerPresenceInCaches,
+} from '@/features/messaging/conversationCache'
 import { useEcho } from '@/hooks/useEcho'
 import { EchoService } from '@/services/echoService'
 import { useMessagingStore } from '@/store/messagingStore'
@@ -56,6 +62,14 @@ export function useMessagingRealtime(
             upsertOwnMessageInCache(queryClient, uuid, msg)
           } else {
             appendOrMergeMessageInCache(queryClient, uuid, msg)
+            if (typeof selfUserId === 'number' && msg.sender.id !== selfUserId) {
+              markAllOwnMessagesSeenInCache(
+                queryClient,
+                uuid,
+                selfUserId,
+                msg.sender.id,
+              )
+            }
           }
           if (typeof selfUserId === 'number' && selfUserId > 0) {
             applyNewMessagePreview(queryClient, uuid, msg, {
@@ -84,15 +98,43 @@ export function useMessagingRealtime(
         onMessageDeleted: (messageUuid) => {
           removeMessageFromCache(queryClient, uuid, messageUuid)
         },
-        onMessageRead: () => {
-          void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.messages(uuid) })
+        onMessageRead: (messageUuid, readerId) => {
+          if (typeof selfUserId === 'number' && readerId !== selfUserId) {
+            markOwnMessageSeenInCache(
+              queryClient,
+              uuid,
+              messageUuid,
+              readerId,
+            )
+          }
         },
       },
       {
-        // Presence join/leave can fire frequently (especially initial `here` batch),
-        // so avoid invalidating conversation detail on every presence change.
-        onJoin: () => {},
-        onLeave: () => {},
+        onJoin: (user) => {
+          if (typeof selfUserId !== 'number') return
+          if (user.id !== selfUserId) {
+            markOwnSentMessagesDeliveredInCache(queryClient, uuid)
+            setPeerPresenceInCaches(queryClient, uuid, user.id, {
+              status: 'online',
+              last_seen_at: null,
+            })
+          }
+        },
+        onLeave: (user) => {
+          if (typeof selfUserId !== 'number' || user.id === selfUserId) return
+          setPeerPresenceInCaches(queryClient, uuid, user.id, {
+            status: 'offline',
+            last_seen_at: new Date().toISOString(),
+          })
+        },
+        onPeerPresence: (payload) => {
+          if (typeof selfUserId === 'number' && payload.user_id !== selfUserId) {
+            setPeerPresenceInCaches(queryClient, uuid, payload.user_id, {
+              status: payload.status,
+              last_seen_at: payload.last_seen_at,
+            })
+          }
+        },
         onTyping: (tu) => {
           setTypingUser(uuid, tu)
           if (tu.is_typing) {

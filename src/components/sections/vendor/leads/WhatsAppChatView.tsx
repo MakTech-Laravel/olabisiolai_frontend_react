@@ -11,7 +11,10 @@ import {
 } from "@/constants/config";
 import { cn } from "@/lib/utils";
 import type { TypingUser } from "@/types/message";
-import { CheckCheck, Paperclip, Send, Smile } from "lucide-react";
+import { Paperclip, Send, Smile } from "lucide-react";
+import { MessageStatusIcon } from "@/components/chat/MessageStatusIcon";
+import type { Message } from "@/types/message";
+import { resolveOwnMessageDisplayStatus } from "@/utils/messageStatus";
 import { type Lead, type ChatMessage } from "./leadsData";
 
 export function WhatsAppChatInterface({
@@ -30,6 +33,7 @@ export function WhatsAppChatInterface({
   fileBusy = false,
   messagesLoading = false,
   typingPeers = [],
+  peerIsOnline = false,
 }: {
   selectedLead: Lead | null;
   selectedConversation: ChatMessage[];
@@ -47,6 +51,7 @@ export function WhatsAppChatInterface({
   fileBusy?: boolean;
   messagesLoading?: boolean;
   typingPeers?: TypingUser[];
+  peerIsOnline?: boolean;
 }) {
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const emojiAnchorRef = useRef<HTMLDivElement>(null);
@@ -99,7 +104,7 @@ export function WhatsAppChatInterface({
                   ? ` - ${selectedLead.chatSubtitle}`
                   : ""}
               </p>
-              {selectedLead.online ? (
+              {peerIsOnline || selectedLead.online ? (
                 <p className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
                   <span className="inline-flex size-2 rounded-full bg-emerald-500" />
                   Online
@@ -131,7 +136,7 @@ export function WhatsAppChatInterface({
         {selectedConversation.map((message, idx) => (
           <Fragment key={message.id}>
             {idx === newMessagesDividerAfterIndex + 1 &&
-            newMessagesDividerAfterIndex >= 0 ? (
+              newMessagesDividerAfterIndex >= 0 ? (
               <div className="relative py-6">
                 <div className="absolute inset-x-0 top-1/2 border-t border-neutral-200" />
                 <p className="relative mx-auto w-fit bg-[#f5f6fa] px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -165,12 +170,17 @@ export function WhatsAppChatInterface({
                     <span className="text-[11px] text-muted-foreground">
                       {message.time}
                     </span>
-                    {idx === lastVendorMessageIndex ? (
-                      <CheckCheck
-                        className="size-3.5 text-sky-600"
-                        aria-label="Read"
-                      />
-                    ) : null}
+                    <MessageStatusIcon
+                      isOwn
+                      peerIsOnline={peerIsOnline}
+                      status={resolveOwnMessageDisplayStatus(
+                        {
+                          uuid: message.id,
+                          status: message.status ?? "sent",
+                        } as Message,
+                        peerIsOnline,
+                      )}
+                    />
                   </div>
                 </div>
               </div>

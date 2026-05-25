@@ -1,5 +1,6 @@
 import { Menu, MessageCircle } from 'lucide-react'
 
+import { BusinessProfileLink } from '@/components/business/BusinessProfileLink'
 import { OnlineStatus } from '@/components/chat/OnlineStatus'
 import { Avatar } from '@/components/ui/Avatar'
 import type { Conversation } from '@/types/conversation'
@@ -26,6 +27,11 @@ export function ChatHeader({
   onOpenSidebar,
 }: ChatHeaderProps) {
   const title = getConversationTitle(conversation, selfUserId)
+  const peerBusinessId =
+    conversation.peer?.business_info_id != null &&
+      conversation.peer.business_info_id > 0
+      ? conversation.peer.business_info_id
+      : null
   const peer =
     conversation.type === 'direct'
       ? conversation.participants.find((p) => p.user_id !== selfUserId)
@@ -61,7 +67,15 @@ export function ChatHeader({
         </div>
         <div className="min-w-0">
           <h2 className="truncate font-heading text-sm font-extrabold tracking-tight text-ink sm:text-base">
-            {title}
+            {peerBusinessId !== null ? (
+              <BusinessProfileLink
+                businessId={peerBusinessId}
+                businessName={title}
+                className="font-heading text-sm font-extrabold tracking-tight sm:text-base"
+              />
+            ) : (
+              title
+            )}
           </h2>
           <div className="mt-0.5 flex items-center gap-2">
             <span

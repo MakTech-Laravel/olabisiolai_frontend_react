@@ -21,6 +21,7 @@ import { useAttachmentUpload } from '@/hooks/useAttachmentUpload'
 import { useUiStore } from '@/store/uiStore'
 import type { Message } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
+import { isPeerOnline } from '@/utils/messageStatus'
 
 function authUserToMessagingUser(u: AuthUser | null): MessagingUser | null {
   if (!u) return null
@@ -53,8 +54,10 @@ export function ConversationView({
 
   useMessagingRealtime(conversation ?? null, selfId)
 
-  const { sendMessage, editMessage, deleteMessage, isSending } =
+  const { sendMessage, editMessage, deleteMessage, markAsRead, isSending } =
     useMessageActions(conversationUuid, me)
+
+  const peerIsOnline = isPeerOnline(conversation?.peer?.presence?.status)
   const { typingUsers, signalTyping } = useTypingIndicator(
     conversation ? { uuid: conversation.uuid, id: conversation.id } : null,
     me ? { id: me.id, name: me.name } : null,
@@ -192,9 +195,11 @@ export function ConversationView({
             isFetchingNextPage={inf.isFetchingNextPage}
             fetchNextPage={() => void inf.fetchNextPage()}
             selfUserId={selfId}
+            peerIsOnline={peerIsOnline}
             onReply={(m) => setReplyingTo(m)}
             onEdit={(m) => setEditingMessage(m)}
             onDelete={onDelete}
+            onMarkPeerMessageRead={markAsRead}
           />
         )}
         <div className="shrink-0">

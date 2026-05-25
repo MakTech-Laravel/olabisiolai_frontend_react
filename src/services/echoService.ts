@@ -17,6 +17,11 @@ export interface PresenceEventHandlers {
   onJoin: (user: PresenceUser) => void
   onLeave: (user: PresenceUser) => void
   onTyping: (typingUser: TypingUser) => void
+  onPeerPresence?: (payload: {
+    user_id: number
+    status: string
+    last_seen_at: string | null
+  }) => void
 }
 
 export interface UserEventHandlers {
@@ -116,11 +121,18 @@ export class EchoService {
     presenceChannel.listen(ECHO_EVENTS.userTyping, (p: TypingUser) => {
       presence.onTyping(p)
     })
-    ;(presenceChannel as unknown as {
-      listenForWhisper?: (event: string, cb: (payload: TypingUser) => void) => void
-    }).listenForWhisper?.('typing', (p: TypingUser) => {
-      presence.onTyping(p)
-    })
+
+    presenceChannel.listen(
+      ECHO_EVENTS.peerPresence,
+      (p: { user_id: number; status: string; last_seen_at: string | null }) => {
+        presence.onPeerPresence?.(p)
+      },
+    )
+      ; (presenceChannel as unknown as {
+        listenForWhisper?: (event: string, cb: (payload: TypingUser) => void) => void
+      }).listenForWhisper?.('typing', (p: TypingUser) => {
+        presence.onTyping(p)
+      })
 
     return () => {
       privateChannel.stopListening(ECHO_EVENTS.messageSent)
@@ -128,6 +140,7 @@ export class EchoService {
       privateChannel.stopListening(ECHO_EVENTS.messageDeleted)
       privateChannel.stopListening(ECHO_EVENTS.messageRead)
       presenceChannel.stopListening(ECHO_EVENTS.userTyping)
+      presenceChannel.stopListening(ECHO_EVENTS.peerPresence)
       this.echo.leave(ECHO_CHANNELS.conversation(conversationId))
     }
   }

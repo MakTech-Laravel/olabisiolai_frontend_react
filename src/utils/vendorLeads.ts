@@ -67,6 +67,8 @@ export function messageToChatMessage(m: Message, vendorUserId: number): ChatMess
     from: sid === vendorUserId ? 'vendor' : 'lead',
     text: m.body?.trim() || (m.attachments.length ? '' : ''),
     time: dayjs(m.created_at).format('h:mm A'),
+    status: m.status,
+    read_by: m.read_by,
     attachments: m.attachments,
   }
 }

@@ -30,11 +30,24 @@ export function resolveMediaUrl(
     return fallback ? resolveMediaUrl(fallback, "") : "";
   }
 
+  const origin = apiOrigin();
+
   if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      const isAppMedia =
+        parsed.pathname.startsWith("/storage/") || parsed.pathname.startsWith("/images/");
+
+      if (origin && isAppMedia) {
+        return `${origin}${parsed.pathname}${parsed.search}`;
+      }
+    } catch {
+      /* keep raw */
+    }
+
     return raw;
   }
 
-  const origin = apiOrigin();
   const path = raw.startsWith("/") ? raw : `/storage/${raw.replace(/^\/+/, "")}`;
 
   if (origin) {

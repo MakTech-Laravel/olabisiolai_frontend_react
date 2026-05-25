@@ -80,6 +80,7 @@ export default function Featured() {
                   favorited={business.isFavorite}
                   phone={business.phone}
                   whatsapp={business.whatsapp}
+                  vendorUserUuid={business.vendorUserUuid}
                 />
               ))}
             </div>

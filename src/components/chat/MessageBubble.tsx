@@ -8,11 +8,13 @@ import { Avatar } from '@/components/ui/Avatar'
 import type { Message } from '@/types/message'
 import { cn } from '@/lib/utils'
 import { formatMessageTime } from '@/utils/formatters'
+import { resolveOwnMessageDisplayStatus } from '@/utils/messageStatus'
 
 interface MessageBubbleProps {
   message: Message
   parentMessage?: Message | null
   isOwn: boolean
+  peerIsOnline?: boolean
   showAvatar: boolean
   highlighted?: boolean
   onReply: () => void
@@ -25,6 +27,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   message,
   parentMessage,
   isOwn,
+  peerIsOnline = false,
   showAvatar,
   highlighted = false,
   onReply,
@@ -37,6 +40,9 @@ export const MessageBubble = React.memo(function MessageBubble({
   const bubbleRef = React.useRef<HTMLDivElement>(null)
 
   const replyParent = parentMessage ?? message.parent ?? null
+  const displayStatus = isOwn
+    ? resolveOwnMessageDisplayStatus(message, peerIsOnline)
+    : message.status
 
   React.useEffect(() => {
     if (!menu) return
@@ -126,7 +132,11 @@ export const MessageBubble = React.memo(function MessageBubble({
           )}
         >
           <span>{formatMessageTime(message.created_at)}</span>
-          <MessageStatusIcon status={message.status} isOwn={isOwn} />
+          <MessageStatusIcon
+            status={displayStatus}
+            isOwn={isOwn}
+            peerIsOnline={peerIsOnline}
+          />
           <button
             type="button"
             className="rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"

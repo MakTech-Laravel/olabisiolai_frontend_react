@@ -44,9 +44,9 @@ function cleanDeliveredMessage(message: Message): Message {
 function matchesPendingOwnMessage(m: Message, message: Message): boolean {
   return Boolean(
     m._isOptimistic &&
-      m.sender.id === message.sender.id &&
-      m.body != null &&
-      m.body === message.body,
+    m.sender.id === message.sender.id &&
+    m.body != null &&
+    m.body === message.body,
   )
 }
 
@@ -100,6 +100,125 @@ export function removeMessageFromCache(
         messages: p.messages.filter((m) => m.uuid !== messageUuid),
       }))
       return { ...old, pages }
+    },
+  )
+}
+
+function mapMessagesInCache(
+  pages: MessagesPage[],
+  mapper: (m: Message) => Message,
+): MessagesPage[] {
+  return pages.map((p) => ({
+    ...p,
+    messages: p.messages.map(mapper),
+  }))
+}
+
+/** Peer came online — upgrade own `sent` messages to delivered in the open thread. */
+export function markOwnSentMessagesDeliveredInCache(
+  queryClient: QueryClient,
+  conversationUuid: string,
+) {
+  queryClient.setQueryData<InfiniteData<MessagesPage>>(
+    QUERY_KEYS.messages(conversationUuid),
+    (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        pages: mapMessagesInCache(old.pages, (m) => {
+          if (m.status !== 'sent') return m
+          return { ...m, status: 'delivered' }
+        }),
+      }
+    },
+  )
+}
+
+/** A peer read message(s) — blue ticks on own messages up to the read point. */
+export function markOwnMessageSeenInCache(
+  queryClient: QueryClient,
+  conversationUuid: string,
+  messageUuid: string,
+  readerId: number,
+) {
+  queryClient.setQueryData<InfiniteData<MessagesPage>>(
+    QUERY_KEYS.messages(conversationUuid),
+    (old) => {
+      if (!old) return old
+
+      let senderId: number | null = null
+      let cutoffMs = Number.POSITIVE_INFINITY
+
+      for (const page of old.pages) {
+        for (const m of page.messages) {
+          if (m.uuid === messageUuid) {
+            senderId = m.sender.id
+            const parsed = Date.parse(m.created_at)
+            if (Number.isFinite(parsed)) cutoffMs = parsed
+            break
+          }
+        }
+        if (senderId !== null) break
+      }
+
+      return {
+        ...old,
+        pages: mapMessagesInCache(old.pages, (m) => {
+          if (senderId === null) {
+            if (m.uuid !== messageUuid) return m
+            const readBy = [...(m.read_by ?? []), readerId]
+            return {
+              ...m,
+              status: 'seen',
+              read_by: Array.from(new Set(readBy)),
+            }
+          }
+
+          const createdMs = Date.parse(m.created_at)
+          const withinCutoff =
+            Number.isFinite(cutoffMs) &&
+            Number.isFinite(createdMs) &&
+            createdMs <= cutoffMs
+
+          if (m.sender.id !== senderId) return m
+          if (m.uuid !== messageUuid && !withinCutoff) return m
+
+          const readBy = [...(m.read_by ?? []), readerId]
+          return {
+            ...m,
+            status: 'seen',
+            read_by: Array.from(new Set(readBy)),
+          }
+        }),
+      }
+    },
+  )
+}
+
+/** Peer replied — treat all of your prior messages as read (WhatsApp-style). */
+export function markAllOwnMessagesSeenInCache(
+  queryClient: QueryClient,
+  conversationUuid: string,
+  selfUserId: number,
+  readerId: number,
+) {
+  queryClient.setQueryData<InfiniteData<MessagesPage>>(
+    QUERY_KEYS.messages(conversationUuid),
+    (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        pages: mapMessagesInCache(old.pages, (m) => {
+          if (m.sender.id !== selfUserId) return m
+          if (m.status === 'seen') return m
+          const readBy = [...(m.read_by ?? []), readerId]
+          return {
+            ...m,
+            status: 'seen',
+            read_by: Array.from(new Set(readBy)),
+          }
+        }),
+      }
     },
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { NewConversationModal } from "@/features/messaging/NewConversationModal";
 import { QUERY_KEYS } from "@/constants/queryKeys";
@@ -10,6 +10,7 @@ import { getConversations } from "@/api/conversations";
 import { sendMessageWithAttachments } from "@/api/messages";
 import { useAuth } from "@/auth/useAuth";
 import type { MessagingUser } from "@/types/user";
+import { useMessagingPresenceLifecycle } from "@/hooks/useMessagingPresenceLifecycle";
 import { useMessagingRealtime } from "@/hooks/useMessagingRealtime";
 import { useInfiniteMessages } from "@/hooks/useInfiniteMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
@@ -24,6 +25,7 @@ import { WhatsAppLeadsList } from "@/components/sections/vendor/leads/WhatsAppLe
 import { WhatsAppChatInterface } from "@/components/sections/vendor/leads/WhatsAppChatView";
 import { type Lead, type LeadChannel } from "@/components/sections/vendor/leads/leadsData";
 import { flattenMessagesChronological } from "@/utils/flattenMessages";
+import { isPeerOnline } from "@/utils/messageStatus";
 import { conversationToLead, messageToChatMessage } from "@/utils/vendorLeads";
 import { appendOrMergeMessageInCache } from "@/features/messaging/messageCache";
 import { applyNewMessagePreview } from "@/features/messaging/conversationCache";
@@ -115,6 +117,8 @@ export default function VendorLeads() {
 
   const isChatChannel = channelFilter === "whatsapp" || channelFilter === "admin";
 
+  useMessagingPresenceLifecycle(isAuthenticated && selfId > 0 && isChatChannel);
+
   useEffect(() => {
     if (conversationsQuery.isError) {
       showError("Could not load conversations");
@@ -166,10 +170,30 @@ export default function VendorLeads() {
 
   const messagesInf = useInfiniteMessages(isChatChannel ? selectedLeadId : null);
 
-  const { sendMessage: sendMessageAction, isSending } = useMessageActions(
+  const { sendMessage: sendMessageAction, markAsRead, isSending } = useMessageActions(
     isChatChannel ? selectedLeadId : null,
     me,
   );
+
+  const peerIsOnline = isPeerOnline(activeRealtimeConversation?.peer?.presence?.status);
+  const lastMarkedPeerUuid = useRef<string | null>(null);
+
+  useEffect(() => {
+    lastMarkedPeerUuid.current = null;
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (!isChatChannel || !selectedLeadId) return;
+    const pages = messagesInf.data?.pages;
+    if (!pages?.length) return;
+    const chrono = flattenMessagesChronological(pages);
+    const latestPeer = [...chrono]
+      .reverse()
+      .find((m) => m.sender.id !== selfId);
+    if (!latestPeer || latestPeer.uuid === lastMarkedPeerUuid.current) return;
+    lastMarkedPeerUuid.current = latestPeer.uuid;
+    markAsRead(latestPeer.uuid);
+  }, [isChatChannel, selectedLeadId, messagesInf.data, selfId, markAsRead]);
 
   const { typingUsers, signalTyping } = useTypingIndicator(
     activeRealtimeConversation
@@ -297,6 +321,7 @@ export default function VendorLeads() {
               selectedLead={selectedLead}
               selectedConversation={selectedConversation}
               lastVendorMessageIndex={lastVendorMessageIndex}
+              peerIsOnline={peerIsOnline}
               newMessagesDividerAfterIndex={-1}
               messageDraft={messageDraft}
               onMessageDraftChange={setMessageDraft}

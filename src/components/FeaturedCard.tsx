@@ -1,7 +1,6 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Heart,
-  MessageCircle,
   Star,
   MapPin,
   CheckCircle,
@@ -9,9 +8,10 @@ import {
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
+import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
-import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
-import { encryptId } from "@/lib/encryptId";
+import { businessProfilePath } from "@/lib/businessProfile";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
 import {
   getFavoriteErrorMessage,
@@ -37,6 +37,7 @@ interface FeaturedCardProps {
   favorited?: boolean;
   phone?: string | null;
   whatsapp?: string | null;
+  vendorUserUuid?: string | null;
 }
 
 export function FeaturedCard({
@@ -56,13 +57,12 @@ export function FeaturedCard({
   favorited = false,
   phone,
   whatsapp,
+  vendorUserUuid,
 }: FeaturedCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
   const queryClient = useQueryClient();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { requireAuthNavigate, isAuthReady, isAuthenticated } =
-    useRequireAuthNavigate();
   const [isFavorited, setIsFavorited] = useState(favorited);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
@@ -71,7 +71,7 @@ export function FeaturedCard({
   }, [favorited]);
 
   const goToService = () => {
-    navigate(`/businesses/${encryptId(id)}`, {
+    navigate(businessProfilePath(id), {
       state: {
         from: pathname,
         business: {
@@ -91,6 +91,7 @@ export function FeaturedCard({
           isFavorite: isFavorited,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
+          vendorUserUuid: vendorUserUuid ?? null,
         },
       },
     });
@@ -168,7 +169,7 @@ export function FeaturedCard({
       </div>
       <div className="p-6 flex flex-col flex-1">
         <h3 className="text-lg font-inter font-semibold text-text-primary mb-1">
-          {name}
+          <BusinessProfileLink businessId={id} businessName={name} />
         </h3>
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
@@ -196,24 +197,13 @@ export function FeaturedCard({
           className="mb-3 flex w-full items-center justify-center rounded-lg bg-destructive py-2 font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
           iconClassName="size-5 shrink-0"
         />
-        <Link
-          to="/messages"
-          state={{ from: pathname }}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!isAuthReady) {
-              event.preventDefault();
-              return;
-            }
-            if (!isAuthenticated) {
-              event.preventDefault();
-              requireAuthNavigate("/messages", { state: { from: pathname } });
-            }
-          }}
-          className="w-full border border-primary text-primary py-2 rounded-lg flex items-center justify-center font-semibold hover:bg-primary/10 transition-colors"
-        >
-          <MessageCircle className="w-5 h-5 mr-2" /> Direct Message
-        </Link>
+        <DirectMessageButton
+          businessInfoId={id}
+          vendorUserUuid={vendorUserUuid}
+          fromPath={pathname}
+          className="w-full py-2"
+          iconClassName="w-5 h-5 mr-2"
+        />
       </div>
     </div>
   );

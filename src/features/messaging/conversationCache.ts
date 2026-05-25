@@ -2,8 +2,61 @@ import type { QueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEYS } from '@/constants/queryKeys'
 import { getConversationPreviewTime, getMessagePreviewText } from '@/utils/messageUtils'
-import type { Conversation } from '@/types/conversation'
+import type { Conversation, ParticipantPresence } from '@/types/conversation'
 import type { Message } from '@/types/message'
+
+export function patchConversationPeerPresence(
+  conversation: Conversation,
+  peerUserId: number,
+  presence: ParticipantPresence,
+): Conversation {
+  const participants = conversation.participants.map((p) => {
+    if (p.user_id !== peerUserId || !p.user) return p
+    return { ...p, user: { ...p.user, presence } }
+  })
+
+  const peer =
+    conversation.peer &&
+      (conversation.peer.user_id === peerUserId || conversation.peer.id === peerUserId)
+      ? { ...conversation.peer, presence }
+      : conversation.peer
+
+  return { ...conversation, participants, peer }
+}
+
+/** Keep inbox + thread peer online/offline in sync with Echo presence. */
+export function setPeerPresenceInCaches(
+  queryClient: QueryClient,
+  conversationUuid: string,
+  peerUserId: number,
+  presence: ParticipantPresence,
+) {
+  const patchList = (list: Conversation[] | undefined): Conversation[] | undefined => {
+    if (!list?.length) return list
+    let changed = false
+    const next = list.map((c) => {
+      if (c.uuid !== conversationUuid) return c
+      changed = true
+      return patchConversationPeerPresence(c, peerUserId, presence)
+    })
+    return changed ? next : list
+  }
+
+  queryClient.setQueryData<Conversation[]>(QUERY_KEYS.conversations, patchList)
+  queryClient.setQueryData<Conversation[]>(['vendor-conversations'], patchList)
+
+  queryClient.setQueryData<Conversation>(
+    QUERY_KEYS.conversation(conversationUuid),
+    (old) =>
+      old ? patchConversationPeerPresence(old, peerUserId, presence) : old,
+  )
+
+  queryClient.setQueryData<Conversation>(['vendor-admin-chat'], (old) =>
+    old?.uuid === conversationUuid
+      ? patchConversationPeerPresence(old, peerUserId, presence)
+      : old,
+  )
+}
 
 function sortConversations(list: Conversation[]): Conversation[] {
   return [...list].sort((a, b) => {

@@ -77,6 +77,7 @@ export type UserFavoriteBusiness = {
   phone: string | null
   whatsapp: string | null
   website: string | null
+  vendor_user_uuid: string | null
 }
 
 export type UserFavoritesPayload = {

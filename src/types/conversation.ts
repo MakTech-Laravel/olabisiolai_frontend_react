@@ -7,8 +7,11 @@ export type ConversationPeer = {
   user_id: number
   id: number
   uuid?: string
+  role?: string
   name: string
   display_name?: string
+  /** Vendor listing id when peer is a vendor with a published business profile. */
+  business_info_id?: number | null
   avatar_url?: string | null
   is_verified?: boolean
   presence?: ParticipantPresence | null

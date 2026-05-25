@@ -38,6 +38,12 @@ export type PublicBusiness = {
   verifiedSince: string | null;
   /** From API e.g. `is_favorite` on GET /businesses/home when authenticated. */
   isFavorite: boolean;
+  boostStatus: 'active' | 'none';
+  isPremium: boolean;
+  /** Vendor account id — for "message yourself" guard on own listing. */
+  vendorUserId: number | null;
+  /** Vendor account UUID — required to start a direct conversation. */
+  vendorUserUuid: string | null;
   businessHours: BusinessHourEntry[];
   businessHoursDisplay: BusinessHoursDisplayRow[];
 };
@@ -159,6 +165,18 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     r.isFavorite === true ||
     r.favorited === true;
 
+  const boostRaw = str(r.boost_status ?? r.boostStatus, 'none').toLowerCase();
+  const boostStatus: PublicBusiness['boostStatus'] =
+    boostRaw === 'active' ? 'active' : 'none';
+  const isPremium = r.is_premium === true || r.isPremium === true;
+
+  const vendorObj = rec(r.vendor) ?? rec(r.user);
+  const vendorUserIdRaw = num(vendorObj?.id ?? r.vendor_id ?? r.user_id, NaN);
+  const vendorUserId =
+    Number.isFinite(vendorUserIdRaw) && vendorUserIdRaw > 0 ? vendorUserIdRaw : null;
+  const vendorUuidRaw = str(vendorObj?.uuid ?? r.vendor_uuid ?? r.vendor_user_uuid, '').trim();
+  const vendorUserUuid = vendorUuidRaw || null;
+
   const memberSinceRaw = str(r.member_since ?? r.memberSince, "").trim();
   const memberSince = memberSinceRaw || null;
   const verifiedSinceRaw = str(r.verified_since ?? r.verifiedSince, "").trim();
@@ -190,6 +208,10 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     memberSince,
     verifiedSince,
     isFavorite,
+    boostStatus,
+    isPremium,
+    vendorUserId,
+    vendorUserUuid,
     businessHours,
     businessHoursDisplay,
   };
@@ -492,6 +514,10 @@ export async function fetchPublicBusinessById(id: number): Promise<PublicBusines
       const data = await fn();
       if (import.meta.env.DEV) {
         console.debug('[publicBusinessApi] single response from', label, data);
+      }
+      const root = rec(data);
+      if (root?.success === false) {
+        continue;
       }
       const inner = mergeBusinessPayloadForParse(data);
       const parsed = parseBusiness(inner, 0);

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { ConversationList } from '@/components/chat/ConversationList'
@@ -16,6 +16,8 @@ import type { Conversation } from '@/types/conversation'
 import { QUERY_KEYS } from '@/constants/queryKeys'
 import { getMessages } from '@/api/messages'
 import type { MessagesPage } from '@/features/messaging/types'
+import { useMessagingPresenceLifecycle } from '@/hooks/useMessagingPresenceLifecycle'
+import { hasPendingDirectMessageState } from '@/lib/directMessage'
 
 export type MessagingLayoutProps = {
   selfUser: AuthUser | null
@@ -31,8 +33,10 @@ export function MessagingLayout({
   conversationQueryParam,
 }: MessagingLayoutProps) {
   const selfId = selfUser ? Number(selfUser.id) : 0
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
+  const pendingDirectMessage = hasPendingDirectMessageState(location.state)
   const urlConversationUuid = conversationQueryParam
     ? searchParams.get(conversationQueryParam)
     : null
@@ -44,6 +48,7 @@ export function MessagingLayout({
   const drawer = useUiStore((s) => s.isMobileDrawerOpen)
   const setDrawer = useUiStore((s) => s.setMobileDrawer)
   const { data: conversations } = useConversations()
+  useMessagingPresenceLifecycle(Boolean(selfId))
   const firstConversationUuid = conversations?.[0]?.uuid ?? null
 
   const prefetchMessages = React.useCallback(
@@ -92,6 +97,12 @@ export function MessagingLayout({
       return
     }
 
+    // Wait for DirectMessageButton / post-login hook to create thread and set ?c=
+    if (pendingDirectMessage) {
+      setActive(null)
+      return
+    }
+
     if (firstConversationUuid) {
       prefetchMessages(firstConversationUuid)
       setActive(firstConversationUuid)
@@ -108,6 +119,7 @@ export function MessagingLayout({
     setQueryConversation,
     activeUuid,
     prefetchMessages,
+    pendingDirectMessage,
   ])
 
   const onSearchPick = React.useCallback(

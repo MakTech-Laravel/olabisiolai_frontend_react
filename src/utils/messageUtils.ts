@@ -1,4 +1,4 @@
-import type { Conversation } from '@/types/conversation'
+import type { Conversation, ParticipantPresence } from '@/types/conversation'
 import type { Attachment } from '@/types/attachment'
 import type { Message, MessageType } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
@@ -192,6 +192,32 @@ export function normalizeConversation(raw: Record<string, unknown>): Conversatio
     (raw.display_name as string | undefined) ??
     (raw.conversation_name as string | undefined)
 
+  const peerRaw = raw.peer as Record<string, unknown> | null | undefined
+  let peer: Conversation['peer'] = null
+  if (peerRaw && typeof peerRaw === 'object') {
+    const businessIdRaw = peerRaw.business_info_id
+    const businessInfoId =
+      typeof businessIdRaw === 'number' && businessIdRaw > 0
+        ? businessIdRaw
+        : businessIdRaw != null && String(businessIdRaw).trim() !== ''
+          ? Number(businessIdRaw) || null
+          : null
+
+    peer = {
+      user_id: Number(peerRaw.user_id ?? 0),
+      id: Number(peerRaw.id ?? peerRaw.user_id ?? 0),
+      uuid: peerRaw.uuid != null ? String(peerRaw.uuid) : undefined,
+      role: peerRaw.role != null ? String(peerRaw.role) : undefined,
+      name: String(peerRaw.name ?? peerRaw.display_name ?? ''),
+      display_name:
+        peerRaw.display_name != null ? String(peerRaw.display_name) : undefined,
+      business_info_id: businessInfoId,
+      avatar_url: (peerRaw.avatar_url as string | null | undefined) ?? null,
+      is_verified: peerRaw.is_verified === true,
+      presence: (peerRaw.presence as ParticipantPresence | null | undefined) ?? null,
+    }
+  }
+
   return {
     id: Number(raw.id ?? 0),
     uuid: String(raw.uuid ?? ''),
@@ -200,7 +226,7 @@ export function normalizeConversation(raw: Record<string, unknown>): Conversatio
     display_name: displayName,
     conversation_name: displayName,
     conversation_image_url: (raw.conversation_image_url as string | null | undefined) ?? null,
-    peer: (raw.peer as Conversation['peer']) ?? null,
+    peer,
     participants: Array.isArray(parts)
       ? (parts as Conversation['participants'])
       : [],

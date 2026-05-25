@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,20 +13,21 @@ import {
   BadgeCheck,
   CheckCircle2,
   Clock,
-  Leaf,
+  Crown,
   MapPin,
-  MessageCircle,
   Shield,
   Sparkles,
   Star,
 } from "lucide-react";
 
+import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { BusinessListingSecondaryActions } from "@/components/business/BusinessListingSecondaryActions";
 import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
 import { BusinessHoursDisplay } from "@/components/business/BusinessHoursDisplay";
 import { ServicePhotosModal } from "@/components/Modal/ServicePhotosModal";
 import { BusinessServiceAreaMap } from "@/components/maps/BusinessServiceAreaMap";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
+import { useAuth } from "@/auth/useAuth";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { Button } from "@/components/ui/button";
 import { env } from "@/config/env";
@@ -39,14 +40,6 @@ import {
 
 const FALLBACK_COVER = "/images/service/hero.jpg";
 const FALLBACK_LOGO = "/images/service/avatar.jpg";
-
-const SERVICES = [
-  "Pipe Installation",
-  "Leak Repairs",
-  "Water Heater Installation",
-  "Drain Cleaning",
-  "Emergency Services",
-] as const;
 
 function AspectCover({ src, className }: { src: string; className?: string }) {
   return (
@@ -120,6 +113,8 @@ interface StateBusinessData {
   whatsapp?: string | null;
   website?: string | null;
   socialAccounts?: SocialAccount[];
+  vendorUserId?: number | null;
+  vendorUserUuid?: string | null;
 }
 
 function toPublicBusinessPlaceholder(data: StateBusinessData): PublicBusiness {
@@ -141,6 +136,10 @@ function toPublicBusinessPlaceholder(data: StateBusinessData): PublicBusiness {
     memberSince: data.memberSince ?? null,
     verifiedSince: data.verifiedSince ?? null,
     isFavorite: data.isFavorite ?? false,
+    boostStatus: "none",
+    isPremium: false,
+    vendorUserId: data.vendorUserId ?? null,
+    vendorUserUuid: data.vendorUserUuid ?? null,
     phone: data.phone ?? null,
     whatsapp: data.whatsapp ?? null,
     website: data.website ?? null,
@@ -163,6 +162,7 @@ export default function Service() {
   const { pathname } = location;
   const routeState = (location.state as ServiceLocationState | null) ?? null;
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const { requireAuthNavigate, isAuthReady, isAuthenticated } =
     useRequireAuthNavigate();
 
@@ -173,6 +173,7 @@ export default function Service() {
     data: business,
     isFetching: businessFetching,
     isFetched: businessFetched,
+    isError: businessError,
   } = useQuery<PublicBusiness | null>({
     queryKey: ["business", businessId],
     queryFn: () => fetchPublicBusinessById(businessId!),
@@ -194,7 +195,20 @@ export default function Service() {
   const pagination = reviewsResult?.pagination ?? { current_page: 1, last_page: 1, total: 0 };
 
   const name = business?.name ?? stateData?.name ?? "";
+  const categoryLabel = business?.category ?? stateData?.category ?? "";
+  const subcategoryLabel = business?.subcategory ?? null;
+  const boostActive = business?.boostStatus === "active";
+  const isPremium = business?.isPremium ?? false;
   const description = business?.description ?? stateData?.description ?? "";
+
+  useEffect(() => {
+    if (name) {
+      document.title = `${name} | Gidira`;
+    }
+    return () => {
+      document.title = "Gidira";
+    };
+  }, [name]);
   const rating = business?.rating ?? stateData?.rating ?? 0;
   const reviewCount = business?.reviews ?? stateData?.reviews ?? 0;
   const ratingLabel =
@@ -241,9 +255,23 @@ export default function Service() {
     FALLBACK_LOGO;
 
   const heroCover = coverPhotos[0] ?? FALLBACK_COVER;
+  const vendorUserUuid =
+    business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
+  const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
+  const isOwnBusiness =
+    user != null &&
+    vendorUserId != null &&
+    Number(user.id) === vendorUserId;
+
   const servicesList =
-    (business?.servicesOffered?.length ? business.servicesOffered : stateData?.servicesOffered) ??
-    SERVICES;
+    business?.servicesOffered?.length
+      ? business.servicesOffered
+      : stateData?.servicesOffered?.length
+        ? stateData.servicesOffered
+        : [];
+
+  const profileUnavailable =
+    businessId === null || (businessFetched && !businessFetching && !business && !stateData);
 
   const handleWriteReview = () => {
     if (!isAuthReady) return;
@@ -252,11 +280,29 @@ export default function Service() {
     });
   };
 
+  if (profileUnavailable) {
+    return (
+      <div className="bg-bg-section font-sans text-ink">
+        <div className={cn(container, "py-16 text-center")}>
+          <h1 className="font-heading text-2xl font-bold text-ink">Business not found</h1>
+          <p className="mt-2 text-body-secondary">
+            {businessError
+              ? "We could not load this profile. Please try again."
+              : "This listing may be unavailable or the link is invalid."}
+          </p>
+          <Button asChild className="mt-6">
+            <Link to="/filters">Browse businesses</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-bg-section font-sans text-ink">
       <div className={cn(container, "pb-16 pt-6 md:pt-10")}>
         <Link
-          to="/"
+          to={routeState?.from ?? "/filters"}
           className="inline-flex items-center gap-2 text-base font-normal text-accent-foreground hover:underline"
         >
           <ArrowLeft className="size-6 shrink-0" aria-hidden />
@@ -297,11 +343,30 @@ export default function Service() {
                   <h1 className="font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
                     {name}
                   </h1>
+                  {categoryLabel ? (
+                    <p className="text-base font-semibold text-brand md:text-lg">
+                      {categoryLabel}
+                      {subcategoryLabel ? (
+                        <span className="font-medium text-body-secondary">
+                          {" "}
+                          · {subcategoryLabel}
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-950">
-                      <Sparkles className="size-3.5" aria-hidden />
-                      Boosted Listing
-                    </span>
+                    {boostActive ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-950">
+                        <Sparkles className="size-3.5" aria-hidden />
+                        Boosted Listing
+                      </span>
+                    ) : null}
+                    {isPremium ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-brand">
+                        <Crown className="size-3.5" aria-hidden />
+                        Premium
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-ink md:text-base">
                     <StarRow rating={rating} />
@@ -350,19 +415,38 @@ export default function Service() {
                   <p className="max-w-3xl text-lg leading-relaxed text-body-secondary">
                     {description || "No description available."}
                   </p>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {[
-                      { icon: Leaf, title: "Eco-Certified", body: "We use 100% biodegradable, non-toxic cleaning agents." },
-                      { icon: Clock, title: "Flexible Timing", body: "Available for early morning or late night sessions." },
-                      { icon: Shield, title: "Fully Insured", body: "Comprehensive $2M liability coverage for peace of mind." },
-                    ].map(({ icon: Icon, title, body }) => (
-                      <div key={title} className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
-                        <Icon className="size-6 text-brand" aria-hidden />
-                        <h3 className="text-base font-semibold text-ink">{title}</h3>
-                        <p className="text-sm leading-5 text-body-secondary">{body}</p>
-                      </div>
-                    ))}
-                  </div>
+                  {(verified || servicesList.length > 0) && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {verified ? (
+                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
+                          <BadgeCheck className="size-6 text-brand" aria-hidden />
+                          <h3 className="text-base font-semibold text-ink">Verified on Gidira</h3>
+                          <p className="text-sm leading-5 text-body-secondary">
+                            Identity and business details reviewed by our team.
+                          </p>
+                        </div>
+                      ) : null}
+                      {servicesList.length > 0 ? (
+                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
+                          <CheckCircle2 className="size-6 text-brand" aria-hidden />
+                          <h3 className="text-base font-semibold text-ink">Services offered</h3>
+                          <p className="text-sm leading-5 text-body-secondary">
+                            {servicesList.length}{" "}
+                            {servicesList.length === 1 ? "service" : "services"} listed on this profile.
+                          </p>
+                        </div>
+                      ) : null}
+                      {contactPhone ? (
+                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
+                          <Shield className="size-6 text-brand" aria-hidden />
+                          <h3 className="text-base font-semibold text-ink">Direct contact</h3>
+                          <p className="text-sm leading-5 text-body-secondary">
+                            Call or message this business through Gidira.
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </section>
               </div>
 
@@ -376,31 +460,16 @@ export default function Service() {
                       className="h-14 w-full rounded-xl bg-brand-red text-base font-medium text-ice hover:bg-brand-red/90"
                       iconClassName="size-5 shrink-0"
                     />
-                    <Button
-                      asChild
-                      className="h-14 rounded-xl border border-ice bg-brand text-base font-medium text-ice hover:bg-brand/90"
-                    >
-                      <Link
-                        to="/messages"
-                        state={{ from: pathname }}
-                        onClick={(event) => {
-                          if (!isAuthReady) {
-                            event.preventDefault();
-                            return;
-                          }
-                          if (!isAuthenticated) {
-                            event.preventDefault();
-                            requireAuthNavigate("/messages", {
-                              state: { from: pathname },
-                            });
-                          }
-                        }}
-                        className="inline-flex w-full items-center justify-center gap-2"
-                      >
-                        <MessageCircle className="size-5" aria-hidden />
-                        Direct Message
-                      </Link>
-                    </Button>
+                    {businessId !== null ? (
+                      <DirectMessageButton
+                        businessInfoId={businessId}
+                        vendorUserUuid={vendorUserUuid}
+                        fromPath={pathname}
+                        disabled={isOwnBusiness}
+                        className="h-14 w-full rounded-xl border border-ice bg-brand text-base font-medium text-ice hover:bg-brand/90 hover:text-ice"
+                        iconClassName="size-5 shrink-0"
+                      />
+                    ) : null}
                     {whatsappUrl ? (
                       <Button
                         asChild
@@ -487,14 +556,20 @@ export default function Service() {
 
             <section className="border-t border-border-gray pt-6">
               <h2 className="font-heading text-xl font-semibold text-ink-heading">Services</h2>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                {servicesList.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-base text-body-secondary">
-                    <span className="size-1.5 shrink-0 rounded-full bg-footer-bar" aria-hidden />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              {servicesList.length > 0 ? (
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {servicesList.map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-base text-body-secondary">
+                      <span className="size-1.5 shrink-0 rounded-full bg-footer-bar" aria-hidden />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-base text-body-secondary">
+                  This business has not listed specific services yet.
+                </p>
+              )}
             </section>
           </div>
         </div>
