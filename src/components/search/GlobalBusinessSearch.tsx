@@ -9,7 +9,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 const PLACEHOLDER =
-  "Search by business name, category, or location...";
+  "Search by business name, category, or location....";
 
 type GlobalBusinessSearchProps = {
   variant?: "hero" | "header";
