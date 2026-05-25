@@ -1,5 +1,6 @@
 import * as React from 'react'
 
+import { BusinessProfileLink } from '@/components/business/BusinessProfileLink'
 import { OnlineStatus } from '@/components/chat/OnlineStatus'
 import { Avatar } from '@/components/ui/Avatar'
 import { UnreadCountBadge } from '@/components/chat/UnreadCountBadge'
@@ -26,6 +27,11 @@ export const ConversationItem = React.memo(function ConversationItem({
   onClick,
 }: ConversationItemProps) {
   const title = getConversationTitle(conversation, selfUserId)
+  const peerBusinessId =
+    conversation.peer?.business_info_id != null &&
+      conversation.peer.business_info_id > 0
+      ? conversation.peer.business_info_id
+      : null
   const peer =
     conversation.type === 'direct'
       ? conversation.participants.find((p) => p.user_id !== selfUserId)
@@ -62,7 +68,17 @@ export const ConversationItem = React.memo(function ConversationItem({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-base font-bold text-ink">{title}</p>
+          <p className="truncate text-base font-bold text-ink">
+            {peerBusinessId !== null ? (
+              <BusinessProfileLink
+                businessId={peerBusinessId}
+                businessName={title}
+                className="truncate text-base font-bold text-ink"
+              />
+            ) : (
+              title
+            )}
+          </p>
           <span
             className={cn(
               'shrink-0 text-[10px]',
