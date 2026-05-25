@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+.husky
+.cursor
+docs
+docker
+*.md
+*.log
+.env*
+!.env.example

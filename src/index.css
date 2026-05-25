@@ -1,0 +1,315 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+@import "tailwindcss";
+
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-white: var(--text-white);
+  --color-bg-section: var(--bg-section);
+
+  /* Landing / marketing (Figma vendor page) — use bg-brand, text-ink, bg-surface-soft, etc. */
+  --color-brand: var(--brand);
+  --color-brand-red: var(--brand-red);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-heading: var(--ink-heading);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-wash: var(--surface-wash);
+  --color-ice: var(--ice);
+  --color-border-light: var(--border-light);
+  --color-border-gray: var(--border-gray);
+  --color-placeholder-text: var(--placeholder-text);
+  --color-body-secondary: var(--body-secondary);
+  --color-stat-muted: var(--stat-muted);
+  --color-step-line: var(--step-line);
+  --color-step-badge: var(--step-badge);
+  --color-tint-red: var(--tint-red);
+  --color-plan-ring: var(--plan-ring);
+  --color-card-ice: var(--card-ice);
+  --color-footer-bar: var(--footer-bar);
+  --color-footer-muted: var(--footer-muted);
+  --color-quote-muted: var(--quote-muted);
+  --color-avatar-a: var(--avatar-a);
+  --color-avatar-b: var(--avatar-b);
+  --color-avatar-c: var(--avatar-c);
+
+  /* Direct messages (Figma chat) */
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-surface-header: var(--chat-surface-header);
+  --color-chat-border: var(--chat-border);
+  --color-chat-border-subtle: var(--chat-border-subtle);
+  --color-chat-border-footer: var(--chat-border-footer);
+  --color-chat-bubble-them: var(--chat-bubble-them);
+  --color-chat-input-bg: var(--chat-input-bg);
+  --color-chat-accent: var(--chat-accent);
+  --color-chat-accent-ring: var(--chat-accent-ring);
+  --color-chat-online-dot: var(--chat-online-dot);
+  --color-chat-online-text: var(--chat-online-text);
+  --color-chat-meta: var(--chat-meta);
+  --color-auth-bg: var(--auth-bg);
+  --color-vendor-header: var(--vendor-header);
+  --color-vendor-body-bg: var(--vendor-body-bg);
+  --color-activity-warning: var(--activity-warning);
+
+  --background-image-landing-hero: radial-gradient(
+    ellipse 120% 80% at 50% 40%,
+    #253143 0%,
+    #191b23 55%,
+    #12151c 100%
+  );
+
+  /* Default UI font; match Figma by changing --font-sans to the file’s text styles */
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-plus-jakarta-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-plus-jakarta-sans);
+  --font-manrope: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-plus-jakarta-sans:
+      "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+    /* Palette aligned with Figma (olabisiolai mobile UI): blues, neutrals, red alert, green success */
+    --background: #ffffff;
+    --foreground: #1c1c1e;
+
+    --card: #ffffff;
+    --card-foreground: #1c1c1e;
+
+    --popover: #ffffff;
+    --popover-foreground: #1c1c1e;
+
+    --primary: #1a73e8;
+    --primary-foreground: #ffffff;
+
+    --secondary: #f2f2f7;
+    --secondary-foreground: #1c1c1e;
+
+    --muted: #f2f2f7;
+    --muted-foreground: #8e8e93;
+
+    --accent: #e8f0fe;
+    --accent-foreground: #1557b0;
+
+    --destructive: #ff3b30;
+    --destructive-foreground: #ffffff;
+
+    --success: #34c759;
+    --success-foreground: #ffffff;
+
+    --border: #e0e0e0;
+    --input: #f8f9fa;
+    --ring: #1a73e8;
+
+    --radius: 0.75rem;
+    --text-primary: #1c1c1e;
+    --text-secondary: #8e8e93;
+    --text-tertiary: #aeaeb2;
+    --text-white: #ffffff;
+    --bg-section: #f8f9fa;
+
+    --brand: #158de0;
+    --brand-red: #e82c3d;
+    --ink: #191b23;
+    --ink-muted: #6b7280;
+    --ink-heading: #0a1a2f;
+    --surface-soft: #eff6ff;
+    --surface-wash: rgb(249 250 251 / 0.5);
+    --ice: #fdfeff;
+    --border-light: #f3f4f6;
+    --border-gray: #e5e7eb;
+    --placeholder-text: #9ca3af;
+    --body-secondary: #4b5563;
+    --stat-muted: #99a1af;
+    --step-line: #e2e8f0;
+    --step-badge: #ef4444;
+    --tint-red: #fef2f2;
+    --plan-ring: #eff6ff;
+    --card-ice: #fdfeff;
+    --footer-bar: #0052cc;
+    --footer-muted: #e5e7eb;
+    --quote-muted: #99a1af;
+    --avatar-a: #2563eb;
+    --avatar-b: #dc2626;
+    --avatar-c: #3b82f6;
+
+    --chat-surface: #faf8ff;
+    --chat-surface-header: rgb(250 248 255 / 0.85);
+    --chat-border: rgb(195 198 215 / 0.64);
+    --chat-border-subtle: rgb(195 198 215 / 0.2);
+    --chat-border-footer: rgb(195 198 215 / 0.1);
+    --chat-bubble-them: #ededf9;
+    --chat-input-bg: #f3f3fe;
+    --chat-accent: #004ac6;
+    --chat-accent-ring: rgb(0 74 198 / 0.3);
+    --chat-online-dot: #6ffbbe;
+    --chat-online-text: #006c49;
+    --chat-meta: #737686;
+    --auth-bg: #F4F5F7;
+    --vendor-header: #1E3A8A;
+    --vendor-body-bg: #F1F1F2;
+    --activity-warning: #784b00;
+  }
+
+  .dark {
+    --background: #121212;
+    --foreground: #ffffff;
+
+    --card: #1c1c1e;
+    --card-foreground: #ffffff;
+
+    --popover: #1c1c1e;
+    --popover-foreground: #ffffff;
+
+    --primary: #4da3ff;
+    --primary-foreground: #0d1117;
+
+    --secondary: #2c2c2e;
+    --secondary-foreground: #ffffff;
+
+    --muted: #2c2c2e;
+    --muted-foreground: #8e8e93;
+
+    --accent: #1e3a5f;
+    --accent-foreground: #a8c7fa;
+
+    --destructive: #ff453a;
+    --destructive-foreground: #ffffff;
+
+    --success: #32d74b;
+    --success-foreground: #0d1117;
+
+    --border: #38383a;
+    --input: #2c2c2e;
+    --ring: #4da3ff;
+    --text-primary: #ffffff;
+    --text-secondary: #8e8e93;
+    --text-tertiary: #636366;
+    --text-white: #ffffff;
+    --bg-section: #1c1c1e;
+
+    --brand: #4da3ff;
+    --brand-red: #ff6b6b;
+    --ink: #f4f4f5;
+    --ink-muted: #a1a1aa;
+    --ink-heading: #e4e4e7;
+    --surface-soft: #1e293b;
+    --surface-wash: rgb(24 24 27 / 0.5);
+    --ice: #fafafa;
+    --border-light: #27272a;
+    --border-gray: #3f3f46;
+    --placeholder-text: #71717a;
+    --body-secondary: #a1a1aa;
+    --stat-muted: #71717a;
+    --step-line: #3f3f46;
+    --step-badge: #ef4444;
+    --tint-red: #3f1515;
+    --plan-ring: #27272a;
+    --card-ice: #18181b;
+    --footer-bar: #1e40af;
+    --footer-muted: #d4d4d8;
+    --quote-muted: #a1a1aa;
+    --avatar-a: #2563eb;
+    --avatar-b: #dc2626;
+    --avatar-c: #3b82f6;
+
+    --chat-surface: #1c1b26;
+    --chat-surface-header: rgb(28 27 38 / 0.92);
+    --chat-border: rgb(148 163 184 / 0.35);
+    --chat-border-subtle: rgb(148 163 184 / 0.2);
+    --chat-border-footer: rgb(148 163 184 / 0.12);
+    --chat-bubble-them: #2a2839;
+    --chat-input-bg: #252336;
+    --chat-accent: #3b82f6;
+    --chat-accent-ring: rgb(59 130 246 / 0.35);
+    --chat-online-dot: #34d399;
+    --chat-online-text: #6ee7b7;
+    --chat-meta: #9ca3af;
+    --activity-warning: #a16207;
+
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: light;
+    /* height: 100%;     
+    overflow: hidden;   */
+
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+  }
+
+  button:not(:disabled),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Vendor dashboard: single scroll container (main), not body + main */
+  html.vendor-app-shell,
+  html.vendor-app-shell body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  html.vendor-app-shell #root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

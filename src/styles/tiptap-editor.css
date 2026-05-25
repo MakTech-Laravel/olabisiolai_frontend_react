@@ -1,0 +1,163 @@
+.cms-tiptap-wrapper .cms-tiptap-editor {
+  width: 100%;
+  max-width: none;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-body-secondary, #475569);
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor:focus {
+  outline: none;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor > * + * {
+  margin-top: 0.75rem;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-ink-heading, #0f172a);
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-heading, #0f172a);
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-ink-heading, #0f172a);
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor ul,
+.cms-tiptap-wrapper .cms-tiptap-editor ol {
+  padding-left: 1.5rem;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor ul {
+  list-style: disc;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor ol {
+  list-style: decimal;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor blockquote {
+  border-left: 4px solid #0b1c30;
+  padding-left: 1rem;
+  font-style: italic;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor img.cms-tiptap-image,
+.cms-tiptap-wrapper .cms-tiptap-editor img {
+  height: auto;
+  border-radius: 0.5rem;
+  cursor: grab;
+}
+
+/* Width/align come from inline style on each image — do not override here */
+
+.cms-tiptap-wrapper .cms-tiptap-editor img.ProseMirror-selectednode {
+  outline: 2px solid #0b1c30;
+  outline-offset: 2px;
+  cursor: grabbing;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor img.ProseMirror-dragging {
+  opacity: 0.6;
+}
+
+/* Drag resize handles (Tiptap ResizableNodeView) — alignment on container via inline style */
+.cms-tiptap-wrapper .cms-image-resize-container {
+  line-height: 0;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-container .cms-tiptap-image {
+  float: none;
+  margin: 0;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-handle {
+  position: absolute;
+  z-index: 20;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 2px;
+  background: #0b1c30;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 35%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-container:hover .cms-image-resize-handle,
+.cms-tiptap-wrapper .cms-image-resize-container.ProseMirror-selectednode .cms-image-resize-handle,
+.cms-tiptap-wrapper .cms-image-resize-active .cms-image-resize-handle {
+  opacity: 1;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-handle[data-resize-handle="bottom-right"] {
+  right: -4px;
+  bottom: -4px;
+  cursor: nwse-resize;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-handle[data-resize-handle="bottom-left"] {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-handle[data-resize-handle="top-right"] {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.cms-tiptap-wrapper .cms-image-resize-handle[data-resize-handle="top-left"] {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor iframe,
+.cms-tiptap-wrapper .cms-tiptap-editor .cms-tiptap-youtube {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 1rem 0;
+  border: 0;
+  border-radius: 0.5rem;
+}
+
+.cms-tiptap-wrapper .cms-tiptap-editor p.is-editor-empty:first-child::before {
+  color: #94a3b8;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
