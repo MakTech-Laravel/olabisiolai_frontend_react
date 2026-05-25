@@ -8,6 +8,7 @@ export type Lead = {
   id: string;
   name: string;
   initials: string;
+  avatarUrl?: string | null;
   phone: string;
   channel: LeadChannel;
   dateTime: string;

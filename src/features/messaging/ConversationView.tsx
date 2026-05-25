@@ -21,6 +21,8 @@ import { useAttachmentUpload } from '@/hooks/useAttachmentUpload'
 import { useUiStore } from '@/store/uiStore'
 import type { Message } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
+import { resolveMediaUrl } from '@/lib/mediaUrl'
+import { conversationPeerAvatar } from '@/utils/messageUtils'
 import { isPeerOnline } from '@/utils/messageStatus'
 
 function authUserToMessagingUser(u: AuthUser | null): MessagingUser | null {
@@ -58,6 +60,11 @@ export function ConversationView({
     useMessageActions(conversationUuid, me)
 
   const peerIsOnline = isPeerOnline(conversation?.peer?.presence?.status)
+  const peerAvatarUrl = React.useMemo(() => {
+    if (!conversation) return null
+    const raw = conversationPeerAvatar(conversation, selfId)
+    return raw ? resolveMediaUrl(raw, '') || null : null
+  }, [conversation, selfId])
   const { typingUsers, signalTyping } = useTypingIndicator(
     conversation ? { uuid: conversation.uuid, id: conversation.id } : null,
     me ? { id: me.id, name: me.name } : null,
@@ -196,6 +203,7 @@ export function ConversationView({
             fetchNextPage={() => void inf.fetchNextPage()}
             selfUserId={selfId}
             peerIsOnline={peerIsOnline}
+            peerAvatar={peerAvatarUrl}
             onReply={(m) => setReplyingTo(m)}
             onEdit={(m) => setEditingMessage(m)}
             onDelete={onDelete}

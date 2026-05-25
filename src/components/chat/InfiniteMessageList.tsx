@@ -47,6 +47,7 @@ export function InfiniteMessageList({
   fetchNextPage,
   selfUserId,
   peerIsOnline = false,
+  peerAvatar = null,
   onReply,
   onEdit,
   onDelete,
@@ -58,6 +59,7 @@ export function InfiniteMessageList({
   fetchNextPage: () => void
   selfUserId: number
   peerIsOnline?: boolean
+  peerAvatar?: string | null
   onReply: (m: Message) => void
   onEdit: (m: Message) => void
   onDelete: (m: Message) => void
@@ -224,6 +226,7 @@ export function InfiniteMessageList({
                 parentMessage={resolveParentMessage(row.message)}
                 isOwn={row.message.sender.id === selfUserId}
                 peerIsOnline={peerIsOnline}
+                peerAvatar={peerAvatar}
                 showAvatar={row.showAvatar}
                 highlighted={highlightUuid === row.message.uuid}
                 onReply={() => onReply(row.message)}

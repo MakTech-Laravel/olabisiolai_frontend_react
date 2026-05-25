@@ -3,9 +3,14 @@ import type { Attachment } from '@/types/attachment'
 import type { Message, MessageType } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
+import { resolveMediaUrl } from '@/lib/mediaUrl'
 import { formatReadAt } from '@/utils/formatters'
 
-type ApiSender = { id: number; name: string }
+type ApiSender = {
+  id: number
+  name: string
+  avatar_url?: string | null
+}
 
 export function mapApiSender(sender: ApiSender | null | undefined): MessagingUser {
   if (!sender) {
@@ -17,10 +22,11 @@ export function mapApiSender(sender: ApiSender | null | undefined): MessagingUse
       last_seen_at: null,
     }
   }
+  const avatarRaw = sender.avatar_url?.trim()
   return {
     id: sender.id,
     name: sender.name,
-    avatar: null,
+    avatar: avatarRaw ? resolveMediaUrl(avatarRaw, '') || null : null,
     status: 'offline',
     last_seen_at: null,
   }

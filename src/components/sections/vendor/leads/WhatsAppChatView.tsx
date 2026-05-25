@@ -1,5 +1,6 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { AttachmentPreview } from "@/components/chat/AttachmentPreview";
+import { Avatar } from "@/components/ui/Avatar";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { Button } from "@/components/ui/button";
@@ -146,9 +147,11 @@ export function WhatsAppChatInterface({
             ) : null}
             {message.from === "lead" ? (
               <div className="mb-4 flex w-full min-w-0 items-end gap-2">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-200/90 text-[10px] font-semibold text-neutral-700">
-                  {selectedLead?.initials}
-                </div>
+                <Avatar
+                  src={selectedLead?.avatarUrl}
+                  name={selectedLead?.name ?? "Lead"}
+                  className="size-8 shrink-0 rounded-full"
+                />
                 <div className="min-w-0 max-w-[min(100%,18rem)] sm:max-w-md">
                   <div className="rounded-2xl rounded-bl-md bg-[#e8e6f4] px-3.5 py-2.5 text-sm leading-relaxed wrap-anywhere text-foreground shadow-sm">
                     {message.text ? <p>{message.text}</p> : null}

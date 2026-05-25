@@ -15,6 +15,7 @@ interface MessageBubbleProps {
   parentMessage?: Message | null
   isOwn: boolean
   peerIsOnline?: boolean
+  peerAvatar?: string | null
   showAvatar: boolean
   highlighted?: boolean
   onReply: () => void
@@ -28,6 +29,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   parentMessage,
   isOwn,
   peerIsOnline = false,
+  peerAvatar = null,
   showAvatar,
   highlighted = false,
   onReply,
@@ -43,6 +45,8 @@ export const MessageBubble = React.memo(function MessageBubble({
   const displayStatus = isOwn
     ? resolveOwnMessageDisplayStatus(message, peerIsOnline)
     : message.status
+
+  const incomingAvatar = message.sender.avatar ?? peerAvatar ?? null
 
   React.useEffect(() => {
     if (!menu) return
@@ -73,9 +77,9 @@ export const MessageBubble = React.memo(function MessageBubble({
     >
       {!isOwn && showAvatar ? (
         <Avatar
-          src={message.sender.avatar}
+          src={incomingAvatar}
           name={message.sender.name}
-          className="mt-1 size-8 shrink-0"
+          className="mt-1 size-8 shrink-0 rounded-full"
         />
       ) : !isOwn ? (
         <div className="size-8 shrink-0" aria-hidden />
@@ -127,8 +131,8 @@ export const MessageBubble = React.memo(function MessageBubble({
         </div>
         <div
           className={cn(
-            'mt-1 flex items-center gap-2 text-xs text-chat-meta',
-            isOwn ? 'justify-end' : '',
+            'mt-1 flex items-center gap-1.5 text-[11px] text-chat-meta',
+            isOwn ? 'justify-end pr-0.5' : 'pl-1',
           )}
         >
           <span>{formatMessageTime(message.created_at)}</span>

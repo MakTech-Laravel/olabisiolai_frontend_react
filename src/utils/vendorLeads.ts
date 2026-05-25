@@ -3,7 +3,8 @@ import { dayjs } from '@/lib/dayjs'
 import type { Conversation } from '@/types/conversation'
 import type { Message } from '@/types/message'
 import { formatLastSeen } from '@/utils/formatters'
-import { getConversationTitle } from '@/utils/messageUtils'
+import { conversationPeerAvatar, getConversationTitle } from '@/utils/messageUtils'
+import { resolveMediaUrl } from '@/lib/mediaUrl'
 
 export function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -44,11 +45,14 @@ export function conversationToLead(
     (conv.last_message?.attachments?.length ? 'Attachment' : 'No messages yet')
 
   const when = conv.last_message?.created_at ?? conv.updated_at
+  const avatarRaw = conversationPeerAvatar(conv, selfUserId)
+  const avatarUrl = avatarRaw ? resolveMediaUrl(avatarRaw, '') || null : null
 
   return {
     id: conv.uuid,
     name: title,
     initials: initialsFromName(title),
+    avatarUrl,
     phone: '—',
     channel,
     dateTime: formatDateTime(when),
