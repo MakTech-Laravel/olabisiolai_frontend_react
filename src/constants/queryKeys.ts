@@ -1,4 +1,5 @@
 export const QUERY_KEYS = {
+  businessReportReasons: ['business-report-reasons'] as const,
   conversations: ['conversations'] as const,
   conversation: (uuid: string) => ['conversations', uuid] as const,
   messages: (uuid: string) => ['messages', uuid] as const,

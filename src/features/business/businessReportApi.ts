@@ -5,24 +5,24 @@ export type BusinessReportReasonOption = {
   label: string;
 };
 
+type ApiEnvelope<T> = {
+  success?: boolean;
+  message?: string;
+  data?: T;
+};
+
 function parseReasons(payload: unknown): BusinessReportReasonOption[] {
   if (!payload || typeof payload !== "object") return [];
 
-  const root = payload as Record<string, unknown>;
+  const root = payload as ApiEnvelope<{ reasons?: unknown[] }> & {
+    reasons?: unknown[];
+  };
   const inner = root.data;
-
-  let list: unknown[] = [];
-  if (Array.isArray(inner)) {
-    list = inner;
-  } else if (inner && typeof inner === "object") {
-    const dataObj = inner as Record<string, unknown>;
-    if (Array.isArray(dataObj.reasons)) {
-      list = dataObj.reasons;
-    }
-  }
-  if (list.length === 0 && Array.isArray(root.reasons)) {
-    list = root.reasons;
-  }
+  const list = Array.isArray(inner?.reasons)
+    ? inner.reasons
+    : Array.isArray(root.reasons)
+      ? root.reasons
+      : [];
 
   return list
     .map((item) => {
@@ -35,39 +35,28 @@ function parseReasons(payload: unknown): BusinessReportReasonOption[] {
     .filter((item): item is BusinessReportReasonOption => item !== null);
 }
 
-const FALLBACK_REASONS: BusinessReportReasonOption[] = [
-  { value: "illegal_or_fraudulent", label: "This is illegal/fraudulent" },
-  { value: "spam", label: "This ad is spam" },
-  { value: "wrong_price", label: "The price is wrong" },
-  { value: "wrong_category", label: "Wrong category" },
-  { value: "seller_asked_for_prepayment", label: "Seller asked for prepayment" },
-  { value: "already_sold", label: "It is sold" },
-];
-
 export async function fetchBusinessReportReasons(): Promise<BusinessReportReasonOption[]> {
-  const endpoints = ["/business-report-reasons", "/review-report-reasons"];
-
-  for (const path of endpoints) {
-    try {
-      const res = await request.get(path, { skipAuthRedirect: true });
-      const parsed = parseReasons(res.data);
-      if (parsed.length > 0) return parsed;
-    } catch {
-      // try next endpoint
-    }
+  const res = await request.get("/business-report-reasons", {
+    skipAuthRedirect: true,
+  });
+  const parsed = parseReasons(res.data);
+  if (parsed.length === 0) {
+    throw new Error("Report reasons are unavailable.");
   }
-
-  return FALLBACK_REASONS;
+  return parsed;
 }
 
 export async function submitBusinessReport(
   businessId: number,
   payload: { reason: string; description?: string },
 ): Promise<string> {
-  const res = await request.post(`/user/businesses/${businessId}/report`, payload);
-  const body = res.data as { success?: boolean; message?: string };
-  if (body.success === false) {
+  const res = await request.post<ApiEnvelope<unknown>>(
+    `/user/businesses/${businessId}/report`,
+    payload,
+  );
+  const body = res.data;
+  if (body?.success === false) {
     throw new Error(body.message ?? "Could not submit report.");
   }
-  return body.message ?? "Thank you for your report.";
+  return body?.message ?? "Thank you for your report.";
 }

@@ -3,6 +3,7 @@ import { ArrowLeft, Flag, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { QUERY_KEYS } from "@/constants/queryKeys";
 import {
   fetchBusinessReportReasons,
   submitBusinessReport,
@@ -30,7 +31,7 @@ export function ReportAbuseModal({
   const [description, setDescription] = useState("");
 
   const reasonsQuery = useQuery({
-    queryKey: ["business-report-reasons"],
+    queryKey: QUERY_KEYS.businessReportReasons,
     queryFn: fetchBusinessReportReasons,
     enabled: open,
     staleTime: 10 * 60 * 1000,
@@ -160,7 +161,18 @@ export function ReportAbuseModal({
           )}
         </div>
 
-        <div className="border-t border-border-light p-4">
+        <div className="border-t border-border-light p-4 space-y-3">
+          <label className="block text-sm text-body-secondary">
+            Additional details (optional)
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="Tell us more about the issue…"
+              className="mt-1.5 w-full resize-none rounded-lg border border-border-light bg-background px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+          </label>
           <Button
             type="button"
             className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"

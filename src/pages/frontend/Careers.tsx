@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   GraduationCap,
   Home,
@@ -9,30 +10,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import {
+  CAREER_JOBS,
+  HR_EMAIL,
+  careerJobPath,
+  handleCareerApply,
+} from "@/features/careers/careerJobs";
 import { container } from "@/lib/container";
-import { alert } from "@/lib/sweetAlert";
 import { cn } from "@/lib/utils";
-
-const HR_EMAIL = "hr@gidira.com";
-
-function applicationMailto(jobTitle: string): string {
-  const subject = `Application: ${jobTitle}`;
-  return `mailto:${HR_EMAIL}?subject=${encodeURIComponent(subject)}`;
-}
-
-async function handleApplyNow(jobTitle: string): Promise<void> {
-  const subject = `Application: ${jobTitle}`;
-  const confirmed = await alert.confirm({
-    title: "Apply for this role",
-    html: `<p class="text-sm">Your email app will open to <strong>${HR_EMAIL}</strong> with the subject line:</p><p class="mt-2 text-sm font-semibold">${subject}</p><p class="mt-3 text-sm text-body-secondary">Attach your CV and a short cover letter, then send the email.</p>`,
-    icon: "info",
-    confirmText: "Open email",
-    cancelText: "Cancel",
-  });
-  if (confirmed) {
-    window.location.href = applicationMailto(jobTitle);
-  }
-}
 
 /** Served from `public/images/careers/` — do not use temporary Figma MCP URLs. */
 const MISSION_IMAGE = "/images/careers/mission-vision.jpg";
@@ -67,34 +52,6 @@ const PERK_CARDS = [
     icon: GraduationCap,
     title: "Learning & Development",
     body: "Access courses, conferences, and training to continuously develop your skills.",
-  },
-] as const;
-
-const OPEN_ROLES = [
-  {
-    title: "Full-stack Developer",
-    dept: "Engineering",
-    location: "Lagos / Remote",
-  },
-  {
-    title: "Product Designer",
-    dept: "Design",
-    location: "Lagos",
-  },
-  {
-    title: "Business Development Manager",
-    dept: "Sales",
-    location: "Lagos / Abuja",
-  },
-  {
-    title: "Customer Success Lead",
-    dept: "Support",
-    location: "Remote",
-  },
-  {
-    title: "Marketing Coordinator",
-    dept: "Marketing",
-    location: "Lagos",
   },
 ] as const;
 
@@ -214,18 +171,21 @@ export default function Careers() {
               Open Positions
             </h2>
             <p className="text-base text-body-secondary">
-              Join us in shaping the future of Nigerian digital commerce.
+              Click a role to read the full description, then apply from the job page.
             </p>
           </div>
 
           <div className="flex flex-col gap-4">
-            {OPEN_ROLES.map((job) => (
-              <div
-                key={job.title}
-                className="flex flex-col gap-4 rounded bg-card-ice p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+            {CAREER_JOBS.map((job) => (
+              <Link
+                key={job.slug}
+                to={careerJobPath(job.slug)}
+                className="flex flex-col gap-4 rounded bg-card-ice p-6 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-bold text-foreground">{job.title}</h3>
+                  <h3 className="text-xl font-bold text-foreground hover:text-brand-red hover:underline">
+                    {job.title}
+                  </h3>
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded bg-muted px-3 py-1 text-xs font-bold uppercase tracking-wide text-body-secondary">
                       {job.dept}
@@ -236,14 +196,10 @@ export default function Careers() {
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleApplyNow(job.title)}
-                  className="inline-flex shrink-0 items-center justify-center rounded bg-brand-red px-6 py-3 text-sm font-bold text-ice transition-opacity hover:opacity-90"
-                >
-                  Apply Now
-                </button>
-              </div>
+                <span className="inline-flex shrink-0 items-center justify-center rounded border border-brand-red/30 bg-card px-6 py-3 text-sm font-bold text-brand-red">
+                  View details
+                </span>
+              </Link>
             ))}
           </div>
 
@@ -257,10 +213,10 @@ export default function Careers() {
             </p>
             <button
               type="button"
-              onClick={() => void handleApplyNow("General inquiry")}
+              onClick={() => void handleCareerApply("General inquiry")}
               className="pt-2 text-base font-semibold text-brand-red hover:underline"
             >
-              hr@gidira.com
+              {HR_EMAIL}
             </button>
           </div>
         </div>

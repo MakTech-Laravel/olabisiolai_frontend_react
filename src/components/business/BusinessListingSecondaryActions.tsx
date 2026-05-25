@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Heart, Share2 } from "lucide-react";
+import { ExternalLink, Flag, Heart, Share2 } from "lucide-react";
+
+import { ReportAbuseModal } from "@/components/Modal/ReportAbuseModal";
 
 import {
   getFavoriteErrorMessage,
@@ -40,6 +42,7 @@ export function BusinessListingSecondaryActions({
   const { copy } = useClipboard();
   const [isFavorited, setIsFavorited] = useState(initialFavorite);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const websiteUrl = normalizeWebsiteUrl(website);
 
@@ -119,6 +122,19 @@ export function BusinessListingSecondaryActions({
     window.open(websiteUrl, "_blank", "noopener,noreferrer");
   }
 
+  function handleReport() {
+    if (!isAuthReady) return;
+
+    if (!isAuthenticated) {
+      requireAuthNavigate(listingPath, {
+        state: { from: listingPath },
+      });
+      return;
+    }
+
+    setReportOpen(true);
+  }
+
   async function handleShare() {
     const shareUrl =
       typeof window !== "undefined"
@@ -150,51 +166,71 @@ export function BusinessListingSecondaryActions({
   }
 
   return (
-    <div className="mt-6 flex items-center justify-between text-xs font-medium uppercase tracking-tight text-stat-muted">
-      <button
-        type="button"
-        onClick={() => void handleSave()}
-        disabled={favoriteLoading || !isAuthReady}
-        aria-pressed={isFavorited}
-        aria-label={isFavorited ? "Remove from saved listings" : "Save listing"}
-        className={cn(
-          "inline-flex items-center gap-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-          isFavorited ? "text-brand-red" : "hover:text-ink",
-        )}
-      >
-        <Heart
-          className={cn("size-4", isFavorited && "fill-brand-red text-brand-red")}
-          aria-hidden
-        />
-        {isFavorited ? "Saved" : "Save"}
-      </button>
+    <>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-xs font-medium uppercase tracking-tight text-stat-muted">
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={favoriteLoading || !isAuthReady}
+          aria-pressed={isFavorited}
+          aria-label={isFavorited ? "Remove from saved listings" : "Save listing"}
+          className={cn(
+            "inline-flex items-center gap-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            isFavorited ? "text-brand-red" : "hover:text-ink",
+          )}
+        >
+          <Heart
+            className={cn("size-4", isFavorited && "fill-brand-red text-brand-red")}
+            aria-hidden
+          />
+          {isFavorited ? "Saved" : "Save"}
+        </button>
 
-      <button
-        type="button"
-        onClick={handleWebsite}
-        disabled={!websiteUrl}
-        aria-label={websiteUrl ? "Open business website" : "Website not available"}
-        title={websiteUrl ? "Open website in a new tab" : "No website listed"}
-        className={cn(
-          "inline-flex items-center gap-1 transition-colors",
-          websiteUrl
-            ? "hover:text-ink"
-            : "cursor-not-allowed opacity-40",
-        )}
-      >
-        <ExternalLink className="size-4" aria-hidden />
-        Website
-      </button>
+        <button
+          type="button"
+          onClick={handleWebsite}
+          disabled={!websiteUrl}
+          aria-label={websiteUrl ? "Open business website" : "Website not available"}
+          title={websiteUrl ? "Open website in a new tab" : "No website listed"}
+          className={cn(
+            "inline-flex items-center gap-1 transition-colors",
+            websiteUrl
+              ? "hover:text-ink"
+              : "cursor-not-allowed opacity-40",
+          )}
+        >
+          <ExternalLink className="size-4" aria-hidden />
+          Website
+        </button>
 
-      <button
-        type="button"
-        onClick={() => void handleShare()}
-        aria-label="Share listing"
-        className="inline-flex items-center gap-1 hover:text-ink"
-      >
-        <Share2 className="size-4" aria-hidden />
-        Share listing
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          aria-label="Share listing"
+          className="inline-flex items-center gap-1 hover:text-ink"
+        >
+          <Share2 className="size-4" aria-hidden />
+          Share listing
+        </button>
+
+        <button
+          type="button"
+          onClick={handleReport}
+          disabled={!isAuthReady}
+          aria-label="Report or flag this listing"
+          className="inline-flex items-center gap-1 hover:text-brand-red"
+        >
+          <Flag className="size-4" aria-hidden />
+          Report
+        </button>
+      </div>
+
+      <ReportAbuseModal
+        open={reportOpen}
+        businessId={businessId}
+        businessName={businessName}
+        onClose={() => setReportOpen(false)}
+      />
+    </>
   );
 }
