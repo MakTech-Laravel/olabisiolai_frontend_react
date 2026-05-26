@@ -13,7 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -466,15 +466,10 @@ export default function GettingMorePositiveReviews() {
             <p className="mx-auto mt-4 max-w-xl text-base text-gray-600">
               Create or upgrade your Gidira profile and start growing your business today.
             </p>
-            <Button
-              asChild
-              className="mt-8 h-12 rounded-lg bg-primary px-8 text-base font-medium text-white hover:bg-primary/80"
-            >
-              <Link to="/login" className="inline-flex items-center gap-2">
-                <ArrowRight className="size-4" aria-hidden />
-                Get Started
-              </Link>
-            </Button>
+            <VendorOnboardingCtaButton className="mt-8 inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-8 text-base font-medium text-white hover:bg-primary/80">
+              <ArrowRight className="size-4" aria-hidden />
+              Get Started
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>

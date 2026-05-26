@@ -1,3 +1,8 @@
+import type { NavigateFunction } from "react-router-dom";
+
+import type { AuthUser } from "@/auth/types";
+import { handleVendorOnboardingCta } from "@/features/vendor/vendorOnboardingCta";
+
 export const TRADE_CHOOSE_PLAN_SECTION_ID = "choose-your-plan";
 
 export type TradePlanTier = "basic" | "premium";
@@ -38,4 +43,21 @@ export function tradePlanActionPath(
   }
 
   return "/vendor/choose-your-plan";
+}
+
+/**
+ * Trade page primary CTAs (hero + footer).
+ * Guests scroll to plans; customers see logout prompt; vendors go to onboarding.
+ */
+export async function handleTradePageVendorCta(options: {
+  user: AuthUser | null;
+  logout: () => Promise<void>;
+  isAuthenticated: boolean;
+  navigate: NavigateFunction;
+}): Promise<void> {
+  return handleVendorOnboardingCta({
+    ...options,
+    vendorDestination: "choose-plan",
+    scrollToPlans: scrollToTradeChoosePlan,
+  });
 }

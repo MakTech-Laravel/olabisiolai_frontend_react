@@ -5,6 +5,7 @@ import {
   PenSquare,
 } from "lucide-react";
 
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -404,13 +405,10 @@ export default function WritingACompellingDescription() {
               Update your description today and see the difference it makes in your customer
               conversion rate.
             </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base"
-            >
+            <VendorOnboardingCtaButton className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base">
               <CheckCircle2 className="h-4 w-4" />
               Improve Your Profile
-            </Link>
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>

@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -352,13 +353,10 @@ export default function PricingYourServicesRight() {
             <p className="mx-auto mt-3 max-w-2xl text-sm text-body-secondary sm:text-base">
               Optimized pricing leads to 30% more conversions. Start upgrading your prices today.
             </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base"
-            >
+            <VendorOnboardingCtaButton className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base">
               <CircleCheck className="h-4 w-4" />
               Go to Business Dashboard
-            </Link>
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>

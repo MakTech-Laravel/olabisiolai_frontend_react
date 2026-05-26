@@ -11,6 +11,7 @@ import {
   Shirt,
 } from "lucide-react";
 
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -19,16 +20,16 @@ const HERO_IMAGE = "/images/feature/1-2.jpg";
 const PRODUCT_IN_USE_IMAGE = "/images/feature/1-4.jpg";
 
 const RECOMMENDED_APPS = [
-  { 
-    name: "Snapseed", 
+  {
+    name: "Snapseed",
     image: "/images/apps/Background (1).png" // Add your image here
   },
-  { 
-    name: "Lightroom Mobile", 
+  {
+    name: "Lightroom Mobile",
     image: "/images/apps/Background (2).png" // Add your image here
   },
-  { 
-    name: "Adobe Express", 
+  {
+    name: "Adobe Express",
     image: "/images/apps/Background (3).png" // Add your image here
   },
 ];
@@ -65,7 +66,7 @@ export default function PhotosThatSell() {
 
       <section className="pb-10 lg:pb-16">
         <div className={cn(container, "space-y-8 lg:space-y-12")}>
-          
+
           {/* Why Photos Matter */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-ink sm:text-3xl">Why Photos Matter</h2>
@@ -219,11 +220,11 @@ export default function PhotosThatSell() {
                       className="flex items-center gap-3 rounded-xl bg-card p-4 shadow-sm"
                     >
                       <div className="h-9 w-9 overflow-hidden rounded-lg bg-surface-soft">
-                        <img 
-                          src={app.image} 
-                          alt={app.name} 
+                        <img
+                          src={app.image}
+                          alt={app.name}
                           className="h-full w-full object-contain"
-                          onError={(e) => (e.currentTarget.style.display = 'none')} 
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
                       </div>
                       <p className="font-medium text-ink">{app.name}</p>
@@ -261,25 +262,25 @@ export default function PhotosThatSell() {
               </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
-              <IndustryCard 
-                Icon={Utensils} 
-                title="Food & Restaurants" 
-                desc="Shoot from directly above (flat lay) or a 45-degree angle. Garnish for color." 
+              <IndustryCard
+                Icon={Utensils}
+                title="Food & Restaurants"
+                desc="Shoot from directly above (flat lay) or a 45-degree angle. Garnish for color."
               />
-              <IndustryCard 
-                Icon={Shirt} 
-                title="Fashion & Clothing" 
-                desc="Show texture details. Use models or high-quality mannequins." 
+              <IndustryCard
+                Icon={Shirt}
+                title="Fashion & Clothing"
+                desc="Show texture details. Use models or high-quality mannequins."
               />
-              <IndustryCard 
-                Icon={Sparkles} 
-                title="Beauty & Salon" 
-                desc="Focus on 'Before & After' shots with consistent lighting." 
+              <IndustryCard
+                Icon={Sparkles}
+                title="Beauty & Salon"
+                desc="Focus on 'Before & After' shots with consistent lighting."
               />
-              <IndustryCard 
-                Icon={Wrench} 
-                title="Tech & Repair" 
-                desc="Show the internal components and the precision of your tools." 
+              <IndustryCard
+                Icon={Wrench}
+                title="Tech & Repair"
+                desc="Show the internal components and the precision of your tools."
               />
             </div>
           </div>
@@ -325,13 +326,10 @@ export default function PhotosThatSell() {
               Start implementing these tips today and watch your engagement grow. A better profile
               means better business.
             </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base transition-opacity"
-            >
+            <VendorOnboardingCtaButton className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice transition-opacity hover:opacity-90 sm:text-base">
               <Upload className="h-4 w-4" />
               Upgrade Your Profile
-            </Link>
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>

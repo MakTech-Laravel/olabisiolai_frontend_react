@@ -1,7 +1,9 @@
 import { Plus, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/auth/useAuth";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { container } from "@/lib/container";
-import { scrollToTradeChoosePlan } from "@/lib/tradeLanding";
+import { handleTradePageVendorCta } from "@/lib/tradeLanding";
 
 const stats = [
   { n: "12,400+", l: "Active Vendors" },
@@ -11,6 +13,20 @@ const stats = [
 ] as const;
 
 export function LandingHero() {
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated, isSessionLoading, isUserLoading } = useAuth();
+  const authReady = !isSessionLoading && !isUserLoading;
+
+  const onStartTrading = () => {
+    if (!authReady) return;
+    void handleTradePageVendorCta({
+      user,
+      logout,
+      isAuthenticated,
+      navigate,
+    });
+  };
+
   return (
     <section className="bg-landing-hero px-4 pb-16 pt-16 sm:px-6 sm:pb-20 sm:pt-20 lg:px-8 lg:pb-24 lg:pt-24">
       <div
@@ -44,8 +60,9 @@ export function LandingHero() {
           <div className="flex flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-center">
             <button
               type="button"
-              onClick={scrollToTradeChoosePlan}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-8 py-4 text-base font-medium text-ice"
+              disabled={!authReady}
+              onClick={onStartTrading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-8 py-4 text-base font-medium text-ice disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus className="size-5 shrink-0" />
               Start Trading Now

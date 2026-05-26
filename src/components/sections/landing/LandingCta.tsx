@@ -1,9 +1,25 @@
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/auth/useAuth";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { container } from "@/lib/container";
-import { scrollToTradeChoosePlan } from "@/lib/tradeLanding";
+import { handleTradePageVendorCta } from "@/lib/tradeLanding";
 
 export function LandingCta() {
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated, isSessionLoading, isUserLoading } = useAuth();
+  const authReady = !isSessionLoading && !isUserLoading;
+
+  const onCreateProfile = () => {
+    if (!authReady) return;
+    void handleTradePageVendorCta({
+      user,
+      logout,
+      isAuthenticated,
+      navigate,
+    });
+  };
+
   return (
     <section className="bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
       <div
@@ -23,8 +39,9 @@ export function LandingCta() {
         <ScrollReveal delayMs={160}>
           <button
             type="button"
-            onClick={scrollToTradeChoosePlan}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand px-10 py-4 text-base font-medium text-ice"
+            disabled={!authReady}
+            onClick={onCreateProfile}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand px-10 py-4 text-base font-medium text-ice disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus className="size-5" />
             Create Your Business Profile

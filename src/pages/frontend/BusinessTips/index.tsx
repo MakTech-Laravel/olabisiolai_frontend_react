@@ -10,6 +10,7 @@ import {
   Triangle,
 } from "lucide-react";
 
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -134,13 +135,10 @@ export default function BusinessTips() {
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-stat-muted sm:text-base">
               Create or upgrade your Gidira profile and start growing your business today.
             </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-ice transition-opacity hover:opacity-90 sm:px-8 sm:text-base"
-            >
+            <VendorOnboardingCtaButton className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-ice transition-opacity hover:opacity-90 sm:px-8 sm:text-base">
               <Triangle className="h-4 w-4 fill-current" />
               Get Started
-            </Link>
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>

@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -565,12 +566,9 @@ export default function RespondingToCustomerEnquiries() {
             <p className="mx-auto mt-3 max-w-2xl text-sm text-body-secondary sm:text-base">
               Small improvements in response speed and clarity create meaningful growth.
             </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base"
-            >
+            <VendorOnboardingCtaButton className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-8 py-3 text-sm font-medium text-ice hover:opacity-90 sm:text-base">
               Update Your Profile
-            </Link>
+            </VendorOnboardingCtaButton>
           </div>
         </div>
       </section>
