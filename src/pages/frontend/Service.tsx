@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { env } from "@/config/env";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
+import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import {
   buildBusinessWhatsAppUrl,
   resolveBusinessContactPhone,
@@ -220,6 +221,9 @@ export default function Service() {
   const locationText = business?.location ?? stateData?.location ?? "";
   const latitude = business?.latitude ?? stateData?.latitude ?? null;
   const longitude = business?.longitude ?? stateData?.longitude ?? null;
+  const mapsUrl = locationText
+    ? buildGoogleMapsSearchUrl(latitude, longitude, locationText)
+    : null;
   const verified = business?.verified ?? stateData?.verified ?? false;
   const memberSince =
     business?.memberSince ?? stateData?.memberSince ?? null;
@@ -382,10 +386,23 @@ export default function Service() {
                     )}
                   </div>
                   <div className="space-y-4 text-base text-ink">
-                    <p className="flex items-start gap-1">
-                      <MapPin className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
-                      {locationText}
-                    </p>
+                    {locationText ? (
+                      <p className="flex items-start gap-1">
+                        <MapPin className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
+                        {mapsUrl ? (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand hover:underline"
+                          >
+                            {locationText}
+                          </a>
+                        ) : (
+                          locationText
+                        )}
+                      </p>
+                    ) : null}
                     {memberSince ? (
                       <p className="flex items-start gap-1">
                         <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />

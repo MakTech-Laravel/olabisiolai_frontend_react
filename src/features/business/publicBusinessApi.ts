@@ -118,11 +118,17 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const socialAccounts = parseSocialAccounts(r.social_accounts ?? r.socialAccounts);
 
   const locObj = rec(r.location);
+  const streetAddress = str(r.street_address ?? r.full_address, '').trim();
+  const formattedAddress = str(locObj?.formatted_address ?? r.formatted_address, '').trim();
+  const fullName = str(locObj?.full_name, '').trim();
   const city = str(locObj?.city ?? r.city, '');
   const state = str(locObj?.state ?? r.state, '');
   const location =
+    streetAddress ||
+    formattedAddress ||
+    fullName ||
     [city, state].filter(Boolean).join(', ') ||
-    str(locObj?.full_name ?? r.full_address ?? r.location, 'N/A');
+    str(r.location, 'N/A');
   const locationId = num(locObj?.id ?? r.location_id, 0) || null;
   const locationName = str(locObj?.name ?? locObj?.full_name ?? city, '') || null;
   const latRaw = num(locObj?.latitude ?? r.latitude, NaN);

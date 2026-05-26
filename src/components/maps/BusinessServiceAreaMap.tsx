@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ensureGoogleMapsConfigured } from '@/lib/googleMapsInit'
+import { buildGoogleMapsSearchUrl } from '@/lib/googleMapsUrl'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -16,13 +17,6 @@ type Props = {
 
 function embedMapUrl(query: string): string {
   return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=14&ie=UTF8&iwloc=&output=embed`
-}
-
-function externalMapsUrl(lat: number | null, lng: number | null, label: string): string {
-  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
-    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-  }
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`
 }
 
 export function BusinessServiceAreaMap({
@@ -52,7 +46,12 @@ export function BusinessServiceAreaMap({
   }, [latitude, longitude])
 
   const mapsHref = useMemo(
-    () => externalMapsUrl(center?.lat ?? null, center?.lng ?? null, locationLabel || businessName),
+    () =>
+      buildGoogleMapsSearchUrl(
+        center?.lat ?? null,
+        center?.lng ?? null,
+        locationLabel || businessName,
+      ),
     [businessName, center, locationLabel],
   )
 
