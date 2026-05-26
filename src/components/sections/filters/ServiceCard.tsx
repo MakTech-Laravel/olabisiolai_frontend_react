@@ -1,11 +1,26 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Heart, MapPin, Star, CheckCircle } from "lucide-react";
 
+import {
+  getFavoriteErrorMessage,
+  removeFavorite,
+  toggleFavorite,
+} from "@/api/favorites";
 import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
+import { useAuth } from "@/auth/useAuth";
+import {
+  fulfillPendingFavoriteSaveForBusiness,
+  setPendingFavoriteSave,
+} from "@/features/auth/pendingFavoriteSave";
+import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { businessProfilePath } from "@/lib/businessProfile";
+import { showError, showSuccess } from "@/lib/sweetAlert";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
+import { cn } from "@/lib/utils";
 
 interface ServiceCardProps {
   id: number;
@@ -47,8 +62,42 @@ export default function ServiceCard({
   vendorUserUuid,
 }: ServiceCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isSessionLoading, isUserLoading, isAuthenticated } = useAuth();
+  const { requireAuthNavigate, isAuthReady } = useRequireAuthNavigate();
+  const [isFavorited, setIsFavorited] = useState(favorited);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    setIsFavorited(favorited);
+  }, [favorited, id]);
+
+  useEffect(() => {
+    if (isSessionLoading || isUserLoading || !isAuthenticated || isFavorited) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const saved = await fulfillPendingFavoriteSaveForBusiness(queryClient, id);
+      if (!cancelled && saved) {
+        setIsFavorited(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    id,
+    isAuthenticated,
+    isFavorited,
+    isSessionLoading,
+    isUserLoading,
+    queryClient,
+  ]);
 
   const goToService = () => {
     navigate(businessProfilePath(id), {
@@ -68,13 +117,51 @@ export default function ServiceCard({
           logoUrl: logoUrl ?? image,
           coverPhotoUrls: coverPhotoUrls ?? (image ? [image] : []),
           verified,
-          isFavorite: favorited,
+          isFavorite: isFavorited,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
         },
       },
     });
+  };
+
+  const handleFavorite = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!isAuthReady || favoriteLoading) return;
+
+    if (!isAuthenticated) {
+      setPendingFavoriteSave(id);
+      requireAuthNavigate(pathname, { state: { from: pathname } });
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorited) {
+        await removeFavorite(id);
+        setIsFavorited(false);
+        showSuccess("Removed from saved listings");
+      } else {
+        const result = await toggleFavorite(id);
+        setIsFavorited(result.favorited);
+        showSuccess(
+          result.favorited ? "Saved to your favorites" : "Removed from saved listings",
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: ["user-favorites"] });
+      await queryClient.invalidateQueries({ queryKey: ["filters"] });
+      await queryClient.invalidateQueries({ queryKey: ["business", id] });
+    } catch (error) {
+      showError(
+        getFavoriteErrorMessage(
+          error,
+          "Could not update saved listing. Please try again.",
+        ),
+      );
+    } finally {
+      setFavoriteLoading(false);
+    }
   };
 
   return (
@@ -102,9 +189,24 @@ export default function ServiceCard({
             <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
           </div>
         )}
-        <div className="absolute top-4 right-4 bg-card rounded-full p-2 shadow-md">
-          <Heart className="w-5 h-5 text-muted-foreground" />
-        </div>
+        <button
+          type="button"
+          onClick={(event) => void handleFavorite(event)}
+          disabled={favoriteLoading || !isAuthReady}
+          className="absolute top-4 right-4 rounded-full bg-card p-2 shadow-md transition-colors hover:bg-card/95 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-pressed={isFavorited}
+          aria-label={isFavorited ? "Remove from favorites" : "Save listing"}
+        >
+          <Heart
+            className={cn(
+              "size-5 transition-colors",
+              isFavorited
+                ? "fill-brand-red text-brand-red"
+                : "text-muted-foreground hover:text-brand-red",
+            )}
+            aria-hidden
+          />
+        </button>
       </div>
       <div className="w-full p-6">
         <h3 className="text-lg font-inter font-semibold text-text-primary mb-1">
