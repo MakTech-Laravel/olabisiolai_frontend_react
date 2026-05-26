@@ -35,7 +35,7 @@ export function storeTradePlanSelection(plan: TradePlanTier): void {
 
 /** Where to send someone who picked a plan on the trade landing page. */
 export function tradePlanActionPath(
-  plan: TradePlanTier,
+  _plan: TradePlanTier,
   isAuthenticated: boolean,
 ): string {
   if (!isAuthenticated) {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
+import { Button } from "@/components/ui/button";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
