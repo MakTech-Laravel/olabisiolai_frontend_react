@@ -119,7 +119,7 @@ export function VendorProfileLocationSection() {
           </option>
         ))}
       </SelectField>
-      {fieldErrors.location_id ? (
+      {isEditing && fieldErrors.location_id ? (
         <p className="text-xs text-destructive">{fieldErrors.location_id}</p>
       ) : null}
 

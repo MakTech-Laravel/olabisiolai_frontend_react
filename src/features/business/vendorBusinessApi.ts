@@ -169,6 +169,8 @@ export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload)
     appendBusinessHoursToFormData(formData, payload.business_hours);
   }
 
-  const res = await request.put("/vendor/business/update", formData);
+  // PHP/nginx often drop multipart bodies on PUT; POST + _method matches vendor settings upload.
+  formData.append("_method", "PUT");
+  const res = await request.post("/vendor/business/update", formData);
   return res.data;
 }

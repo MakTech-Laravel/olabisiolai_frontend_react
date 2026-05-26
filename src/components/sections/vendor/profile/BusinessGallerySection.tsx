@@ -158,7 +158,7 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
           </div>
         )}
 
-        {fieldErrors.cover_photos ? (
+        {isEditing && fieldErrors.cover_photos ? (
           <p className="mt-3 text-xs text-destructive">{fieldErrors.cover_photos}</p>
         ) : null}
       </CardContent>

@@ -88,11 +88,39 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
 
   const startEditing = useCallback(() => {
     if (!query.data) return;
-    setDraft(profileToDraft(query.data));
+    const profile = query.data;
+    let nextDraft = profileToDraft(profile);
+
+    if (!nextDraft.categoryId && profile.categoryName && formOptions?.categories?.length) {
+      const match = formOptions.categories.find(
+        (category) =>
+          category.name.trim().toLowerCase() === profile.categoryName.trim().toLowerCase(),
+      );
+      if (match) {
+        nextDraft = { ...nextDraft, categoryId: String(match.id) };
+      }
+    }
+
+    if (!nextDraft.locationId && parsedLocations.length > 0) {
+      const stateKey = profile.state.trim().toLowerCase();
+      const cityKey = profile.city.trim().toLowerCase();
+      const lgaKey = profile.lga.trim().toLowerCase();
+      const match = parsedLocations.find(
+        (location) =>
+          location.state.trim().toLowerCase() === stateKey &&
+          location.city.trim().toLowerCase() === cityKey &&
+          location.lga.trim().toLowerCase() === lgaKey,
+      );
+      if (match) {
+        nextDraft = { ...nextDraft, locationId: match.id };
+      }
+    }
+
+    setDraft(nextDraft);
     setFieldErrors({});
     setSaveError(null);
     setIsEditing(true);
-  }, [query.data]);
+  }, [formOptions?.categories, parsedLocations, query.data]);
 
   const cancelEditing = useCallback(() => {
     setDraft((prev) => {

@@ -82,7 +82,7 @@ export function BusinessInfoCard() {
             onChange={(e) => setDraftField("businessName", e.target.value)}
             className="h-11 border-border-light bg-background text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
           />
-          {fieldErrors.business_name ? (
+          {isEditing && fieldErrors.business_name ? (
             <p className="mt-1 text-xs text-destructive">{fieldErrors.business_name}</p>
           ) : null}
         </div>
@@ -106,7 +106,7 @@ export function BusinessInfoCard() {
           ) : (
             <Input value={profile.categoryName} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
           )}
-          {fieldErrors.category_id ? (
+          {isEditing && fieldErrors.category_id ? (
             <p className="mt-1 text-xs text-destructive">{fieldErrors.category_id}</p>
           ) : null}
         </div>
@@ -134,7 +134,7 @@ export function BusinessInfoCard() {
                 className="h-11 border-border-light bg-background text-sm shadow-sm"
               />
             )}
-            {fieldErrors.subcategory ? (
+            {isEditing && fieldErrors.subcategory ? (
               <p className="mt-1 text-xs text-destructive">{fieldErrors.subcategory}</p>
             ) : null}
           </div>
@@ -151,7 +151,7 @@ export function BusinessInfoCard() {
             rows={5}
             className="min-h-[120px] max-h-56 resize-none border-border-light bg-background text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
           />
-          {fieldErrors.business_description ? (
+          {isEditing && fieldErrors.business_description ? (
             <p className="mt-1 text-xs text-destructive">{fieldErrors.business_description}</p>
           ) : null}
         </div>
@@ -195,7 +195,7 @@ export function BusinessInfoCard() {
                 <Plus className="mr-1 size-4" />
                 Add service
               </Button>
-              {fieldErrors.services ? (
+              {isEditing && fieldErrors.services ? (
                 <p className="text-xs text-destructive">{fieldErrors.services}</p>
               ) : null}
             </div>
@@ -281,7 +281,9 @@ export function BusinessInfoCard() {
               </div>
             )}
           </DashedFrame>
-          {fieldErrors.logo ? <p className="mt-1 text-xs text-destructive">{fieldErrors.logo}</p> : null}
+          {isEditing && fieldErrors.logo ? (
+            <p className="mt-1 text-xs text-destructive">{fieldErrors.logo}</p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

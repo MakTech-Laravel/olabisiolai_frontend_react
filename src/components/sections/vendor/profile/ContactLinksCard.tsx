@@ -86,7 +86,7 @@ export function ContactLinksCard() {
             readOnly={!isEditing}
             onChange={(v) => setDraftField("phone", v)}
             placeholder="Not set"
-            error={fieldErrors.phone}
+            error={isEditing ? fieldErrors.phone : undefined}
           />
           <IconInput
             label="WhatsApp Number"
@@ -95,7 +95,7 @@ export function ContactLinksCard() {
             readOnly={!isEditing}
             onChange={(v) => setDraftField("whatsapp", v)}
             placeholder="Not set"
-            error={fieldErrors.whatsapp}
+            error={isEditing ? fieldErrors.whatsapp : undefined}
           />
         </div>
 
@@ -107,7 +107,7 @@ export function ContactLinksCard() {
             readOnly={!isEditing}
             onChange={(v) => setDraftField("website", v)}
             placeholder="https://yourbusiness.com"
-            error={fieldErrors.website}
+            error={isEditing ? fieldErrors.website : undefined}
           />
           <IconInput label="Account email" icon={Mail} value={email} readOnly placeholder="Not set" />
         </div>
