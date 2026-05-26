@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { container } from "@/lib/container";
+import { scrollToTradeChoosePlan } from "@/lib/tradeLanding";
 
 export function LandingCta() {
   return (
@@ -21,13 +21,14 @@ export function LandingCta() {
           </p>
         </ScrollReveal>
         <ScrollReveal delayMs={160}>
-          <Link
-            to="/login"
+          <button
+            type="button"
+            onClick={scrollToTradeChoosePlan}
             className="inline-flex items-center gap-2 rounded-lg bg-brand px-10 py-4 text-base font-medium text-ice"
           >
             <Plus className="size-5" />
             Create Your Business Profile
-          </Link>
+          </button>
         </ScrollReveal>
       </div>
     </section>

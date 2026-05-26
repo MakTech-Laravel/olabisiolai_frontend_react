@@ -1,14 +1,29 @@
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ensureCanStartVendorSignup } from "@/features/vendor/vendorSignupFromCustomerGuard";
 import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
 
 import { PlanFeatureCheck, PlanFeatureLocked } from "./PlanFeature";
 
 export function PlanPricingCards() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { goToPremiumPayment } = useVendorSubscriptionAccess();
+
+  const handleFreePlan = async () => {
+    if (!(await ensureCanStartVendorSignup(user, logout))) return;
+    localStorage.setItem("vendorPlan", "free");
+    navigate("/vendor/plan-form");
+  };
+
+  const handlePremiumPlan = async () => {
+    if (!(await ensureCanStartVendorSignup(user, logout))) return;
+    localStorage.setItem("vendorPlan", "premium");
+    goToPremiumPayment();
+  };
 
   return (
     <div className="grid gap-6 md:grid-cols-2 md:gap-8">
@@ -35,10 +50,7 @@ export function PlanPricingCards() {
             type="button"
             variant="outline"
             className="w-full border-border py-6 text-base font-inter font-semibold hover:bg-muted/50"
-            onClick={() => {
-              localStorage.setItem("vendorPlan", "free"); // ✅ save plan
-              navigate("/vendor/plan-form");
-            }}
+            onClick={() => void handleFreePlan()}
           >
             Get started free
           </Button>
@@ -74,10 +86,7 @@ export function PlanPricingCards() {
           <Button
             type="button"
             className="w-full bg-brand-red py-6 text-base font-inter font-semibold text-white shadow-sm hover:bg-brand-red/90"
-            onClick={() => {
-              localStorage.setItem("vendorPlan", "premium");
-              goToPremiumPayment();
-            }}
+            onClick={() => void handlePremiumPlan()}
           >
             Start premium
           </Button>

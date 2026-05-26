@@ -1,7 +1,16 @@
-import { Link } from "react-router-dom";
+import * as React from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Check, Lock } from "lucide-react";
+import { useAuth } from "@/auth/useAuth";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { ensureCanStartVendorSignup } from "@/features/vendor/vendorSignupFromCustomerGuard";
 import { container } from "@/lib/container";
+import {
+  TRADE_CHOOSE_PLAN_SECTION_ID,
+  storeTradePlanSelection,
+  tradePlanActionPath,
+  type TradePlanTier,
+} from "@/lib/tradeLanding";
 
 const basicFeatures = [
   { text: "Business profile listing", included: true },
@@ -21,9 +30,60 @@ const premiumFeatures = [
   "Featured in search results",
 ] as const;
 
+function PlanCtaButton({
+  plan,
+  className,
+  children,
+}: {
+  plan: TradePlanTier;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated, isSessionLoading, isUserLoading } = useAuth();
+  const authReady = !isSessionLoading && !isUserLoading;
+
+  const handleClick = async () => {
+    if (isAuthenticated && !(await ensureCanStartVendorSignup(user, logout))) {
+      return;
+    }
+    storeTradePlanSelection(plan);
+    navigate(tradePlanActionPath(plan, isAuthenticated));
+  };
+
+  if (!authReady) {
+    return (
+      <button type="button" disabled className={className}>
+        {children}
+      </button>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        to={tradePlanActionPath(plan, false)}
+        onClick={() => storeTradePlanSelection(plan)}
+        className={className}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={() => void handleClick()} className={className}>
+      {children}
+    </button>
+  );
+}
+
 export function LandingPricing() {
   return (
-    <section className="bg-surface-wash px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+    <section
+      id={TRADE_CHOOSE_PLAN_SECTION_ID}
+      className="scroll-mt-24 bg-surface-wash px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
+    >
       <div className={container}>
         <ScrollReveal className="mb-12 text-center md:mb-16">
           <h2 className="text-2xl font-extrabold text-ink sm:text-3xl sm:leading-9">
@@ -65,12 +125,12 @@ export function LandingPricing() {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/login"
+              <PlanCtaButton
+                plan="basic"
                 className="mt-8 flex w-full items-center justify-center rounded-lg border border-border-gray py-3.5 font-heading text-sm font-bold text-ink-heading"
               >
                 Get Started Free
-              </Link>
+              </PlanCtaButton>
             </div>
           </ScrollReveal>
 
@@ -101,12 +161,12 @@ export function LandingPricing() {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/login"
+              <PlanCtaButton
+                plan="premium"
                 className="mt-8 flex w-full items-center justify-center rounded-lg bg-brand-red py-3 text-sm font-medium text-white"
               >
                 Start Premium
-              </Link>
+              </PlanCtaButton>
             </div>
           </ScrollReveal>
         </div>
