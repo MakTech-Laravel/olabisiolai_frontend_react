@@ -73,6 +73,64 @@ export async function searchConversations(query: string): Promise<Conversation[]
   return Array.isArray(data) ? data.map((r) => normalizeConversation(r)) : []
 }
 
+export type MessageRecipient = {
+  uuid: string
+  display_name: string
+  subtitle: string
+  avatar_url: string | null
+  is_verified?: boolean
+  role?: string
+  business_info_id?: number | null
+}
+
+function normalizeMessageRecipient(raw: Record<string, unknown>): MessageRecipient | null {
+  const uuid = typeof raw.uuid === 'string' ? raw.uuid.trim().toUpperCase() : ''
+  const displayName =
+    typeof raw.display_name === 'string'
+      ? raw.display_name.trim()
+      : typeof raw.name === 'string'
+        ? raw.name.trim()
+        : ''
+  if (!uuid || !displayName) return null
+
+  const subtitle =
+    typeof raw.subtitle === 'string' ? raw.subtitle.trim() : ''
+  const avatarUrl =
+    typeof raw.avatar_url === 'string' && raw.avatar_url.trim() !== ''
+      ? raw.avatar_url.trim()
+      : null
+  const businessInfoId =
+    typeof raw.business_info_id === 'number' && raw.business_info_id > 0
+      ? raw.business_info_id
+      : null
+
+  return {
+    uuid,
+    display_name: displayName,
+    subtitle,
+    avatar_url: avatarUrl,
+    is_verified: raw.is_verified === true,
+    role: typeof raw.role === 'string' ? raw.role : undefined,
+    business_info_id: businessInfoId,
+  }
+}
+
+export async function searchMessageRecipients(query: string): Promise<MessageRecipient[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+
+  const res = await api.get<ApiResponse<Record<string, unknown>[]>>(
+    messagingPath('/conversations/recipients/search'),
+    { params: { q } },
+  )
+  const { data } = unwrapApi(res.data)
+  if (!Array.isArray(data)) return []
+
+  return data
+    .map((row) => normalizeMessageRecipient(row))
+    .filter((row): row is MessageRecipient => row !== null)
+}
+
 export async function deleteConversation(uuid: string): Promise<void> {
   await api.delete(messagingPath(`/conversations/${uuid}`))
 }
