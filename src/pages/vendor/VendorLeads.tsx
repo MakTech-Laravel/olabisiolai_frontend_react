@@ -215,14 +215,6 @@ export default function VendorLeads() {
     );
   }, [messagesInf.data, selfId]);
 
-  const lastVendorMessageIndex = useMemo(() => {
-    let last = -1;
-    selectedConversation.forEach((m, i) => {
-      if (m.from === "vendor") last = i;
-    });
-    return last;
-  }, [selectedConversation]);
-
   const selectedLead =
     filteredLeads.find((lead) => lead.id === selectedLeadId) ?? filteredLeads[0] ?? null;
 
@@ -320,7 +312,6 @@ export default function VendorLeads() {
             <WhatsAppChatInterface
               selectedLead={selectedLead}
               selectedConversation={selectedConversation}
-              lastVendorMessageIndex={lastVendorMessageIndex}
               peerIsOnline={peerIsOnline}
               newMessagesDividerAfterIndex={-1}
               messageDraft={messageDraft}

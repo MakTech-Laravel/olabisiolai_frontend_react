@@ -1,5 +1,3 @@
-import type { To } from 'react-router-dom'
-
 /** Location state consumed by DirectMessage / user Messages to open or create a thread. */
 export type DirectMessageLocationState = {
   from?: string
@@ -34,10 +32,15 @@ export function hasPendingDirectMessageState(state: unknown): boolean {
 }
 
 /** Navigate target for starting a direct message with a business vendor. */
+export type DirectMessageNavigateTarget = {
+  pathname: string
+  state: DirectMessageLocationState
+}
+
 export function directMessageTo(
   input: DirectMessageLocationState,
   messagesPath: '/messages' | '/user/messages' = '/messages',
-): To {
+): DirectMessageNavigateTarget {
   return {
     pathname: messagesPath,
     state: buildDirectMessageState(input),

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Heart, MapPin, MessageCircle, Star } from 'lucide-react'
+import { CheckCircle2, Heart, MapPin, Star } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { removeFavorite } from '@/api/favorites'

@@ -164,8 +164,7 @@ export default function Service() {
   const routeState = (location.state as ServiceLocationState | null) ?? null;
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
-  const { requireAuthNavigate, isAuthReady, isAuthenticated } =
-    useRequireAuthNavigate();
+  const { requireAuthNavigate, isAuthReady } = useRequireAuthNavigate();
 
   const businessId = slug ? resolveBusinessIdFromSlug(slug) : null;
   const stateData = routeState?.business ?? null;
