@@ -208,6 +208,24 @@ export function validateBusinessHours(hours: BusinessHourEntry[]): Record<string
   return errors;
 }
 
+export function serializeBusinessHoursForApi(
+  hours: BusinessHourEntry[],
+): Array<{ day: string; is_closed: boolean; opens_at?: string; closes_at?: string }> {
+  return hours.map((entry) => {
+    const row: { day: string; is_closed: boolean; opens_at?: string; closes_at?: string } = {
+      day: entry.day,
+      is_closed: entry.isClosed,
+    };
+    if (!entry.isClosed && entry.opensAt) {
+      row.opens_at = entry.opensAt;
+    }
+    if (!entry.isClosed && entry.closesAt) {
+      row.closes_at = entry.closesAt;
+    }
+    return row;
+  });
+}
+
 export function appendBusinessHoursToFormData(formData: FormData, hours: BusinessHourEntry[]): void {
   hours.forEach((entry, index) => {
     formData.append(`business_hours[${index}][day]`, entry.day);

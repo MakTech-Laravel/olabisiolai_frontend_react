@@ -102,6 +102,18 @@ export function VendorProfileLocationSection() {
   const city = selectedLocation?.city || profile.city || "";
   const lga = selectedLocation?.lga || profile.lga || "";
 
+  const savedLocationOption = useMemo(() => {
+    if (!profile.locationId || profile.locationId <= 0) return null;
+    const id = String(profile.locationId);
+    if (parsedLocations.some((entry) => entry.id === id)) return null;
+    const label =
+      profile.locationFullName ||
+      [profile.state, profile.city, profile.lga].filter(Boolean).join(" / ") ||
+      profile.locationLabel;
+    if (!label.trim()) return null;
+    return { id, label };
+  }, [parsedLocations, profile]);
+
   return (
     <div className="space-y-5">
       <SelectField
@@ -113,6 +125,9 @@ export function VendorProfileLocationSection() {
         <option value="">
           {isPending ? "Loading locations…" : "Select location"}
         </option>
+        {savedLocationOption ? (
+          <option value={savedLocationOption.id}>{savedLocationOption.label}</option>
+        ) : null}
         {parsedLocations.map((option) => (
           <option key={option.id} value={option.id}>
             {option.label}
@@ -150,9 +165,10 @@ export function VendorProfileLocationSection() {
           }
           locationLabel={`${selectedLocation.state} / ${selectedLocation.city} / ${selectedLocation.lga}`}
         />
-      ) : locationId ? (
+      ) : locationId && !selectedLocation && !savedLocationOption ? (
         <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
-          Location details could not be matched to the catalog. Showing saved address:{" "}
+          Location details could not be matched to the catalog. Please pick a location from the list, or
+          keep your saved address:{" "}
           <span className="font-medium">{profile.locationFullName || profile.locationLabel}</span>
         </div>
       ) : null}

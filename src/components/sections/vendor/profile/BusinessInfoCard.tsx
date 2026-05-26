@@ -52,6 +52,15 @@ export function BusinessInfoCard() {
   const businessName = isEditing && draft ? draft.businessName : profile.businessName;
   const categoryId = isEditing && draft ? draft.categoryId : String(profile.categoryId);
   const subcategory = isEditing && draft ? draft.subcategory : profile.subcategory;
+  const savedCategoryOption = useMemo(() => {
+    if (!profile.categoryId || profile.categoryId <= 0) return null;
+    const id = String(profile.categoryId);
+    if (categories.some((category) => String(category.id) === id)) return null;
+    const name = profile.categoryName.trim();
+    if (!name) return null;
+    return { id, name };
+  }, [categories, profile.categoryId, profile.categoryName]);
+
   const subcategoryOptions = useMemo(() => {
     const category = categories.find((c) => String(c.id) === categoryId);
     return category?.subcategories ?? [];
@@ -97,6 +106,9 @@ export function BusinessInfoCard() {
               className="h-11 w-full rounded-md border border-border-light bg-background px-3 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
             >
               <option value="">{isPending ? "Loading…" : "Select category"}</option>
+              {savedCategoryOption ? (
+                <option value={savedCategoryOption.id}>{savedCategoryOption.name}</option>
+              ) : null}
               {categories.map((c) => (
                 <option key={c.id} value={String(c.id)}>
                   {c.name}

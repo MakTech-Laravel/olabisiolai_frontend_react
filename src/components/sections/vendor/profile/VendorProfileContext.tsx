@@ -226,9 +226,8 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         throw err;
       }
 
+      const profile = query.data;
       const selectedLocation = parsedLocations.find((l) => l.id === draft.locationId);
-      if (!selectedLocation) throw new Error("Invalid location selected.");
-
       const coverPhotos = draft.newCoverFiles.length > 0 ? draft.newCoverFiles : undefined;
 
       return updateVendorBusiness({
@@ -236,10 +235,10 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         subcategory: draft.subcategory.trim() || undefined,
         location_id: draft.locationId,
         business_name: draft.businessName,
-        location: selectedLocation.location,
-        state: selectedLocation.state,
-        city: selectedLocation.city,
-        lga: selectedLocation.lga,
+        location: selectedLocation?.location ?? profile?.locationLabel ?? "Nigeria",
+        state: selectedLocation?.state ?? profile?.state ?? "",
+        city: selectedLocation?.city ?? profile?.city ?? "",
+        lga: selectedLocation?.lga ?? profile?.lga ?? "",
         business_description: draft.description,
         services,
         phone: draft.phone,
