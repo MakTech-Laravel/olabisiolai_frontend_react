@@ -24,6 +24,7 @@ import {
   type VendorProfileDraft,
 } from "@/features/business/vendorProfileDraft";
 import { parseVendorLocationOptions } from "@/features/locations/vendorLocationOptions";
+import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useVendorBusinessProfile } from "@/features/business/useVendorBusinessProfile";
@@ -71,6 +72,11 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const query = useVendorBusinessProfile();
   const { data: formOptions } = useVendorBusinessFormOptions();
+  const { data: publicCategories = [] } = useCategoryCatalog();
+  const categoryCatalog =
+    (formOptions?.categories?.length ?? 0) > 0
+      ? (formOptions?.categories ?? [])
+      : publicCategories;
   const parsedLocations = useMemo(
     () => parseVendorLocationOptions(formOptions?.locations),
     [formOptions?.locations],
@@ -91,8 +97,8 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
     const profile = query.data;
     let nextDraft = profileToDraft(profile);
 
-    if (!nextDraft.categoryId && profile.categoryName && formOptions?.categories?.length) {
-      const match = formOptions.categories.find(
+    if (!nextDraft.categoryId && profile.categoryName && categoryCatalog.length > 0) {
+      const match = categoryCatalog.find(
         (category) =>
           category.name.trim().toLowerCase() === profile.categoryName.trim().toLowerCase(),
       );
@@ -120,7 +126,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
     setFieldErrors({});
     setSaveError(null);
     setIsEditing(true);
-  }, [formOptions?.categories, parsedLocations, query.data]);
+  }, [categoryCatalog, parsedLocations, query.data]);
 
   const cancelEditing = useCallback(() => {
     setDraft((prev) => {
@@ -208,6 +214,16 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       if (!draft.description.trim()) throw new Error("Business description is required.");
       if (!draft.phone.trim()) throw new Error("Phone number is required.");
       if (services.length === 0) throw new Error("Please add at least one service.");
+
+      const selectedCategory = categoryCatalog.find(
+        (category) => String(category.id) === draft.categoryId,
+      );
+      if (
+        (selectedCategory?.subcategories?.length ?? 0) > 0 &&
+        !draft.subcategory.trim()
+      ) {
+        throw new Error("Please select a subcategory.");
+      }
 
       const hourErrors = validateBusinessHours(draft.businessHours);
       if (Object.keys(hourErrors).length > 0) {

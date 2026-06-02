@@ -24,6 +24,7 @@ interface FeaturedCardProps {
   id: number;
   name: string;
   category: string;
+  subcategory?: string | null;
   location: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -44,6 +45,7 @@ export function FeaturedCard({
   id,
   name,
   category,
+  subcategory,
   location,
   latitude,
   longitude,
@@ -78,6 +80,7 @@ export function FeaturedCard({
           id,
           name,
           category,
+          subcategory: subcategory ?? null,
           location,
           latitude: latitude ?? null,
           longitude: longitude ?? null,

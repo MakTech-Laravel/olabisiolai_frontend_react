@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchPublicBusinessById,
+  resolvePublicBusinessSubcategory,
   type PublicBusiness,
 } from "@/features/business/publicBusinessApi";
 import type { SocialAccount } from "@/features/business/socialAccounts";
@@ -96,6 +97,7 @@ interface StateBusinessData {
   id: number;
   name: string;
   category: string;
+  subcategory?: string | null;
   location: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -123,6 +125,7 @@ function toPublicBusinessPlaceholder(data: StateBusinessData): PublicBusiness {
     id: data.id,
     name: data.name,
     category: data.category,
+    subcategory: data.subcategory ?? null,
     location: data.location,
     latitude: data.latitude ?? null,
     longitude: data.longitude ?? null,
@@ -196,7 +199,13 @@ export default function Service() {
 
   const name = business?.name ?? stateData?.name ?? "";
   const categoryLabel = business?.category ?? stateData?.category ?? "";
-  const subcategoryLabel = business?.subcategory ?? null;
+  const subcategoryLabel = useMemo(() => {
+    if (business) {
+      return resolvePublicBusinessSubcategory(business);
+    }
+    const fromState = stateData?.subcategory?.trim();
+    return fromState || null;
+  }, [business, stateData?.subcategory]);
   const boostActive = business?.boostStatus === "active";
   const isPremium = business?.isPremium ?? false;
   const description = business?.description ?? stateData?.description ?? "";
@@ -342,21 +351,31 @@ export default function Service() {
 
             <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
               <div className="flex flex-col gap-10">
-                <div className="space-y-4 pt-10 sm:pt-12">
-                  <h1 className="font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
-                    {name}
-                  </h1>
-                  {categoryLabel ? (
-                    <p className="text-base font-semibold text-brand md:text-lg">
-                      {categoryLabel}
-                      {subcategoryLabel ? (
-                        <span className="font-medium text-body-secondary">
-                          {" "}
-                          · {subcategoryLabel}
-                        </span>
-                      ) : null}
-                    </p>
-                  ) : null}
+                <div className="space-y-3 pt-10 sm:pt-12">
+                  <div className="space-y-3 rounded-xl bg-surface-soft px-4 py-5 sm:px-6 sm:py-6">
+                    <h1 className="font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
+                      {name}
+                    </h1>
+                    {categoryLabel || subcategoryLabel ? (
+                      <p className="text-base font-semibold leading-relaxed md:text-lg">
+                        {categoryLabel ? (
+                          <>
+                            <span className="text-ink">Category: </span>
+                            <span className="text-brand">{categoryLabel}</span>
+                          </>
+                        ) : null}
+                        {categoryLabel && subcategoryLabel ? (
+                          <span className="text-ink">, </span>
+                        ) : null}
+                        {subcategoryLabel ? (
+                          <>
+                            <span className="text-ink">Subcategory: </span>
+                            <span className="text-brand">{subcategoryLabel}</span>
+                          </>
+                        ) : null}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {boostActive ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-950">

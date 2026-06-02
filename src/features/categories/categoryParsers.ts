@@ -39,9 +39,20 @@ export function parseCategoryDto(raw: unknown): CategoryDto | null {
   }
 }
 
+/** Laravel JsonResource collections may serialize as `{ data: [...] }`. */
+export function unwrapResourceList(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw
+  const wrapped = asRecord(raw)
+  if (wrapped && Array.isArray(wrapped.data)) {
+    return wrapped.data
+  }
+  return []
+}
+
 export function parseCategoryList(raw: unknown): CategoryDto[] {
-  if (!Array.isArray(raw)) return []
-  return raw.map(parseCategoryDto).filter((c): c is CategoryDto => c !== null)
+  return unwrapResourceList(raw)
+    .map(parseCategoryDto)
+    .filter((c): c is CategoryDto => c !== null)
 }
 
 export function laravelInnerData(body: unknown): Record<string, unknown> | null {

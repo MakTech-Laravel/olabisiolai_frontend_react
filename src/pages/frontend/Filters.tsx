@@ -576,6 +576,7 @@ export default function Filters() {
                   id={business.id}
                   name={business.name}
                   category={business.category}
+                  subcategory={business.subcategory}
                   location={business.location}
                   latitude={business.latitude}
                   longitude={business.longitude}

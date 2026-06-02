@@ -26,6 +26,7 @@ interface ServiceCardProps {
   id: number;
   name: string;
   category: string;
+  subcategory?: string | null;
   location: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -46,6 +47,7 @@ export default function ServiceCard({
   id,
   name,
   category,
+  subcategory,
   location,
   latitude,
   longitude,
@@ -107,6 +109,7 @@ export default function ServiceCard({
           id,
           name,
           category,
+          subcategory: subcategory ?? null,
           location,
           latitude: latitude ?? null,
           longitude: longitude ?? null,

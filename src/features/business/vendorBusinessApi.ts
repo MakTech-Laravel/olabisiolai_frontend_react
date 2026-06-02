@@ -58,7 +58,7 @@ export async function createVendorBusiness(
   formData.append("subscription_plan", plan);
 
   formData.append("category_id", payload.category_id);
-  appendIfTruthy(formData, "subcategory", payload.subcategory);
+  formData.append("subcategory", payload.subcategory?.trim() ?? "");
   formData.append("location_id", payload.location_id.trim());
   formData.append("business_name", payload.business_name.trim());
   formData.append("location", payload.location.trim());
@@ -147,9 +147,7 @@ function buildUpdateVendorBusinessJsonBody(
     phone: payload.phone.trim(),
   };
 
-  if (payload.subcategory?.trim()) {
-    body.subcategory = payload.subcategory.trim();
-  }
+  body.subcategory = payload.subcategory?.trim() ?? "";
   if (payload.whatsapp?.trim()) {
     body.whatsapp = payload.whatsapp.trim();
   }
@@ -171,7 +169,7 @@ function appendUpdateVendorBusinessFormData(
   payload: UpdateVendorBusinessPayload,
 ): void {
   formData.append("category_id", payload.category_id);
-  appendIfTruthy(formData, "subcategory", payload.subcategory);
+  formData.append("subcategory", payload.subcategory?.trim() ?? "");
   formData.append("location_id", payload.location_id.trim());
   formData.append("business_name", payload.business_name.trim());
   formData.append("location", payload.location.trim());

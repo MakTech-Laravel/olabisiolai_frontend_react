@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 import { VendorProfileLocationSection } from "@/components/sections/vendor/profile/VendorProfileLocationSection";
@@ -43,7 +44,11 @@ export function BusinessInfoCard() {
     fieldErrors,
   } = useVendorProfileContext();
   const { data: formOptions, isPending, isError } = useVendorBusinessFormOptions();
-  const categories = formOptions?.categories ?? [];
+  const { data: publicCategories = [] } = useCategoryCatalog();
+  const categories =
+    (formOptions?.categories?.length ?? 0) > 0
+      ? (formOptions?.categories ?? [])
+      : publicCategories;
 
   if (!profile) return null;
 
@@ -67,11 +72,14 @@ export function BusinessInfoCard() {
   }, [categories, categoryId]);
 
   useEffect(() => {
-    if (!isEditing || !draft) return;
+    if (!isEditing || !draft || subcategoryOptions.length === 0) return;
     if (subcategory && !subcategoryOptions.includes(subcategory)) {
       setDraftField("subcategory", "");
     }
   }, [categoryId, isEditing, draft, subcategory, subcategoryOptions, setDraftField]);
+
+  const showSubcategoryField =
+    subcategoryOptions.length > 0 || Boolean(profile.subcategory?.trim());
 
   const description = isEditing && draft ? draft.description : profile.description;
   const services = isEditing && draft ? draft.services : profile.services;
@@ -123,7 +131,7 @@ export function BusinessInfoCard() {
           ) : null}
         </div>
 
-        {subcategoryOptions.length > 0 ? (
+        {showSubcategoryField ? (
           <div>
             <Label>Subcategory</Label>
             {isEditing ? (

@@ -6,6 +6,7 @@ import {
   type BusinessHoursDisplayRow,
 } from '@/features/business/businessHours';
 import { parseSocialAccounts, type SocialAccount } from '@/features/business/socialAccounts';
+import { normalizeSubcategories } from '@/features/categories/categoryParsers';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 export type PublicBusiness = {
@@ -14,6 +15,7 @@ export type PublicBusiness = {
   category: string;
   categoryId?: number | null;
   subcategory?: string | null;
+  categorySubcategories?: string[];
   phone?: string | null;
   whatsapp?: string | null;
   website?: string | null;
@@ -96,6 +98,37 @@ function parseCoverPhotoUrls(r: Raw): string[] {
     .filter((url) => url.length > 0);
 }
 
+export function resolveSubcategoryFromServices(
+  allowed: string[],
+  servicesOffered: string[],
+): string | null {
+  if (allowed.length === 0 || servicesOffered.length === 0) return null;
+
+  for (const service of servicesOffered) {
+    const normalizedService = service.trim();
+    if (!normalizedService) continue;
+
+    const match = allowed.find(
+      (candidate) => candidate.trim().toLowerCase() === normalizedService.toLowerCase(),
+    );
+    if (match) return match;
+  }
+
+  return null;
+}
+
+export function resolvePublicBusinessSubcategory(
+  business: Pick<PublicBusiness, 'subcategory' | 'servicesOffered' | 'categorySubcategories'>,
+): string | null {
+  const direct = business.subcategory?.trim();
+  if (direct) return direct;
+
+  return resolveSubcategoryFromServices(
+    business.categorySubcategories ?? [],
+    business.servicesOffered ?? [],
+  );
+}
+
 function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const r = rec(raw);
   if (!r) return null;
@@ -107,8 +140,12 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const category = str(catObj?.name ?? r.category_name ?? r.category, 'General');
   const categoryId = num(catObj?.id ?? r.category_id, NaN);
   const categoryIdNorm = Number.isFinite(categoryId) && categoryId > 0 ? categoryId : null;
+  const categorySubcategories = normalizeSubcategories(catObj?.subcategories);
   const subcategoryRaw = str(r.subcategory, '').trim();
-  const subcategory = subcategoryRaw || null;
+  const subcategory =
+    subcategoryRaw ||
+    resolveSubcategoryFromServices(categorySubcategories, parseStringList(r.services_offered)) ||
+    null;
   const phoneRaw = str(r.phone, '').trim();
   const phone = phoneRaw || null;
   const whatsappRaw = str(r.whatsapp, '').trim();
@@ -194,6 +231,7 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     category,
     categoryId: categoryIdNorm,
     subcategory,
+    categorySubcategories,
     phone,
     whatsapp,
     website,

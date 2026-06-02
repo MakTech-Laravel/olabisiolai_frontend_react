@@ -11,6 +11,7 @@ export type BusinessProfileNavState = {
     id: number
     name: string
     category: string
+    subcategory?: string | null
     location: string
     latitude?: number | null
     longitude?: number | null
