@@ -10,7 +10,6 @@ import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
 import { hasAnyRole } from "@/auth/roles";
 import type { BillingFormValues } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
-import { BillingInformationCard } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
 import { PaymentMethodsCard } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
@@ -518,11 +517,6 @@ export default function VendorSubscriptionPayPage() {
       return;
     }
 
-    if (!billing.email.trim() || !billing.phone.trim() || !billing.cardholder_name.trim()) {
-      showError("Please fill in billing name, email, and phone before paying.");
-      return;
-    }
-
     try {
       setIsPaying(true);
 
@@ -561,11 +555,6 @@ export default function VendorSubscriptionPayPage() {
     }
   };
 
-  const billingHint =
-    selectedProfileId !== null
-      ? "Using a saved profile — you can still edit fields before opening the payment window. Card number and CVV are entered only inside Flutterwave."
-      : null;
-
   if (isSessionLoading || (isUserLoading && !user && hasToken)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -603,7 +592,6 @@ export default function VendorSubscriptionPayPage() {
               selectedId={selectedProfileId}
               onSelect={onSelectProfile}
             />
-            <BillingInformationCard value={billing} onChange={setBilling} editable hint={billingHint} />
           </div>
 
           <OrderSummaryCard

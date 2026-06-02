@@ -9,6 +9,8 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+export type PaymentGateway = "flutterwave" | "paystack";
+
 export type VendorBoostPendingRequest = {
   id: number;
   tier_key: string;
@@ -60,6 +62,7 @@ export type BoostPaymentSession = {
   amount: number;
   currency: string;
   tx_ref: string;
+  gateway?: PaymentGateway | null;
   status: "pending" | "completed" | "failed";
   is_consumed: boolean;
   paid_at: string | null;
@@ -87,6 +90,7 @@ export async function initVendorBoostPayment(params: {
   locationId?: string | number;
   renewType?: BoostRenewType;
   sourceCampaignId?: number;
+  gateway?: PaymentGateway;
 }): Promise<{ payment: BoostPaymentSession; message: string }> {
   const locationId =
     params.locationId !== undefined && params.locationId !== ""
@@ -101,6 +105,7 @@ export async function initVendorBoostPayment(params: {
     location_id: locationId && Number.isFinite(locationId) ? locationId : undefined,
     renew_type: params.renewType,
     source_campaign_id: params.sourceCampaignId,
+    gateway: params.gateway,
   });
 
   return {
@@ -112,12 +117,14 @@ export async function initVendorBoostPayment(params: {
 export async function confirmVendorBoostPayment(
   paymentId: number,
   gatewayTransactionId: string,
+  gateway: PaymentGateway,
 ): Promise<{ message: string; campaigns: BoostCampaignRow[] }> {
   const res = await request.post<
     ApiEnvelope<{ payment: BoostPaymentSession; campaigns: BoostCampaignRow[] }>
   >("/vendor/boost/payment/confirm", {
     payment_id: paymentId,
     gateway_transaction_id: gatewayTransactionId,
+    gateway,
   });
 
   return {

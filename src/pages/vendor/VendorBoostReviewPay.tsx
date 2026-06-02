@@ -8,7 +8,6 @@ import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
 import type { BillingFormValues } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
-import { BillingInformationCard } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
 import { PaymentMethodsCard } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
@@ -209,7 +208,7 @@ export default function VendorBoostReviewPayPage() {
 
   const completeBoostCheckout = useCallback(
     async (paymentId: number, gatewayTransactionId: string) => {
-      const result = await confirmVendorBoostPayment(paymentId, gatewayTransactionId);
+      const result = await confirmVendorBoostPayment(paymentId, gatewayTransactionId, selectedGateway);
       clearBoostCheckoutSelection();
       void queryClient.invalidateQueries({ queryKey: ["vendor", "boost", "catalog"] });
       void queryClient.invalidateQueries({ queryKey: ["vendor", "business"] });
@@ -225,7 +224,7 @@ export default function VendorBoostReviewPayPage() {
 
   const completeVerificationCheckout = useCallback(
     async (paymentId: number, gatewayTransactionId: string) => {
-      const result = await confirmVerificationPayment(paymentId, gatewayTransactionId);
+      const result = await confirmVerificationPayment(paymentId, gatewayTransactionId, selectedGateway);
 
       if (result.consumable_payment_id) {
         sessionStorage.setItem("verificationPaymentId", String(result.consumable_payment_id));
@@ -457,11 +456,6 @@ export default function VendorBoostReviewPayPage() {
       return;
     }
 
-    if (!billing.email.trim() || !billing.phone.trim() || !billing.cardholder_name.trim()) {
-      showError("Please fill in billing name, email, and phone before paying.");
-      return;
-    }
-
     try {
       setIsPaying(true);
 
@@ -496,6 +490,7 @@ export default function VendorBoostReviewPayPage() {
           locationId: boostSelection.locationId,
           renewType: boostSelection.renewType,
           sourceCampaignId: boostSelection.sourceCampaignId,
+          gateway: selectedGateway,
         });
         setCheckoutPayment(payment);
         if (selectedGateway === "flutterwave") {
@@ -508,7 +503,7 @@ export default function VendorBoostReviewPayPage() {
 
       clearVerificationPaymentSession();
 
-      const payment = await initVerificationPayment(packageId);
+      const payment = await initVerificationPayment(packageId, selectedGateway);
       setCheckoutPayment(payment);
       sessionStorage.setItem("verificationPaymentId", String(payment.id));
       if (selectedGateway === "flutterwave") {
@@ -531,11 +526,6 @@ export default function VendorBoostReviewPayPage() {
     }
   };
 
-  const billingHint =
-    selectedProfileId !== null
-      ? "Using a saved profile — edit if needed. Card data is entered only inside Flutterwave."
-      : null;
-
   const methods = methodsData?.items ?? [];
 
   return (
@@ -551,7 +541,6 @@ export default function VendorBoostReviewPayPage() {
               selectedId={selectedProfileId}
               onSelect={onSelectProfile}
             />
-            <BillingInformationCard value={billing} onChange={setBilling} editable hint={billingHint} />
           </div>
 
           <OrderSummaryCard

@@ -1,5 +1,7 @@
 import { request } from '@/api/request';
 
+export type PaymentGateway = 'flutterwave' | 'paystack';
+
 export type VerificationPackage = {
   id: string;
   title: string;
@@ -15,6 +17,7 @@ export type VerificationPayment = {
   amount: number;
   currency: string;
   tx_ref: string;
+  gateway?: PaymentGateway | null;
   status: 'pending' | 'completed' | 'failed';
   is_consumed: boolean;
   paid_at: string | null;
@@ -82,10 +85,13 @@ export function clearVerificationPaymentSession(): void {
   sessionStorage.removeItem(PAYMENT_ID_KEY);
 }
 
-export async function initVerificationPayment(packageId: string): Promise<VerificationPayment> {
+export async function initVerificationPayment(
+  packageId: string,
+  gateway?: PaymentGateway,
+): Promise<VerificationPayment> {
   const res = await request.post<ApiEnvelope<{ payment: VerificationPayment }>>(
     '/vendor/verification/payment/init',
-    { package_id: packageId },
+    { package_id: packageId, gateway },
   );
   const data = assertApiSuccess(res.data);
   return data.payment;
@@ -100,6 +106,7 @@ export type ConfirmVerificationPaymentResult = {
 export async function confirmVerificationPayment(
   paymentId: number,
   gatewayTransactionId: string,
+  gateway: PaymentGateway,
 ): Promise<ConfirmVerificationPaymentResult> {
   const res = await request.post<
     ApiEnvelope<{
@@ -110,6 +117,7 @@ export async function confirmVerificationPayment(
   >('/vendor/verification/payment/confirm', {
     payment_id: paymentId,
     gateway_transaction_id: gatewayTransactionId,
+    gateway,
   });
   const data = assertApiSuccess(res.data);
   return {
