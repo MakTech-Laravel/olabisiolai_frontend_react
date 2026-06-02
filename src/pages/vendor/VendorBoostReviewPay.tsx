@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
+import PaystackPop from "@paystack/inline-js";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
@@ -61,7 +62,7 @@ function redirectToDocumentUpload(
 export default function VendorBoostReviewPayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedMethod, setSelectedMethod] = useState<"card" | "bank">("card");
+  const [selectedGateway, setSelectedGateway] = useState<"flutterwave" | "paystack">("paystack");
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutPayment, setCheckoutPayment] = useState<CheckoutPayment | null>(null);
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -292,6 +293,81 @@ export default function VendorBoostReviewPayPage() {
     return false;
   }, [navigate]);
 
+  const openPaystack = useCallback(
+    async (payment: CheckoutPayment) => {
+      if (!env.paystackPublicKey) {
+        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+        return;
+      }
+
+      const amountKobo = Math.round(amountNgn * 100);
+      const currency = payment.currency ?? packagesData?.currency ?? "NGN";
+      const reference = payment.tx_ref;
+
+      const paystack = new PaystackPop();
+      paystack.newTransaction({
+        key: env.paystackPublicKey,
+        email: customerEmail,
+        amount: amountKobo,
+        currency,
+        ref: reference,
+        metadata: {
+          custom_fields: [
+            { display_name: "Customer name", variable_name: "customer_name", value: customerName },
+            { display_name: "Phone", variable_name: "phone", value: customerPhone },
+          ],
+        },
+        onClose: () => setIsPaying(false),
+        callback: async (response: { reference?: string }) => {
+          try {
+            const paystackRef = String(response?.reference ?? "").trim();
+            if (!paystackRef) {
+              showError("Payment completed but Paystack reference was missing.");
+              return;
+            }
+
+            if (isBoostCheckout) {
+              await completeBoostCheckout(payment.id, paystackRef);
+            } else {
+              await completeVerificationCheckout(payment.id, paystackRef);
+              showSuccess("Payment confirmed. Upload your documents next.");
+            }
+
+            clearBoostCheckoutSelection();
+            void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
+          } catch (error) {
+            const recovered = await recoverAfterConfirmFailure();
+            if (recovered) {
+              showSuccess("Payment confirmed. Upload your documents next.");
+              return;
+            }
+            showError(
+              getLaravelErrorMessage(
+                error,
+                "Payment succeeded but confirmation failed. Contact support.",
+              ),
+            );
+          } finally {
+            setIsPaying(false);
+          }
+        },
+      });
+    },
+    [
+      amountNgn,
+      completeBoostCheckout,
+      completeVerificationCheckout,
+      customerEmail,
+      customerName,
+      customerPhone,
+      env.paystackPublicKey,
+      isBoostCheckout,
+      packagesData?.currency,
+      queryClient,
+      recoverAfterConfirmFailure,
+    ],
+  );
+
   useEffect(() => {
     if (!shouldOpenFlutterwave || !checkoutPayment) {
       return;
@@ -355,13 +431,12 @@ export default function VendorBoostReviewPayPage() {
   ]);
 
   const onConfirmPay = async () => {
-    if (selectedMethod === "bank") {
-      showInfo("Bank transfer checkout is coming soon. Please use Card for now.");
+    if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
+      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
       return;
     }
-
-    if (!env.flutterwavePublicKey) {
-      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
+    if (selectedGateway === "paystack" && !env.paystackPublicKey) {
+      showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
       return;
     }
 
@@ -396,14 +471,22 @@ export default function VendorBoostReviewPayPage() {
           checkoutPayment.status === "pending" &&
           !checkoutPayment.is_consumed
         ) {
-          setShouldOpenFlutterwave(true);
+          if (selectedGateway === "flutterwave") {
+            setShouldOpenFlutterwave(true);
+          } else {
+            void openPaystack(checkoutPayment);
+          }
           return;
         }
 
         if (boostSelection.requestId) {
           const { payment } = await resumeVendorBoostPayment(boostSelection.requestId);
           setCheckoutPayment(payment);
-          setShouldOpenFlutterwave(true);
+          if (selectedGateway === "flutterwave") {
+            setShouldOpenFlutterwave(true);
+          } else {
+            void openPaystack(payment);
+          }
           return;
         }
 
@@ -415,7 +498,11 @@ export default function VendorBoostReviewPayPage() {
           sourceCampaignId: boostSelection.sourceCampaignId,
         });
         setCheckoutPayment(payment);
-        setShouldOpenFlutterwave(true);
+        if (selectedGateway === "flutterwave") {
+          setShouldOpenFlutterwave(true);
+        } else {
+          void openPaystack(payment);
+        }
         return;
       }
 
@@ -424,7 +511,11 @@ export default function VendorBoostReviewPayPage() {
       const payment = await initVerificationPayment(packageId);
       setCheckoutPayment(payment);
       sessionStorage.setItem("verificationPaymentId", String(payment.id));
-      setShouldOpenFlutterwave(true);
+      if (selectedGateway === "flutterwave") {
+        setShouldOpenFlutterwave(true);
+      } else {
+        void openPaystack(payment);
+      }
     } catch (error) {
       setIsPaying(false);
       showError(getLaravelErrorMessage(error, "Unable to start payment."));
@@ -454,7 +545,7 @@ export default function VendorBoostReviewPayPage() {
 
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
-            <PaymentMethodsCard selectedMethod={selectedMethod} onMethodChange={setSelectedMethod} />
+            <PaymentMethodsCard selectedGateway={selectedGateway} onGatewayChange={setSelectedGateway} />
             <SavedCheckoutProfilesCard
               items={methods}
               selectedId={selectedProfileId}

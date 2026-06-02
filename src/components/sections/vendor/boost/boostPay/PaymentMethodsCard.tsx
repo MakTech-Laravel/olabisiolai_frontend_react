@@ -1,35 +1,35 @@
-import { CreditCard, Landmark } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function PaymentMethodsCard({
-  selectedMethod,
-  onMethodChange,
+  selectedGateway,
+  onGatewayChange,
 }: {
-  selectedMethod: "card" | "bank";
-  onMethodChange: (method: "card" | "bank") => void;
+  selectedGateway: "flutterwave" | "paystack";
+  onGatewayChange: (gateway: "flutterwave" | "paystack") => void;
 }) {
   return (
     <>
       <h2 className="font-inter font-semibold text-base uppercase text-foreground">Payment Methods</h2>
 
-      {/* Pay with Card */}
+      {/* Flutterwave */}
       <Card
-        className={`cursor-pointer transition-colors ${selectedMethod === "card" ? "border-brand-red" : ""}`}
-        onClick={() => onMethodChange("card")}
+        className={`cursor-pointer transition-colors ${selectedGateway === "flutterwave" ? "border-brand-red" : ""}`}
+        onClick={() => onGatewayChange("flutterwave")}
       >
         <CardContent className="flex items-center justify-between p-4">
           <div className="inline-flex items-center gap-3">
-            <div className={`rounded-md p-2 ${selectedMethod === "card" ? "bg-red-50 text-brand-red" : "bg-slate-100 text-slate-700"}`}>
+            <div
+              className={`rounded-md p-2 ${selectedGateway === "flutterwave" ? "bg-red-50 text-brand-red" : "bg-slate-100 text-slate-700"}`}
+            >
               <CreditCard className="w-10 h-10" />
             </div>
             <div>
-              <p className="font-inter font-semibold text-sm text-foreground">Pay with Card</p>
-              <p className="font-inter font-normal text-sm text-muted-foreground">
-                Secure checkout via Flutterwave
-              </p>
+              <p className="font-inter font-semibold text-sm text-foreground">Flutterwave</p>
+              <p className="font-inter font-normal text-sm text-muted-foreground">Secure card payment via Flutterwave</p>
             </div>
           </div>
-          {selectedMethod === "card" ? (
+          {selectedGateway === "flutterwave" ? (
             <div className="border-2 border-brand-red rounded-full p-1">
               <div className="w-4 h-4 bg-brand-red rounded-full"></div>
             </div>
@@ -39,22 +39,24 @@ export function PaymentMethodsCard({
         </CardContent>
       </Card>
 
-      {/* Bank Transfer */}
+      {/* Paystack */}
       <Card
-        className={`cursor-pointer transition-colors bg-[#EFF4FF] ${selectedMethod === "bank" ? "border-brand-red" : ""}`}
-        onClick={() => onMethodChange("bank")}
+        className={`cursor-pointer transition-colors bg-[#EFF4FF] ${selectedGateway === "paystack" ? "border-brand-red" : ""}`}
+        onClick={() => onGatewayChange("paystack")}
       >
         <CardContent className="flex items-center justify-between p-4">
           <div className="inline-flex items-center gap-3">
-            <div className={`rounded-md p-2 ${selectedMethod === "bank" ? "bg-red-50 text-brand-red" : "bg-slate-100 text-slate-700"}`}>
-              <Landmark className="size-4" />
+            <div
+              className={`rounded-md p-2 ${selectedGateway === "paystack" ? "bg-red-50 text-brand-red" : "bg-slate-100 text-slate-700"}`}
+            >
+              <CreditCard className="w-10 h-10" />
             </div>
             <div>
-              <p className="font-inter font-semibold text-sm text-foreground">Bank Transfer</p>
-              <p className="font-inter font-normal text-sm text-muted-foreground">Direct deposit to Gidira accounts</p>
+              <p className="font-inter font-semibold text-sm text-foreground">Paystack</p>
+              <p className="font-inter font-normal text-sm text-muted-foreground">Secure card payment via Paystack</p>
             </div>
           </div>
-          {selectedMethod === "bank" ? (
+          {selectedGateway === "paystack" ? (
             <div className="border-2 border-brand-red rounded-full p-1">
               <div className="w-4 h-4 bg-brand-red rounded-full"></div>
             </div>

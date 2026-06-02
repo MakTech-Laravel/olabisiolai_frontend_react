@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
+import PaystackPop from "@paystack/inline-js";
 import { Loader2 } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
+import { showError, showSuccess } from "@/lib/sweetAlert";
 
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
@@ -36,6 +37,7 @@ import {
   resumeSubscriptionPayment,
   type SubscriptionCheckoutInit,
   type SubscriptionPayment,
+  type PaymentGateway,
 } from "@/features/subscription/vendorSubscriptionApi";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
@@ -108,7 +110,12 @@ async function loadFreshSubscriptionCheckout(
     // fall through to new checkout
   }
 
-  const created = normalizeCheckout(await initSubscriptionPayment(boost));
+  const created = normalizeCheckout(
+    await initSubscriptionPayment({
+      gateway: "flutterwave",
+      boost,
+    }),
+  );
   if (!created) {
     throw new Error("Unable to prepare premium checkout.");
   }
@@ -136,7 +143,7 @@ function writeCheckoutToSession(checkout: SubscriptionCheckoutInit | null) {
 export default function VendorSubscriptionPayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedMethod, setSelectedMethod] = useState<"card" | "bank">("card");
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>("paystack");
   const [isPaying, setIsPaying] = useState(false);
   const [checkout, setCheckout] = useState<SubscriptionCheckoutInit | null>(() => readCheckoutFromSession());
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -237,6 +244,90 @@ export default function VendorSubscriptionPayPage() {
     setCheckout(normalized);
     writeCheckoutToSession(normalized);
   }, []);
+
+  const openPaystack = useCallback(
+    async (freshCheckout: SubscriptionCheckoutInit) => {
+      if (!env.paystackPublicKey) {
+        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+        return;
+      }
+
+      const paymentId = resolveSubscriptionPaymentId(freshCheckout);
+      const amountKobo = Math.round((freshCheckout.total_amount ?? amountNgn) * 100);
+      const currency = freshCheckout.currency ?? flutterCurrency;
+      const reference = freshCheckout.payments.subscription.tx_ref ?? flutterTxRef;
+
+      const paystack = new PaystackPop();
+      paystack.newTransaction({
+        key: env.paystackPublicKey,
+        email: customerEmail,
+        amount: amountKobo,
+        currency,
+        ref: reference,
+        metadata: {
+          custom_fields: [
+            { display_name: "Customer name", variable_name: "customer_name", value: customerName },
+            { display_name: "Phone", variable_name: "phone", value: customerPhone },
+          ],
+        },
+        onClose: () => {
+          setIsPaying(false);
+        },
+        callback: async (response: { reference?: string }) => {
+          try {
+            const paystackRef = String(response?.reference ?? "").trim();
+            if (!paystackRef) {
+              showError("Payment completed but Paystack reference was missing.");
+              return;
+            }
+
+            const result = await confirmSubscriptionPayment(paymentId, paystackRef, "paystack");
+
+            persistCheckout(null);
+            clearBoostCheckoutSelection();
+
+            if (result.subscription.is_premium_active) {
+              localStorage.setItem("vendorPlan", "premium");
+            } else {
+              localStorage.removeItem("vendorPlan");
+            }
+            localStorage.setItem("vendorBusinessCreated", "true");
+            primeVendorSubscriptionCaches(queryClient, result.subscription);
+
+            navigate("/vendor/dashboard", { replace: true });
+            showSuccess(result.message || "Premium subscription activated successfully.");
+
+            void queryClient.invalidateQueries({ queryKey: ["vendor"] });
+            void queryClient.invalidateQueries({ queryKey: ["vendor", "onboarding", "status"] });
+            void queryClient.invalidateQueries({ queryKey: ["vendor", "subscription", "status"] });
+            void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
+          } catch (error) {
+            persistCheckout(null);
+            showError(
+              getLaravelErrorMessage(
+                error,
+                "Payment succeeded but premium activation failed. Tap Pay again on this page to retry activation.",
+              ),
+            );
+          } finally {
+            setIsPaying(false);
+          }
+        },
+      });
+    },
+    [
+      amountNgn,
+      customerEmail,
+      customerName,
+      customerPhone,
+      env.paystackPublicKey,
+      flutterCurrency,
+      flutterTxRef,
+      navigate,
+      persistCheckout,
+      queryClient,
+    ],
+  );
 
   useEffect(() => {
     const sub = subscriptionStatus?.subscription;
@@ -364,7 +455,7 @@ export default function VendorSubscriptionPayPage() {
             paymentId = resolveSubscriptionPaymentId(fresh);
           }
 
-          const result = await confirmSubscriptionPayment(paymentId, String(txId));
+          const result = await confirmSubscriptionPayment(paymentId, String(txId), "flutterwave");
 
           closePaymentModal();
           persistCheckout(null);
@@ -418,13 +509,12 @@ export default function VendorSubscriptionPayPage() {
   };
 
   const onConfirmPay = async () => {
-    if (selectedMethod === "bank") {
-      showInfo("Bank transfer checkout is coming soon. Please use Card for now.");
+    if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
+      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
       return;
     }
-
-    if (!env.flutterwavePublicKey) {
-      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
+    if (selectedGateway === "paystack" && !env.paystackPublicKey) {
+      showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
       return;
     }
 
@@ -436,13 +526,26 @@ export default function VendorSubscriptionPayPage() {
     try {
       setIsPaying(true);
 
-      const fresh = await loadFreshSubscriptionCheckout(
-        boostSelection
-          ? { tierKey: boostSelection.tierKey, durationDays: boostSelection.durationDays }
-          : undefined,
-      );
+      const resumed = normalizeCheckout(await resumeSubscriptionPayment().catch(() => null));
+      const fresh =
+        resumed ??
+        normalizeCheckout(
+          await initSubscriptionPayment({
+            gateway: selectedGateway,
+            boost: boostSelection
+              ? { tierKey: boostSelection.tierKey, durationDays: boostSelection.durationDays }
+              : undefined,
+          }),
+        );
+      if (!fresh) {
+        throw new Error("Unable to prepare premium checkout.");
+      }
       persistCheckout(fresh);
-      setShouldOpenFlutterwave(true);
+      if (selectedGateway === "flutterwave") {
+        setShouldOpenFlutterwave(true);
+      } else {
+        void openPaystack(fresh);
+      }
     } catch (error) {
       setIsPaying(false);
       showError(getLaravelErrorMessage(error, "Unable to start payment."));
@@ -494,7 +597,7 @@ export default function VendorSubscriptionPayPage() {
 
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
-            <PaymentMethodsCard selectedMethod={selectedMethod} onMethodChange={setSelectedMethod} />
+            <PaymentMethodsCard selectedGateway={selectedGateway} onGatewayChange={setSelectedGateway} />
             <SavedCheckoutProfilesCard
               items={methods}
               selectedId={selectedProfileId}

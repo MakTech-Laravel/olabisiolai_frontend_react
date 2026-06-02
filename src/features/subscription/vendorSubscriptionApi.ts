@@ -1,5 +1,7 @@
 import { request } from '@/api/request';
 
+export type PaymentGateway = 'flutterwave' | 'paystack';
+
 export type SubscriptionPackage = {
   id: string;
   title: string;
@@ -16,6 +18,7 @@ export type SubscriptionPayment = {
   amount: number;
   currency: string;
   tx_ref: string;
+  gateway?: PaymentGateway | null;
   status: 'pending' | 'completed' | 'failed';
   is_consumed: boolean;
   paid_at: string | null;
@@ -71,19 +74,23 @@ export async function fetchSubscriptionStatus(): Promise<{
   return res.data.data;
 }
 
-export async function initSubscriptionPayment(boost?: {
-  tierKey: string;
-  durationDays: number;
-}): Promise<SubscriptionCheckoutInit> {
-  const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>(
-    '/vendor/subscription/payment/init',
-    boost
+export async function initSubscriptionPayment(
+  args?: {
+    gateway?: PaymentGateway;
+    boost?: { tierKey: string; durationDays: number };
+  },
+): Promise<SubscriptionCheckoutInit> {
+  const boost = args?.boost;
+  const gateway = args?.gateway;
+  const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>('/vendor/subscription/payment/init', {
+    gateway,
+    ...(boost
       ? {
         boost_tier_key: boost.tierKey,
         boost_duration_days: boost.durationDays,
       }
-      : undefined,
-  );
+      : null),
+  });
   if (res.data?.success !== true || !res.data.data) {
     throw new Error(res.data?.message ?? 'Unable to start premium payment.');
   }
@@ -103,6 +110,7 @@ export async function resumeSubscriptionPayment(): Promise<SubscriptionCheckoutI
 export async function confirmSubscriptionPayment(
   paymentId: number,
   gatewayTransactionId: string,
+  gateway: PaymentGateway,
 ): Promise<{
   subscription: VendorSubscriptionState;
   message: string;
@@ -112,6 +120,7 @@ export async function confirmSubscriptionPayment(
   >('/vendor/subscription/payment/confirm', {
     payment_id: paymentId,
     gateway_transaction_id: gatewayTransactionId,
+    gateway,
   });
   if (res.data?.success !== true || !res.data.data?.subscription) {
     throw new Error(res.data?.message ?? 'Premium activation failed.');
