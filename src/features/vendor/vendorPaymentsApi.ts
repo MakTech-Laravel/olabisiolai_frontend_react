@@ -1,5 +1,7 @@
 import { request } from '@/api/request';
 
+export type PaymentGatewayCode = 'paystack' | 'flutterwave';
+
 export type VendorPaymentListItem = {
   id: number;
   purpose: string;
@@ -11,6 +13,8 @@ export type VendorPaymentListItem = {
   currency: string;
   status: string;
   tx_ref: string;
+  /** Resolved gateway (stored value or legacy Flutterwave inference). */
+  gateway?: PaymentGatewayCode | null;
   paid_at: string | null;
   paid_at_iso: string | null;
   created_at: string | null;

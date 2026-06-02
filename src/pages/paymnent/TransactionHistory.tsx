@@ -38,6 +38,18 @@ function purposeBadgeClass(purpose: string) {
   return "bg-slate-100 text-slate-800";
 }
 
+function gatewayLabel(gateway: string | null | undefined) {
+  if (gateway === "paystack") return "Paystack";
+  if (gateway === "flutterwave") return "Flutterwave";
+  return null;
+}
+
+function gatewayBadgeClass(gateway: string | null | undefined) {
+  if (gateway === "paystack") return "bg-emerald-100 text-emerald-900";
+  if (gateway === "flutterwave") return "bg-orange-100 text-orange-900";
+  return "bg-slate-100 text-slate-600";
+}
+
 /** Months from first successful subscription payment month through current month (newest first). */
 function monthsFromSubscriptionRange(range: SubscriptionMonthRange | undefined): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [{ value: "", label: "All months" }];
@@ -203,12 +215,13 @@ export function TransactionHistory() {
         ) : null}
 
         {!isPending && !isError ? (
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-[#EFF4FF] text-xs font-inter font-bold uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">When</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Reference</th>
+                <th className="px-4 py-3">Gateway</th>
                 <th className="px-4 py-3">Description</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Status</th>
@@ -218,7 +231,7 @@ export function TransactionHistory() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-8 text-center text-muted-foreground" colSpan={7}>
+                  <td className="px-4 py-8 text-center text-muted-foreground" colSpan={8}>
                     No payments match these filters. Try another type or month.
                   </td>
                 </tr>
@@ -237,6 +250,20 @@ export function TransactionHistory() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{row.tx_ref}</td>
+                    <td className="px-4 py-3">
+                      {gatewayLabel(row.gateway) ? (
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                            gatewayBadgeClass(row.gateway),
+                          )}
+                        >
+                          {gatewayLabel(row.gateway)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-inter text-sm font-semibold">{row.description}</p>
                     </td>

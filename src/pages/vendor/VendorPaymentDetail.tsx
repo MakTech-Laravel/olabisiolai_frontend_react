@@ -64,6 +64,16 @@ export default function VendorPaymentDetailPage() {
                 <dt className="text-xs font-semibold uppercase text-muted-foreground">Status</dt>
                 <dd className="font-medium capitalize">{p.status}</dd>
               </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase text-muted-foreground">Gateway</dt>
+                <dd className="font-medium capitalize">
+                  {p.gateway === "paystack"
+                    ? "Paystack"
+                    : p.gateway === "flutterwave"
+                      ? "Flutterwave"
+                      : "—"}
+                </dd>
+              </div>
               <div className="sm:col-span-2">
                 <dt className="text-xs font-semibold uppercase text-muted-foreground">Description</dt>
                 <dd className="font-medium">{p.description}</dd>
