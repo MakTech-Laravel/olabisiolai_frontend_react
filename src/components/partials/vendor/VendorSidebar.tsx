@@ -18,8 +18,10 @@ import {
   User,
   X,
 } from "lucide-react";
-import logo from "@/assets/vendor/logo.jpeg";
 import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
+import { useVendorBusinessProfile } from "@/features/business/useVendorBusinessProfile";
+
+const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
 
 const items = [
   { to: "/vendor/dashboard", label: "Dashboard", icon: LayoutGrid, end: true, premiumOnly: false },
@@ -110,6 +112,8 @@ export function VendorSidebar({
   const { pathname } = useActiveUrl();
 
   const { isPremiumActive, canPayPremium, goToPremiumPayment, goToBoost } = useVendorSubscriptionAccess();
+  const vendorProfileQuery = useVendorBusinessProfile();
+  const isVerified = vendorProfileQuery.data?.verificationStatus === "approved";
 
   return (
     <>
@@ -146,10 +150,44 @@ export function VendorSidebar({
           </button>
         </div>
 
-        {/* Logo */}
-        <Link to="/" className="px-4 pt-2 pb-2 text-center" onClick={onClose}>
-          <img src={logo} alt="Gidira Vendor" className="h-full w-auto" />
-        </Link>
+        {/* Brand + verification (dynamic) */}
+        <div className="px-4 pt-2 pb-3">
+          <div className="rounded-xl border border-border-light bg-white px-3 py-3">
+            <Link to="/" onClick={onClose} className="block">
+              <div className="flex items-center gap-2">
+                <img src={VENDOR_LOGO_SRC} alt="Gidira" className="h-7 w-auto" />
+                <span className="text-sm font-semibold font-manrope text-[#1E3A8A]">
+                  Vendor
+                </span>
+              </div>
+            </Link>
+
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p
+                className={cn(
+                  "text-xs font-medium font-inter",
+                  isVerified ? "text-emerald-700" : "text-muted-foreground",
+                )}
+              >
+                {isVerified ? "Verified Merchant" : "Unverified"}
+              </p>
+
+              {isVerified ? (
+                <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+              ) : (
+                <Button
+                  asChild
+                  size="sm"
+                  className="h-7 rounded-lg bg-brand-red px-3 text-[11px] hover:bg-brand-red/90"
+                >
+                  <Link to="/vendor/verification" onClick={onClose}>
+                    Verify Now
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-4 mt-2 grid gap-1 content-start">

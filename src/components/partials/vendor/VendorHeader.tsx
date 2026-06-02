@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { VendorNotificationBell } from "@/components/partials/vendor/VendorNotificationBell";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/vendor/logo.jpeg";
+
+const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
 
 function HeaderSearch({ className }: { className?: string }) {
   return (
@@ -228,8 +229,11 @@ export function VendorHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
 
           <Link to="/" className="inline-flex shrink-0 items-center">
-            <div className="h-20 w-full">
-              <img src={logo} alt="Gidira Vendor" className="h-full w-auto" />
+            <div className="flex items-center gap-2">
+              <img src={VENDOR_LOGO_SRC} alt="Gidira" className="h-8 w-auto" />
+              <span className="text-sm font-semibold font-manrope text-[#1E3A8A]">
+                Vendor
+              </span>
             </div>
           </Link>
 
