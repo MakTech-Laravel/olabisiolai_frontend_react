@@ -82,6 +82,7 @@ export default function Featured() {
                   phone={business.phone}
                   whatsapp={business.whatsapp}
                   vendorUserUuid={business.vendorUserUuid}
+                  socialAccounts={business.socialAccounts}
                 />
               ))}
             </div>

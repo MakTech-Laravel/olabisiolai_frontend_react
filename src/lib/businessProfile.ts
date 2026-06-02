@@ -26,6 +26,7 @@ export type BusinessProfileNavState = {
     phone?: string | null
     whatsapp?: string | null
     website?: string | null
+    socialAccounts?: Array<{ platform: string; url: string }>
   }
 }
 

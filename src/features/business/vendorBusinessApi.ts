@@ -154,9 +154,10 @@ function buildUpdateVendorBusinessJsonBody(
   if (payload.website?.trim()) {
     body.website = payload.website.trim();
   }
-  if (payload.social_accounts?.length) {
-    body.social_accounts = payload.social_accounts;
-  }
+  body.social_accounts = (payload.social_accounts ?? []).map((account) => ({
+    platform: account.platform,
+    url: account.url.trim(),
+  }));
   if (payload.business_hours?.length) {
     body.business_hours = serializeBusinessHoursForApi(payload.business_hours);
   }

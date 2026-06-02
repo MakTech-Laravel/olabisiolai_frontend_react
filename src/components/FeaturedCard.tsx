@@ -18,6 +18,7 @@ import {
   removeFavorite,
   toggleFavorite,
 } from "@/api/favorites";
+import type { SocialAccount } from "@/features/business/socialAccounts";
 import { showError, showSuccess } from "@/lib/sweetAlert";
 
 interface FeaturedCardProps {
@@ -39,6 +40,7 @@ interface FeaturedCardProps {
   phone?: string | null;
   whatsapp?: string | null;
   vendorUserUuid?: string | null;
+  socialAccounts?: SocialAccount[];
 }
 
 export function FeaturedCard({
@@ -60,6 +62,7 @@ export function FeaturedCard({
   phone,
   whatsapp,
   vendorUserUuid,
+  socialAccounts,
 }: FeaturedCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
   const queryClient = useQueryClient();
@@ -95,6 +98,7 @@ export function FeaturedCard({
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
+          socialAccounts: socialAccounts ?? [],
         },
       },
     });

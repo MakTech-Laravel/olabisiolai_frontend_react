@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/useAuth";
 import { SocialAccountsEditor } from "@/components/business/SocialAccountsEditor";
+import { SocialAccountsViewList } from "@/components/business/SocialAccountsViewList";
 import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 
@@ -112,15 +113,32 @@ export function ContactLinksCard() {
           <IconInput label="Account email" icon={Mail} value={email} readOnly placeholder="Not set" />
         </div>
 
-        {isEditing && draft ? (
-          <SocialAccountsEditor
-            accounts={draft.socialAccounts}
-            onChange={(accounts) => setDraftField("socialAccounts", accounts)}
-            error={fieldErrors.social_accounts}
-          />
-        ) : (
-          <BusinessSocialLinks accounts={socialAccounts} />
-        )}
+        <div className="space-y-4 rounded-xl border border-border-light bg-card p-4 sm:p-5">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Social accounts</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Add links to your social profiles. Visitors can tap the icons on your business page.
+            </p>
+          </div>
+
+          {isEditing && draft ? (
+            <SocialAccountsEditor
+              accounts={draft.socialAccounts}
+              onChange={(accounts) => setDraftField("socialAccounts", accounts)}
+              error={fieldErrors.social_accounts}
+              showIntro={false}
+            />
+          ) : (
+            <>
+              <SocialAccountsViewList accounts={socialAccounts} />
+              <BusinessSocialLinks
+                accounts={socialAccounts}
+                title="Preview on business page"
+                className="border-t border-border-light pt-4"
+              />
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

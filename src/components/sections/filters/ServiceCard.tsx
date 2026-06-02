@@ -19,6 +19,7 @@ import {
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { businessProfilePath } from "@/lib/businessProfile";
 import { showError, showSuccess } from "@/lib/sweetAlert";
+import type { SocialAccount } from "@/features/business/socialAccounts";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ interface ServiceCardProps {
   phone?: string | null;
   whatsapp?: string | null;
   vendorUserUuid?: string | null;
+  socialAccounts?: SocialAccount[];
 }
 
 export default function ServiceCard({
@@ -62,6 +64,7 @@ export default function ServiceCard({
   phone,
   whatsapp,
   vendorUserUuid,
+  socialAccounts,
 }: ServiceCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
   const queryClient = useQueryClient();
@@ -124,6 +127,7 @@ export default function ServiceCard({
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
+          socialAccounts: socialAccounts ?? [],
         },
       },
     });

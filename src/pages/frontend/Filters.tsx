@@ -591,6 +591,7 @@ export default function Filters() {
                   phone={business.phone}
                   whatsapp={business.whatsapp}
                   vendorUserUuid={business.vendorUserUuid}
+                  socialAccounts={business.socialAccounts}
                 />
               ))
             )}

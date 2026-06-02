@@ -17,6 +17,7 @@ type SocialAccountsEditorProps = {
   disabled?: boolean;
   error?: string | null;
   className?: string;
+  showIntro?: boolean;
 };
 
 export function SocialAccountsEditor({
@@ -25,6 +26,7 @@ export function SocialAccountsEditor({
   disabled,
   error,
   className,
+  showIntro = true,
 }: SocialAccountsEditorProps) {
   const rows = accounts.length > 0 ? accounts : [];
 
@@ -44,9 +46,11 @@ export function SocialAccountsEditor({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <p className="text-sm text-muted-foreground">
-        Add links to your social profiles. Visitors can tap the icons on your business page.
-      </p>
+      {showIntro ? (
+        <p className="text-sm text-muted-foreground">
+          Add links to your social profiles. Visitors can tap the icons on your business page.
+        </p>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground italic">No social accounts added yet.</p>
