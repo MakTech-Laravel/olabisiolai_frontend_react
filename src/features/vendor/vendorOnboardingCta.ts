@@ -2,10 +2,6 @@ import type { NavigateFunction } from "react-router-dom";
 
 import { hasAnyRole } from "@/auth/roles";
 import type { AuthUser } from "@/auth/types";
-import {
-  ensureCanStartVendorSignup,
-  isLoggedInCustomerOnly,
-} from "./vendorSignupFromCustomerGuard";
 
 export type VendorOnboardingGuestDestination = "trade-plans" | "vendor-register";
 export type VendorOnboardingVendorDestination = "dashboard" | "choose-plan";
@@ -23,7 +19,7 @@ export type VendorOnboardingCtaOptions = {
 
 /**
  * Vendor signup CTAs used on Trade, Business Tips, and similar pages.
- * - Customer account → logout prompt (no user dashboard redirect).
+ * - Logged-in customer account → choose a plan (no logout friction; no user dashboard redirect).
  * - Vendor → dashboard or choose-your-plan.
  * - Guest → trade plans or vendor registration.
  */
@@ -32,18 +28,13 @@ export async function handleVendorOnboardingCta(
 ): Promise<void> {
   const {
     user,
-    logout,
+    logout: _logout,
     isAuthenticated,
     navigate,
     guestDestination = "trade-plans",
     vendorDestination = "dashboard",
     scrollToPlans,
   } = options;
-
-  if (isAuthenticated && isLoggedInCustomerOnly(user)) {
-    await ensureCanStartVendorSignup(user, logout);
-    return;
-  }
 
   if (isAuthenticated && user && hasAnyRole(user, "vendor")) {
     navigate(
@@ -54,8 +45,16 @@ export async function handleVendorOnboardingCta(
     return;
   }
 
+  // When a page provides an in-place scroll target (e.g. the Trade landing page),
+  // prefer scrolling over routing. This avoids "URL changed but page didn't move"
+  // and keeps the experience frictionless for guests and logged-in users.
   if (scrollToPlans) {
     scrollToPlans();
+    return;
+  }
+
+  if (isAuthenticated) {
+    navigate("/vendor/choose-your-plan");
     return;
   }
 

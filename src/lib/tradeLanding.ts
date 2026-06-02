@@ -47,7 +47,7 @@ export function tradePlanActionPath(
 
 /**
  * Trade page primary CTAs (hero + footer).
- * Guests scroll to plans; customers see logout prompt; vendors go to onboarding.
+ * Guests scroll to plans; logged-in users can proceed to choose a plan; vendors go to onboarding.
  */
 export async function handleTradePageVendorCta(options: {
   user: AuthUser | null;
