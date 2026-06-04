@@ -172,6 +172,7 @@ function primaryBoostPrice(lga: LGA): number {
 
 export default function LocationHierarchy() {
   const [locations, setLocations] = useState<StateEntry[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -185,6 +186,8 @@ export default function LocationHierarchy() {
   // Load locations on component mount
   useEffect(() => {
     const loadLocations = async () => {
+      setLoadingLocations(true)
+      setSaveError(null)
       try {
         const fetchedLocations = await adminListLocations()
         let stateEntries: StateEntry[] = []
@@ -197,6 +200,8 @@ export default function LocationHierarchy() {
       } catch (error) {
         console.error('Failed to load locations:', error)
         setSaveError(error instanceof Error ? error.message : 'Failed to load locations.')
+      } finally {
+        setLoadingLocations(false)
       }
     }
 
@@ -612,7 +617,12 @@ export default function LocationHierarchy() {
           </div>
 
           <div className="px-4 py-4 sm:px-6 sm:py-5">
-            {locations.length === 0 ? (
+            {loadingLocations ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-6 py-12 text-center">
+                <p className="text-sm font-medium text-slate-600">Loading all states and LGAs…</p>
+                <p className="mt-1 text-xs text-slate-500">This may take a moment for the full Nigeria catalog.</p>
+              </div>
+            ) : locations.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-6 py-12 text-center">
                 <Globe className="mx-auto size-10 text-slate-300" />
                 <p className="mt-3 text-sm font-medium text-slate-600">No locations yet</p>

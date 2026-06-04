@@ -387,9 +387,8 @@ export async function adminStoreLocation(params: {
   }
 }
 
-export async function adminListLocations(): Promise<AdminSavedLocation[]> {
-  const res = await request.post('/admin/locations', {})
-  const root = asRecord(res.data)
+function parseAdminLocationListPage(body: unknown): AdminSavedLocation[] {
+  const root = asRecord(body)
   if (!root || root.success !== true) {
     throw new Error(asString(root?.message, 'Failed to load locations.'))
   }
@@ -410,6 +409,12 @@ export async function adminListLocations(): Promise<AdminSavedLocation[]> {
       }
     })
     .filter((item): item is AdminSavedLocation => item !== null)
+}
+
+/** Loads the full Nigeria catalog (all LGAs) for the admin hierarchy screen. */
+export async function adminListLocations(): Promise<AdminSavedLocation[]> {
+  const res = await request.post('/admin/locations', { all: true })
+  return parseAdminLocationListPage(res.data)
 }
 
 export async function adminUpdateLocationStatus(params: {
