@@ -44,6 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserState(nextUser)
   }, [])
 
+  const resetAuthState = React.useCallback(() => {
+    clearAccessToken()
+    setAccessTokenState(null)
+    setUser(null)
+    setIsUserLoading(false)
+  }, [setUser])
+
   const refreshSession = React.useCallback(async (): Promise<AuthUser | null> => {
     const prev = userRef.current ?? getStoredAuthUser()
     const shouldBlock = env.authStrategy === 'http_only_cookie' || !prev
@@ -65,13 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(u)
         return u
       }
+      // Expired or invalid Bearer token — clear client session without forcing /login on public pages.
+      if (env.authStrategy === 'bearer_memory' && getAccessToken()) {
+        resetAuthState()
+      }
       return null
     } finally {
       if (shouldBlock) {
         setIsUserLoading(false)
       }
     }
-  }, [setUser])
+  }, [resetAuthState, setUser])
 
   React.useEffect(() => {
     if (env.authStrategy !== 'http_only_cookie') {
@@ -122,13 +133,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setToken = React.useCallback((token: string) => {
     setAccessToken(token)
     setAccessTokenState(token)
-  }, [])
-
-  const resetAuthState = React.useCallback(() => {
-    clearAccessToken()
-    setAccessTokenState(null)
-    setUser(null)
-    setIsUserLoading(false)
   }, [])
 
   const can = React.useCallback(

@@ -18,6 +18,8 @@ let warnedMissingReverbEnv = false
 export function EchoProvider({ children }: { children: React.ReactNode }) {
   const { accessToken, isAuthenticated } = useAuth()
   const [echo, setEcho] = React.useState<ReverbEcho | null>(() => getEcho())
+  /** Avoid POST /presence/offline for guests — that route requires auth and triggers a 401 → /login redirect. */
+  const wasAuthenticatedRef = React.useRef(isAuthenticated)
 
   React.useEffect(() => {
     if (
@@ -42,11 +44,15 @@ export function EchoProvider({ children }: { children: React.ReactNode }) {
       return
     }
     if (!isAuthenticated) {
-      void setMessagingOffline().catch(() => { })
+      if (wasAuthenticatedRef.current) {
+        void setMessagingOffline().catch(() => { })
+      }
+      wasAuthenticatedRef.current = false
       disconnectEcho()
       setEcho(null)
       return
     }
+    wasAuthenticatedRef.current = true
     const instance = createEcho(accessToken)
     setEcho(instance)
   }, [isAuthenticated, accessToken])
