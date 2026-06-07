@@ -471,6 +471,8 @@ export async function fetchPublicBusinessesPage(params?: {
 
   const endpoints = strictFiltered ? endpointsStrict : endpointsLoose;
 
+  let lastError: unknown = null;
+
   for (const { label, fn } of endpoints) {
     try {
       const data = await fn();
@@ -483,10 +485,15 @@ export async function fetchPublicBusinessesPage(params?: {
       }
       if (parsedPage.items.length > 0) return parsedPage;
     } catch (err) {
+      lastError = err;
       if (import.meta.env.DEV) {
         console.warn('[publicBusinessApi] failed:', label, err);
       }
     }
+  }
+
+  if (lastError) {
+    throw lastError;
   }
 
   return {

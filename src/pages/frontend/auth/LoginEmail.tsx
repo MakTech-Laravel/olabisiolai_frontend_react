@@ -172,13 +172,21 @@ export default function LoginEmail() {
             </div>
           </form>
 
-          <div className="flex items-center gap-2 mb-5">
-            <p className="text-base font-inter font-normal text-muted-foreground">
-              Don't have an account?
-            </p>
-            <Link to={`/register?role=${role}`} className="text-primary hover:underline">
-              Sign Up
+          <div className="flex flex-col items-center gap-3 mb-5">
+            <Link
+              to={`/login/phone?role=${role}`}
+              className="text-sm text-primary hover:underline"
+            >
+              Login with phone instead
             </Link>
+            <div className="flex items-center gap-2">
+              <p className="text-base font-inter font-normal text-muted-foreground">
+                Don't have an account?
+              </p>
+              <Link to={`/register?role=${role}`} className="text-primary hover:underline">
+                Sign Up
+              </Link>
+            </div>
           </div>
         </div>
       </div>

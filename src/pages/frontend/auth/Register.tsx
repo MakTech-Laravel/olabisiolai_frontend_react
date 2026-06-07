@@ -4,16 +4,17 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { registerAndLoginUser } from "@/features/auth/service";
-import { type AuthRole } from "@/features/auth/types";
-
+import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
 
 export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
+  const [verificationChannel, setVerificationChannel] = React.useState<VerificationChannel>("email");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -24,6 +25,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [success, setSuccess] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -35,6 +37,7 @@ export default function Register() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSuccess(null);
 
     if (!acceptedTerms) {
@@ -47,29 +50,50 @@ export default function Register() {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+
+    if (verificationChannel === "email" && !trimmedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (verificationChannel === "phone" && !trimmedPhone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
     setLoading(true);
     saveAuthRole(role);
 
     try {
-      const loggedInUser = await registerAndLoginUser({
+      await registerAndLoginUser({
         first_name: firstName,
         last_name: lastName,
-        email,
-        phone,
+        verification_channel: verificationChannel,
+        ...(verificationChannel === "email" ? { email: trimmedEmail } : { phone: trimmedPhone }),
         password,
         password_confirmation: passwordConfirmation,
         role,
       });
+
       setSuccess("Registration successful. Redirecting to OTP verification...");
-      const verifiedRole = role;
-      const verifiedEmail = encodeURIComponent(loggedInUser?.email ?? email);
-      navigate(
-        `/otp-verification?purpose=register&email=${verifiedEmail}&role=${verifiedRole}`,
-        { replace: true },
-      );
+      const params = new URLSearchParams({
+        purpose: "register",
+        role,
+        channel: verificationChannel,
+      });
+      if (verificationChannel === "email") {
+        params.set("email", trimmedEmail);
+      } else {
+        params.set("phone", trimmedPhone);
+      }
+
+      navigate(`/otp-verification?${params.toString()}`, { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
-      setError(message);
+      const errors = getAuthFieldErrors(err);
+      setFieldErrors(errors);
+      setError(getAuthErrorMessage(err, "Registration failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -121,7 +145,35 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-normal text-muted-foreground mb-2">
+                Sign up with <span className="text-brand-red">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setVerificationChannel("email")}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "email"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerificationChannel("phone")}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "phone"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Phone number
+                </button>
+              </div>
+            </div>
+
+            {verificationChannel === "email" ? (
               <div>
                 <label className="block text-sm font-normal text-muted-foreground mb-2">
                   Email <span className="text-brand-red">*</span>
@@ -134,21 +186,30 @@ export default function Register() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
+                {fieldErrors.email ? (
+                  <p className="mt-1 text-sm text-destructive">{fieldErrors.email}</p>
+                ) : null}
               </div>
+            ) : (
               <div>
                 <label className="block text-sm font-normal text-muted-foreground mb-2">
                   Phone Number <span className="text-brand-red">*</span>
                 </label>
                 <Input
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter your phone number"
+                  placeholder="e.g. 08012345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
                 />
+                {fieldErrors.phone ? (
+                  <p className="mt-1 text-sm text-destructive">{fieldErrors.phone}</p>
+                ) : null}
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-normal text-muted-foreground mb-2">
@@ -171,6 +232,9 @@ export default function Register() {
                   <Eye className="w-4 h-4" />
                 </button>
               </div>
+              {fieldErrors.password ? (
+                <p className="mt-1 text-sm text-destructive">{fieldErrors.password}</p>
+              ) : null}
             </div>
 
             <div>

@@ -16,6 +16,8 @@ import {
   type AuthRole,
   type LoginPayload,
   type PasswordResetOtpPayload,
+  type PhoneLoginRequestPayload,
+  type PhoneVerifyOtpPayload,
   type RegisterPayload,
   type VerifyOtpPayload,
 } from '@/features/auth/types'
@@ -179,6 +181,50 @@ export async function loginAdmin(payload: AdminLoginPayload, handlers: AuthHandl
   throw last;
 }
 
+export async function requestPhoneLoginOtp(payload: PhoneLoginRequestPayload) {
+  const res = await request.post<unknown>('/auth/phone/request-otp', payload)
+  logOtpFromResponse(res.data, 'phone login request')
+  return res.data
+}
+
+export async function resendPhoneLoginOtp(payload: PhoneLoginRequestPayload) {
+  const res = await request.post<unknown>('/auth/phone/resend-otp', payload)
+  logOtpFromResponse(res.data, 'phone login resend')
+}
+
+export async function verifyPhoneLoginOtp(
+  payload: PhoneVerifyOtpPayload,
+  handlers: AuthHandlers,
+): Promise<LoginUserResult> {
+  try {
+    const res = await request.post<unknown>('/auth/phone/verify-otp', payload)
+
+    if (isTwoFactorLoginRequired(res.data)) {
+      const twoFactorToken = extractTwoFactorLoginToken(res.data)
+      if (!twoFactorToken) {
+        throw new Error('Two-factor authentication is required, but the login token is missing.')
+      }
+      handlers.resetAuthState()
+      return { kind: 'two_factor', twoFactorToken }
+    }
+
+    const user = await hydrateSessionFromLoginBody(
+      res.data,
+      handlers,
+      'Unable to restore your session after phone login.',
+      'Login response is missing access token.',
+    )
+    if (!user) {
+      throw new Error('Unable to restore your session after phone login.')
+    }
+    ensureRoleMatchesExpected(user, payload.role)
+    return { kind: 'authenticated', user }
+  } catch (error) {
+    handlers.resetAuthState()
+    throw error
+  }
+}
+
 export async function registerUser(payload: RegisterPayload) {
   const res = await request.post<unknown>('/auth/register', payload)
   logOtpFromResponse(res.data, 'register')
@@ -188,18 +234,19 @@ export async function registerAndLoginUser(payload: RegisterPayload) {
   const res = await request.post<unknown>('/auth/register', payload)
   logOtpFromResponse(res.data, 'register')
 
-  // Write the token directly to storage (NOT React state via handlers.setToken).
-  // Updating React state here would make isAuthenticated=true on /register,
-  // causing GuestGate to redirect before navigate() to /otp-verification fires.
-  // AuthProvider picks up the stored token when the OTP page mounts or on reload,
-  // and skips the /me call (which 404s for unverified users).
   const token = extractBearerTokenFromLoginBody(res.data)
   const responseUser = extractUserFromAuthPayload(res.data)
+  const contactId =
+    payload.verification_channel === 'phone'
+      ? (payload.phone ?? '')
+      : (payload.email ?? '')
+
   const storedUser =
     responseUser ??
     ({
-      id: payload.email,
+      id: contactId,
       email: payload.email,
+      phone: payload.phone,
       role: payload.role,
       roles: [payload.role],
     } satisfies AuthUser)
@@ -230,9 +277,11 @@ export async function verifyRegistrationOtp(
   selectedRole: AuthRole,
 ) {
   const verifyPayload = {
-    ...payload,
     code: payload.otp,
     verification_code: payload.otp,
+    ...(payload.email ? { email: payload.email } : {}),
+    ...(payload.phone ? { phone: payload.phone } : {}),
+    ...(payload.verification_channel ? { verification_channel: payload.verification_channel } : {}),
   }
   const res = await request.post<unknown>('/auth/otp/verify', verifyPayload)
   logOtpFromResponse(res.data, 'verify-otp')
@@ -259,8 +308,9 @@ export async function verifyRegistrationOtp(
     // and profile endpoint may be unavailable. Keep role context so routing
     // can still proceed to the correct dashboard.
     const fallbackUser: AuthUser = {
-      id: payload.email,
+      id: payload.email ?? payload.phone ?? 'unknown',
       email: payload.email,
+      phone: payload.phone,
       role: selectedRole,
       roles: [selectedRole],
     }

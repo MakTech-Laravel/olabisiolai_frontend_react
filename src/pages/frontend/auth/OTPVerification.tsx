@@ -1,18 +1,20 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
 import { getAuthErrorMessage } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { getAccessToken, getStoredAuthUser } from "@/auth/token";
 import {
   requestPasswordResetOtp,
+  resendPhoneLoginOtp,
   resendRegistrationOtp,
   resolvePostLoginPath,
+  verifyPhoneLoginOtp,
   verifyRegistrationOtp,
 } from "@/features/auth/service";
-import { type AuthRole } from "@/features/auth/types";
+import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
 
 const OTP_LENGTH = 6;
 const RESEND_WINDOW_MS = 5 * 60 * 1000;
@@ -26,8 +28,8 @@ type ResendLimiterState = {
   bannedUntil: number | null;
 };
 
-function getLimiterStorageKey(purpose: string | null, email: string) {
-  return `${RESEND_STORAGE_PREFIX}:${purpose ?? "unknown"}:${email.toLowerCase()}`;
+function getLimiterStorageKey(purpose: string | null, identifier: string) {
+  return `${RESEND_STORAGE_PREFIX}:${purpose ?? "unknown"}:${identifier.toLowerCase()}`;
 }
 
 function readLimiterState(storageKey: string): ResendLimiterState {
@@ -67,6 +69,7 @@ function formatRemaining(ms: number) {
 
 export default function OTPVerification() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
 
@@ -81,11 +84,15 @@ export default function OTPVerification() {
 
   const purpose = searchParams.get("purpose");
   const email = searchParams.get("email")?.trim() ?? "";
+  const phone = searchParams.get("phone")?.trim() ?? "";
+  const channel = (searchParams.get("channel") as VerificationChannel | null) ?? (phone ? "phone" : "email");
   const role: AuthRole = resolveAuthRole(searchParams.get("role"));
+  const identifier =
+    purpose === "login" || (purpose === "register" && channel === "phone") ? phone : email;
   const limiterKey = React.useMemo(() => {
-    if (!email) return null;
-    return getLimiterStorageKey(purpose, email);
-  }, [purpose, email]);
+    if (!identifier) return null;
+    return getLimiterStorageKey(purpose, identifier);
+  }, [purpose, identifier]);
 
   // Sync the registration token from storage into React auth state so the
   // user appears logged in immediately after registration (without reload).
@@ -169,24 +176,79 @@ export default function OTPVerification() {
     }
 
     // Existing forgot-password flow still uses this screen without register context.
+    if (purpose === "reset") {
+      navigate("/reset-password", { replace: true });
+      return;
+    }
+
+    if (purpose === "login") {
+      if (!phone) {
+        setError("Missing phone number for OTP verification. Please try again.");
+        return;
+      }
+
+      setLoading(true);
+      saveAuthRole(role);
+
+      try {
+        const returnTo = (location.state as { from?: unknown } | null)?.from;
+        const loginResult = await verifyPhoneLoginOtp(
+          { phone, code: otpCode, role },
+          { authStrategy, setToken, setUser, refreshSession, resetAuthState },
+        );
+
+        if (loginResult.kind === "two_factor") {
+          navigate("/login/two-factor", {
+            replace: true,
+            state: {
+              twoFactorToken: loginResult.twoFactorToken,
+              role,
+              from: returnTo,
+            },
+          });
+          return;
+        }
+
+        navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
+      } catch (err) {
+        setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (purpose !== "register") {
       navigate("/reset-password", { replace: true });
       return;
     }
 
-    if (!email) {
+    if (!email && !phone) {
+      setError("Missing contact details for OTP verification. Please register again.");
+      return;
+    }
+
+    if (channel === "email" && !email) {
       setError("Missing email for OTP verification. Please register again.");
       return;
     }
 
-    const normalizedEmail = email.toLowerCase();
+    if (channel === "phone" && !phone) {
+      setError("Missing phone number for OTP verification. Please register again.");
+      return;
+    }
 
     setLoading(true);
     saveAuthRole(role);
 
     try {
       const loggedInUser = await verifyRegistrationOtp(
-        { email: normalizedEmail, otp: otpCode },
+        {
+          ...(email ? { email: email.toLowerCase() } : {}),
+          ...(phone ? { phone } : {}),
+          otp: otpCode,
+          verification_channel: channel,
+        },
         { authStrategy, setToken, setUser, refreshSession, resetAuthState },
         role,
       );
@@ -202,8 +264,12 @@ export default function OTPVerification() {
     setError(null);
     setResendMessage(null);
 
-    if (!email) {
-      setError("Missing email. Please go back and try again.");
+    if (!identifier) {
+      setError(
+        purpose === "login" || channel === "phone"
+          ? "Missing phone number. Please go back and try again."
+          : "Missing email. Please go back and try again.",
+      );
       return;
     }
 
@@ -245,12 +311,18 @@ export default function OTPVerification() {
     try {
       if (purpose === "register") {
         await resendRegistrationOtp({ email: normalizedEmail });
+      } else if (purpose === "login") {
+        await resendPhoneLoginOtp({ phone, role });
       } else {
         await requestPasswordResetOtp({ email: normalizedEmail });
       }
       limiter.attempts += 1;
       writeLimiterState(limiterKey, limiter);
-      setResendMessage("A new OTP has been sent.");
+      setResendMessage(
+        channel === "phone" || purpose === "login"
+          ? "A new OTP has been sent to your phone."
+          : "A new OTP has been sent to your email.",
+      );
       setOtp(Array.from({ length: OTP_LENGTH }, () => ""));
       inputRefs.current[0]?.focus();
     } catch (err) {
@@ -270,7 +342,9 @@ export default function OTPVerification() {
                 OTP Verification
               </h2>
               <p className="text-base font-inter font-normal text-muted-foreground text-start">
-                Enter the verification code we just sent to your Phone number.
+                {purpose === "register" && channel === "email"
+                  ? `Enter the verification code we just sent to ${email || "your email"}.`
+                  : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}
               </p>
             </div>
 

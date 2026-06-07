@@ -10,7 +10,7 @@ export default function LoginGoogle() {
           <div className="space-y-3">
             <div className="mb-7">
               <h2 className="text-2xl font-inter font-semibold text-center text-foreground">
-                Login to your account   
+                Login to your account
               </h2>
             </div>
             <div className="flex gap-4">
@@ -66,7 +66,7 @@ export default function LoginGoogle() {
             </div>
           </div>
 
-          <div className="my-7">
+          <div className="my-7 space-y-3">
             <Button
               asChild
               type="button"
@@ -74,10 +74,20 @@ export default function LoginGoogle() {
               className="flex justify-center w-full h-11 rounded-lg bg-brand px-6 text-base font-medium text-ice shadow-none hover:bg-brand/90"
             >
               <Link
-                to="/login/email"
+                to="/login/phone"
                 className="inline-flex items-center gap-2 bg-brand"
               >
-                E-mail or phone
+                Login with phone
+              </Link>
+            </Button>
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              className="flex justify-center w-full h-11 rounded-lg px-6 text-base font-medium shadow-none"
+            >
+              <Link to="/login/email" className="inline-flex items-center gap-2">
+                Login with email
               </Link>
             </Button>
           </div>
