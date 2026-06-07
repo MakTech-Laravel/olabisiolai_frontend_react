@@ -2,13 +2,13 @@ import type { BillingFormValues } from "@/components/sections/vendor/boost/boost
 import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
 
 type UserLike = {
-  email?: string;
+  email?: string | null;
   name?: string;
   full_name?: string;
   first_name?: string;
   last_name?: string;
-  phone?: string;
-  phone_number?: string;
+  phone?: string | null;
+  phone_number?: string | null;
 };
 
 export function billingFromUser(user: UserLike | null | undefined): BillingFormValues {

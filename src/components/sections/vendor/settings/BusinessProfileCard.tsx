@@ -17,7 +17,6 @@ type Props = {
   businessName: string
   contactFirstName: string
   contactLastName: string
-  email: string
   phone: string
   logoUrl: string | null
   logoPreview: string | null
@@ -33,7 +32,6 @@ export function BusinessProfileCard({
   businessName,
   contactFirstName,
   contactLastName,
-  email,
   phone,
   logoUrl,
   logoPreview,
@@ -117,16 +115,6 @@ export function BusinessProfileCard({
                 className="h-11 border-border-light bg-accent/60 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
               />
             </div>
-          </div>
-          <div>
-            <Label>Business Email</Label>
-            <Input
-              type="email"
-              value={email}
-              readOnly
-              disabled
-              className="h-11 cursor-not-allowed border-border-light bg-muted/50 text-sm shadow-sm"
-            />
           </div>
           <div>
             <Label>Phone Number</Label>

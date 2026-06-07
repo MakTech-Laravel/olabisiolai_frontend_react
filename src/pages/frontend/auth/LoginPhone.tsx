@@ -1,20 +1,32 @@
 import * as React from "react";
-import { ArrowRight } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Eye } from "lucide-react";
 
+import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
-import { requestPhoneLoginOtp } from "@/features/auth/service";
+import { getUserRoles } from "@/auth/roles";
+import { extractUserFromAuthPayload } from "@/api/laravelResponse";
+import { loginUserWithRole, resolvePostLoginPath } from "@/features/auth/service";
 import { type AuthRole } from "@/features/auth/types";
+import { type LoginReturnTarget } from "@/features/auth/loginReturn";
+import { navigateAfterLogin } from "@/features/auth/navigateAfterLogin";
+import { fulfillPendingFavoriteSave } from "@/features/auth/pendingFavoriteSave";
 
 export default function LoginPhone() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
 
   const [phone, setPhone] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState<AuthRole>("user");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
@@ -33,16 +45,48 @@ export default function LoginPhone() {
     saveAuthRole(role);
 
     try {
-      await requestPhoneLoginOtp({ phone: phone.trim(), role });
-      const encodedPhone = encodeURIComponent(phone.trim());
-      navigate(
-        `/otp-verification?purpose=login&phone=${encodedPhone}&role=${role}`,
-        { replace: true },
+      const returnTo = (location.state as { from?: LoginReturnTarget } | null)?.from;
+
+      const loginResult = await loginUserWithRole(
+        {
+          phone: phone.trim(),
+          password,
+          role,
+        },
+        { authStrategy, setToken, setUser, refreshSession, resetAuthState },
       );
+
+      if (loginResult.kind === "two_factor") {
+        navigate("/login/two-factor", {
+          replace: true,
+          state: {
+            twoFactorToken: loginResult.twoFactorToken,
+            role,
+            from: returnTo,
+          },
+        });
+        return;
+      }
+
+      const roles = getUserRoles(extractUserFromAuthPayload(loginResult.user));
+      const isVendor = roles.includes("vendor") || role === "vendor";
+
+      await fulfillPendingFavoriteSave(queryClient);
+
+      if (isVendor) {
+        navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
+        return;
+      }
+
+      if (navigateAfterLogin(navigate, returnTo)) {
+        return;
+      }
+
+      navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
     } catch (err) {
       const errors = getAuthFieldErrors(err);
       setFieldErrors(errors);
-      setError(getAuthErrorMessage(err, "Unable to send OTP. Please try again."));
+      setError(getAuthErrorMessage(err, "Login failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -57,7 +101,7 @@ export default function LoginPhone() {
               Login with phone
             </h2>
             <p className="text-sm text-muted-foreground">
-              We&apos;ll send a 6-digit verification code to your phone number.
+              Enter your phone number and password to sign in.
             </p>
           </div>
 
@@ -81,6 +125,35 @@ export default function LoginPhone() {
               ) : null}
             </div>
 
+            <div>
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+                <Link to="/forget-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+              {fieldErrors.password ? (
+                <p className="mt-1 text-sm text-destructive">{fieldErrors.password}</p>
+              ) : null}
+            </div>
+
             {error ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -95,7 +168,7 @@ export default function LoginPhone() {
                 className="flex justify-center w-full h-11 rounded-lg bg-brand px-6 text-base font-medium text-ice shadow-none hover:bg-brand/90"
               >
                 <span className="inline-flex items-center gap-2 bg-brand">
-                  {loading ? "Sending OTP..." : "Send OTP"}
+                  {loading ? "Logging in..." : "Login"}
                   <ArrowRight className="w-4 h-4" />
                 </span>
               </Button>

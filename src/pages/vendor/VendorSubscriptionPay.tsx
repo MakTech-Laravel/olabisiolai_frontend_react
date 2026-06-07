@@ -39,6 +39,9 @@ import {
   type PaymentGateway,
 } from "@/features/subscription/vendorSubscriptionApi";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
+import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
+import { fetchVendorSettings } from "@/api/vendorSettings";
+import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
 import { createVendorPaymentMethod, fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
 import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
@@ -175,6 +178,16 @@ export default function VendorSubscriptionPayPage() {
     enabled: canFetchPackages,
     retry: 1,
   });
+
+  const { data: vendorSettings } = useQuery({
+    queryKey: ["vendor", "settings"],
+    queryFn: fetchVendorSettings,
+    enabled: canFetchPackages,
+    staleTime: 30_000,
+  });
+
+  const emailVerificationProfile = vendorSettings?.profile ?? user;
+  const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
 
   const [boostSelection, setBoostSelection] = useState(() => readPremiumBundledBoostSelection());
 
@@ -508,6 +521,10 @@ export default function VendorSubscriptionPayPage() {
   };
 
   const onConfirmPay = async () => {
+    if (purchaseBlockedByEmail) {
+      showError("Verify your email in Settings before making a purchase.");
+      return;
+    }
     if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
       showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
       return;
@@ -578,6 +595,8 @@ export default function VendorSubscriptionPayPage() {
       <div className="space-y-4">
         <BoostPayHeader variant="subscription" />
 
+        <PurchaseEmailVerificationBlock profile={emailVerificationProfile} />
+
         {packagesError ? (
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             Could not load premium package details. You can still pay {formatNaira(amountNgn, { freeLabel: false })} below.
@@ -596,7 +615,7 @@ export default function VendorSubscriptionPayPage() {
 
           <OrderSummaryCard
             onConfirmPay={() => void onConfirmPay()}
-            isPaying={isPaying || packagesLoading}
+            isPaying={isPaying || packagesLoading || purchaseBlockedByEmail}
             planTitle={premiumPackage?.title ?? "Premium"}
             totalAmount={amountNgn}
             boostLine={

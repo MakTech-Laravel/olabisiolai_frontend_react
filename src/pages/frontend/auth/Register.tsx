@@ -14,7 +14,7 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
-  const [verificationChannel, setVerificationChannel] = React.useState<VerificationChannel>("email");
+  const [verificationChannel, setVerificationChannel] = React.useState<VerificationChannel>("phone");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -154,8 +154,8 @@ export default function Register() {
                   type="button"
                   onClick={() => setVerificationChannel("email")}
                   className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "email"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   Email
@@ -164,8 +164,8 @@ export default function Register() {
                   type="button"
                   onClick={() => setVerificationChannel("phone")}
                   className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "phone"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   Phone number

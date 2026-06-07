@@ -8,6 +8,11 @@ export type VendorSettingsProfile = {
   phone: string | null
   business_name: string | null
   logo_url: string | null
+  email_verified_at?: string | null
+  phone_verified_at?: string | null
+  email_verified?: boolean
+  email_verification_required?: boolean
+  can_make_purchases?: boolean
 }
 
 export type VendorSettingsNotifications = {

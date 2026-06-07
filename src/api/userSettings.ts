@@ -8,6 +8,11 @@ export type UserSettingsProfile = {
   email: string
   phone: string | null
   wants_marketing_emails: boolean
+  email_verified_at?: string | null
+  phone_verified_at?: string | null
+  email_verified?: boolean
+  email_verification_required?: boolean
+  can_make_purchases?: boolean
   location?: string | null
   image_path?: string | null
   image_url?: string | null

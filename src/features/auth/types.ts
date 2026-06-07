@@ -1,7 +1,8 @@
 export type AuthRole = 'user' | 'vendor'
 
 export type LoginPayload = {
-  email: string
+  email?: string
+  phone?: string
   password: string
   role: AuthRole
 }

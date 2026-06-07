@@ -43,6 +43,9 @@ import {
   type BoostPaymentSession,
 } from "@/features/boost/vendorBoostApi";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
+import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
+import { fetchVendorSettings } from "@/api/vendorSettings";
+import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
 
 const PLAN_STORAGE_KEY = "verificationPlanId";
 
@@ -97,6 +100,16 @@ export default function VendorBoostReviewPayPage() {
     enabled: Boolean(getAccessToken()),
     staleTime: 30_000,
   });
+
+  const { data: vendorSettings } = useQuery({
+    queryKey: ["vendor", "settings"],
+    queryFn: fetchVendorSettings,
+    enabled: Boolean(getAccessToken()),
+    staleTime: 30_000,
+  });
+
+  const emailVerificationProfile = vendorSettings?.profile ?? user;
+  const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
 
   useEffect(() => {
     if (profileInitDone) return;
@@ -430,6 +443,10 @@ export default function VendorBoostReviewPayPage() {
   ]);
 
   const onConfirmPay = async () => {
+    if (purchaseBlockedByEmail) {
+      showError("Verify your email in Settings before making a purchase.");
+      return;
+    }
     if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
       showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
       return;
@@ -533,6 +550,8 @@ export default function VendorBoostReviewPayPage() {
       <div className="space-y-4">
         <BoostPayHeader />
 
+        <PurchaseEmailVerificationBlock profile={emailVerificationProfile} />
+
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
             <PaymentMethodsCard selectedGateway={selectedGateway} onGatewayChange={setSelectedGateway} />
@@ -545,7 +564,7 @@ export default function VendorBoostReviewPayPage() {
 
           <OrderSummaryCard
             onConfirmPay={() => void onConfirmPay()}
-            isPaying={isPaying}
+            isPaying={isPaying || purchaseBlockedByEmail}
             confirmLabel={isResumingBoostPayment ? "Continue Payment" : undefined}
             planTitle={
               isBoostCheckout

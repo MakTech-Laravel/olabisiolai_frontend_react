@@ -19,6 +19,7 @@ import { Link } from "react-router-dom"
 import { changeUserPassword } from "@/api/userPassword"
 import { fetchUserSettings, patchUserSettings, type UserSettingsPayload } from "@/api/userSettings"
 import { useAuth } from "@/auth/useAuth"
+import { EmailVerificationSection } from "@/components/settings/EmailVerificationSection"
 import { UserShell } from "@/components/partials/user/UserShell"
 import { HeaderAvatar } from "@/components/ui/HeaderAvatar"
 import { Button } from "@/components/ui/button"
@@ -467,17 +468,15 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <div className="mt-4 space-y-1.5">
-                <label className="text-xs text-chat-meta" htmlFor="settings-email">
-                  Email
-                </label>
-                <Input
-                  id="settings-email"
-                  value={displayEmail}
-                  readOnly
-                  className="h-11 rounded-lg border-chat-border-subtle bg-muted/40 text-chat-meta"
-                />
-              </div>
+              <EmailVerificationSection
+                email={displayEmail}
+                emailVerified={Boolean(settingsQuery.data?.profile.email_verified)}
+                emailVerificationRequired={Boolean(settingsQuery.data?.profile.email_verification_required)}
+                disabled={busy}
+                onVerified={() => {
+                  void refreshSession()
+                }}
+              />
               <div className="mt-4 space-y-1.5">
                 <label className="text-xs text-chat-meta" htmlFor="settings-phone">
                   Phone number

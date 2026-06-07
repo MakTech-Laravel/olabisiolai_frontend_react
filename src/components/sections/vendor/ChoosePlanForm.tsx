@@ -31,6 +31,8 @@ import {
   defaultBusinessHours,
   validateBusinessHours,
 } from "@/features/business/businessHours";
+import { useAuth } from "@/auth/useAuth";
+import { formatPhoneDisplay } from "@/lib/whatsappUrl";
 import {
   normalizeSocialUrl,
   type SocialAccount,
@@ -178,6 +180,7 @@ function DashedUpload({
 
 export default function ChoosePlanForm() {
   const navigate = useNavigate();
+  const { user, refreshSession } = useAuth();
   const { data: formOptions, isPending: formOptionsLoading, isError: formOptionsError } =
     useVendorBusinessFormOptions();
   const categories = formOptions?.categories ?? [];
@@ -198,6 +201,7 @@ export default function ChoosePlanForm() {
   const [logo, setLogo] = useState<File | null>(null);
   const [coverPhotos, setCoverPhotos] = useState<File[]>([]);
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+  const [phone, setPhone] = useState("");
   const [businessHours, setBusinessHours] = useState(defaultBusinessHours);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [coverPreviewUrls, setCoverPreviewUrls] = useState<string[]>([]);
@@ -262,6 +266,19 @@ export default function ChoosePlanForm() {
   useEffect(() => {
     setSubcategory("");
   }, [categoryId]);
+
+  useEffect(() => {
+    if (!user?.phone) {
+      void refreshSession();
+    }
+  }, [refreshSession, user?.phone]);
+
+  useEffect(() => {
+    const registeredPhone = typeof user?.phone === "string" ? user.phone.trim() : "";
+    if (!registeredPhone) return;
+
+    setPhone((current) => current || formatPhoneDisplay(registeredPhone));
+  }, [user?.phone]);
 
   useEffect(() => {
     if (!selectedLocation) {
@@ -452,7 +469,7 @@ export default function ChoosePlanForm() {
       full_address: showLocationSection ? String(formData.get("fullAddress") ?? "") : "",
       business_description: String(formData.get("description") ?? ""),
       services: normalizedServices,
-      phone: String(formData.get("phone") ?? ""),
+      phone: phone.trim(),
       whatsapp: String(formData.get("whatsapp") ?? ""),
       website: String(formData.get("website") ?? ""),
       social_accounts: activeSocialAccounts,
@@ -884,6 +901,8 @@ export default function ChoosePlanForm() {
               <Input
                 type="tel"
                 name="phone"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
                 placeholder="+234 800 123 4567"
                 className="h-11 border-border-light bg-secondary/80 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
                 required

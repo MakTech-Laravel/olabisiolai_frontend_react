@@ -16,6 +16,8 @@ import { NotificationChannelsCard } from '@/components/sections/vendor/settings/
 import { SecurityAccessCard } from '@/components/sections/vendor/settings/SecurityAccessCard'
 import { TwoFactorSetupModal } from '@/components/sections/vendor/settings/TwoFactorSetupModal'
 import { VerifiedStatusCard } from '@/components/sections/vendor/settings/VerifiedStatusCard'
+import { EmailVerificationSection } from '@/components/settings/EmailVerificationSection'
+import { useAuth } from '@/auth/useAuth'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { alert, Swal } from '@/lib/sweetAlert'
 
@@ -45,6 +47,7 @@ function payloadToForm(data: VendorSettingsPayload): FormState {
 
 export default function VendorSettings() {
   const queryClient = useQueryClient()
+  const { refreshSession } = useAuth()
 
   const settingsQuery = useQuery({
     queryKey: VENDOR_SETTINGS_QUERY_KEY,
@@ -271,7 +274,6 @@ export default function VendorSettings() {
               businessName={form.businessName}
               contactFirstName={form.contactFirstName}
               contactLastName={form.contactLastName}
-              email={data.profile.email}
               phone={form.phone}
               logoUrl={data.profile.logo_url}
               logoPreview={logoPreview}
@@ -282,6 +284,20 @@ export default function VendorSettings() {
               onPhoneChange={(v) => setForm((f) => (f ? { ...f, phone: v } : f))}
               onLogoChange={setLogoFile}
             />
+            <div className="rounded-xl border-0 border-l-4 border-brand-red bg-card p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-foreground font-manrope">Business Email</h3>
+              <EmailVerificationSection
+                email={data.profile.email ?? ''}
+                emailVerified={Boolean(data.profile.email_verified)}
+                emailVerificationRequired={Boolean(data.profile.email_verification_required)}
+                disabled={saveMutation.isPending}
+                settingsQueryKey={[...VENDOR_SETTINGS_QUERY_KEY]}
+                inputId="vendor-settings-email"
+                onVerified={() => {
+                  void refreshSession()
+                }}
+              />
+            </div>
             <SecurityAccessCard
               twoFactorEnabled={twoFactorEnabled}
               twoFactorBusy={twoFactorBusy}
