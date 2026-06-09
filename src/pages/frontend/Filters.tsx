@@ -93,7 +93,7 @@ export default function Filters() {
 
   const { data: apiCategories = [], isPending: categoriesLoading } = useCategoryCatalog();
   const { data: catalogLocations = [] } = useLocationCatalog();
-  const perPage = 12;
+  const perPage = 10;
 
   /**
    * Category filter from URL — must NOT wait for `apiCategories` to load.
@@ -329,6 +329,7 @@ export default function Filters() {
 
   const totalPages = Math.max(1, businessesQuery.data?.lastPage ?? 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
+  const showPagination = totalPages > 1;
 
   const hasActiveFilters = useMemo(() => {
     const hasCategoryInUrl =
@@ -597,7 +598,8 @@ export default function Filters() {
             )}
           </div>
 
-          {/* Pagination */}
+          {/* Pagination — only when more than perPage (10) results */}
+          {showPagination ? (
           <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 flex-wrap">
             <button
               className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50"
@@ -649,6 +651,7 @@ export default function Filters() {
               <ChevronLeft size={16} className="text-muted-foreground rotate-180" />
             </button>
           </div>
+          ) : null}
         </div>
 
         {/* Map Section — hidden on mobile, visible on lg+ */}
