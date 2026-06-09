@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Mail, MessageCircle, Phone } from "lucide-react";
+import { Loader2, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
 import {
   getContactSubmitErrorMessage,
@@ -8,6 +8,10 @@ import {
 } from "@/api/contactMessages";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  COMPANY_OFFICE_ADDRESS_LINES,
+  COMPANY_OFFICE_MAPS_URL,
+} from "@/constants/company";
 import { container } from "@/lib/container";
 import { alert, showError } from "@/lib/sweetAlert";
 import { cn } from "@/lib/utils";
@@ -141,7 +145,7 @@ export default function Contact() {
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           <ContactChannelCard
             iconWrapClassName="bg-accent"
             icon={<Mail className="size-6 text-brand" strokeWidth={2} />}
@@ -165,6 +169,14 @@ export default function Contact() {
             description="Mon-Fri 9am-5pm WAT"
             href="tel:+2349047858961"
             linkLabel={WHATSAPP_DISPLAY}
+          />
+          <ContactChannelCard
+            iconWrapClassName="bg-muted"
+            icon={<MapPin className="size-6 text-brand" strokeWidth={2} />}
+            title="Office Address"
+            description={COMPANY_OFFICE_ADDRESS_LINES.join(", ")}
+            href={COMPANY_OFFICE_MAPS_URL}
+            linkLabel="View on Google Maps"
           />
         </div>
 

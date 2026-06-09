@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { COMPANY_OFFICE_ADDRESS } from "@/constants/company";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,10 @@ export function FrontendFooter() {
             <p className="mt-4 text-sm leading-5 text-ice">
               FIND BETTER | CONNECT FASTER
             </p>
+            <address className="mt-4 not-italic text-sm leading-5 text-footer-muted">
+              <span className="block font-medium text-white">Office Address</span>
+              {COMPANY_OFFICE_ADDRESS}
+            </address>
           </div>
 
           <div className="grid flex-1 grid-cols-1 gap-10 sm:grid-cols-3">
