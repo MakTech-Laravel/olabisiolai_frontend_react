@@ -1,4 +1,5 @@
-import { Star } from "lucide-react";
+import { Search, Star } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import type { CategoryDto } from "@/features/categories/types";
 
@@ -46,6 +47,35 @@ export default function FiltersSection({
   const catName = `${radioGroupId}-category`;
   const locName = `${radioGroupId}-location`;
   const ratingName = `${radioGroupId}-rating`;
+  const [locationSearch, setLocationSearch] = useState("");
+
+  const filteredLocationOptions = useMemo(() => {
+    const query = locationSearch.trim().toLowerCase();
+    if (query === "") {
+      return locationOptions;
+    }
+
+    return locationOptions.filter((location) =>
+      location.label.toLowerCase().includes(query),
+    );
+  }, [locationOptions, locationSearch]);
+
+  const visibleLocationOptions = useMemo(() => {
+    if (selectedLocationId === null) {
+      return filteredLocationOptions;
+    }
+
+    const selected = locationOptions.find((location) => location.id === selectedLocationId);
+    if (selected === undefined) {
+      return filteredLocationOptions;
+    }
+
+    if (filteredLocationOptions.some((location) => location.id === selectedLocationId)) {
+      return filteredLocationOptions;
+    }
+
+    return [selected, ...filteredLocationOptions];
+  }, [filteredLocationOptions, locationOptions, selectedLocationId]);
 
   return (
     <div className="bg-card p-8 rounded-lg  sticky top-20">
@@ -174,29 +204,50 @@ export default function FiltersSection({
         <h3 className="font-inter font-semibold text-text-primary mb-3">
           Location
         </h3>
-        <div className="space-y-2">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name={locName}
-              className="mr-2 accent-primary"
-              checked={selectedLocationId === null}
-              onChange={() => onSelectLocation(null)}
-            />
-            <span className="text-text-secondary">All locations</span>
-          </label>
-          {locationOptions.map((location) => (
-            <label key={location.id} className="flex items-center">
-              <input
-                type="radio"
-                name={locName}
-                className="mr-2 accent-primary"
-                checked={selectedLocationId === location.id}
-                onChange={() => onSelectLocation(location.id)}
-              />
-              <span className="text-text-secondary">{location.label}</span>
-            </label>
-          ))}
+
+        <div className="relative mb-3">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={locationSearch}
+            onChange={(event) => setLocationSearch(event.target.value)}
+            placeholder="Search location..."
+            aria-label="Search locations"
+            className="w-full rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
+          />
+        </div>
+
+        <label className="mb-2 flex cursor-pointer items-center">
+          <input
+            type="radio"
+            name={locName}
+            className="mr-2 accent-primary"
+            checked={selectedLocationId === null}
+            onChange={() => onSelectLocation(null)}
+          />
+          <span className="text-text-secondary">All locations</span>
+        </label>
+
+        <div className="max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">
+          {visibleLocationOptions.length === 0 ? (
+            <p className="py-2 text-sm text-text-secondary">No locations match your search.</p>
+          ) : (
+            visibleLocationOptions.map((location) => (
+              <label key={location.id} className="flex cursor-pointer items-center">
+                <input
+                  type="radio"
+                  name={locName}
+                  className="mr-2 accent-primary"
+                  checked={selectedLocationId === location.id}
+                  onChange={() => onSelectLocation(location.id)}
+                />
+                <span className="text-sm text-text-secondary">{location.label}</span>
+              </label>
+            ))
+          )}
         </div>
       </div>
 
