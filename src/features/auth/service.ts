@@ -1,8 +1,10 @@
 import {
   extractBearerTokenFromLoginBody,
+  extractLoginVerificationChannel,
   extractRefreshTokenFromLoginBody,
   extractTwoFactorLoginToken,
   extractUserFromAuthPayload,
+  isLoginVerificationRequired,
   isTwoFactorLoginRequired,
 } from '@/api/laravelResponse'
 import { request } from '@/api/request'
@@ -19,6 +21,7 @@ import {
   type PhoneLoginRequestPayload,
   type PhoneVerifyOtpPayload,
   type RegisterPayload,
+  type VerificationChannel,
   type VerifyOtpPayload,
 } from '@/features/auth/types'
 
@@ -104,6 +107,33 @@ async function hydrateSessionFromLoginBody(
 export type LoginUserResult =
   | { kind: 'authenticated'; user: AuthUser }
   | { kind: 'two_factor'; twoFactorToken: string }
+  | {
+      kind: 'verification_required'
+      user: AuthUser
+      verificationChannel: VerificationChannel
+      email?: string
+      phone?: string
+    }
+
+export function buildRegisterOtpVerificationPath(options: {
+  role: AuthRole
+  channel: VerificationChannel
+  email?: string
+  phone?: string
+}): string {
+  const params = new URLSearchParams({
+    purpose: 'register',
+    role: options.role,
+    channel: options.channel,
+  })
+  if (options.channel === 'email' && options.email) {
+    params.set('email', options.email)
+  }
+  if (options.channel === 'phone' && options.phone) {
+    params.set('phone', options.phone)
+  }
+  return `/otp-verification?${params.toString()}`
+}
 
 export async function loginUserWithRole(
   payload: LoginPayload,
@@ -111,6 +141,28 @@ export async function loginUserWithRole(
 ): Promise<LoginUserResult> {
   try {
     const res = await request.post<unknown>('/auth/login', payload)
+    logOtpFromResponse(res.data, 'login verification')
+
+    if (isLoginVerificationRequired(res.data)) {
+      const user = await hydrateSessionFromLoginBody(
+        res.data,
+        handlers,
+        'Unable to restore your session for account verification.',
+        'Login response is missing access token.',
+      )
+      if (!user) {
+        throw new Error('Unable to restore your session for account verification.')
+      }
+      ensureRoleMatchesExpected(user, payload.role)
+      const verificationChannel = extractLoginVerificationChannel(res.data)
+      return {
+        kind: 'verification_required',
+        user,
+        verificationChannel,
+        email: payload.email,
+        phone: payload.phone,
+      }
+    }
 
     if (isTwoFactorLoginRequired(res.data)) {
       const twoFactorToken = extractTwoFactorLoginToken(res.data)

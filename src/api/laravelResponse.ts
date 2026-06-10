@@ -60,6 +60,20 @@ function isAdminResourceShape(o: Record<string, unknown>): boolean {
  * Typical Laravel `sendResponse($success, $message, $payload)` JSON:
  * `{ success?: boolean, message?: string, data?: T }`
  */
+export function isLoginVerificationRequired(body: unknown): boolean {
+  const data = unwrapLaravelData<Record<string, unknown>>(body)
+  return (
+    data?.verification_status === 'unverified' &&
+    typeof data.token === 'string' &&
+    data.token.length > 0
+  )
+}
+
+export function extractLoginVerificationChannel(body: unknown): 'email' | 'phone' {
+  const data = unwrapLaravelData<Record<string, unknown>>(body)
+  return data?.verification_channel === 'phone' ? 'phone' : 'email'
+}
+
 export function isTwoFactorLoginRequired(body: unknown): body is {
   two_factor_required: true
   two_factor_token: string

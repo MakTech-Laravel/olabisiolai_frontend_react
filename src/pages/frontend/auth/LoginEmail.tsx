@@ -10,7 +10,11 @@ import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMe
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { getUserRoles } from "@/auth/roles";
 import { extractUserFromAuthPayload } from "@/api/laravelResponse";
-import { loginUserWithRole, resolvePostLoginPath } from "@/features/auth/service";
+import {
+  buildRegisterOtpVerificationPath,
+  loginUserWithRole,
+  resolvePostLoginPath,
+} from "@/features/auth/service";
 import { type AuthRole } from "@/features/auth/types";
 import { type LoginReturnTarget } from "@/features/auth/loginReturn";
 import { navigateAfterLogin } from "@/features/auth/navigateAfterLogin";
@@ -55,6 +59,19 @@ export default function LoginEmail() {
         },
         { authStrategy, setToken, setUser, refreshSession, resetAuthState },
       );
+
+      if (loginResult.kind === "verification_required") {
+        navigate(
+          buildRegisterOtpVerificationPath({
+            role,
+            channel: loginResult.verificationChannel,
+            email: loginResult.email ?? identifier.trim(),
+            phone: loginResult.phone,
+          }),
+          { replace: true },
+        );
+        return;
+      }
 
       if (loginResult.kind === 'two_factor') {
         navigate('/login/two-factor', {
