@@ -145,7 +145,7 @@ export default function Contact() {
           </p>
         </header>
 
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-3">
           <ContactChannelCard
             iconWrapClassName="bg-accent"
             icon={<Mail className="size-6 text-brand" strokeWidth={2} />}
@@ -169,14 +169,6 @@ export default function Contact() {
             description="Mon-Fri 9am-5pm WAT"
             href="tel:+2349047858961"
             linkLabel={WHATSAPP_DISPLAY}
-          />
-          <ContactChannelCard
-            iconWrapClassName="bg-muted"
-            icon={<MapPin className="size-6 text-brand" strokeWidth={2} />}
-            title="Office Address"
-            description={COMPANY_OFFICE_ADDRESS_LINES.join(", ")}
-            href={COMPANY_OFFICE_MAPS_URL}
-            linkLabel="View on Google Maps"
           />
         </div>
 
@@ -274,7 +266,7 @@ export default function Contact() {
           </div>
 
           <div className="flex flex-col gap-6">
-            {/* <div className="rounded-2xl border border-black/10 bg-card p-6 shadow-sm">
+            <div className="rounded-2xl border border-black/10 bg-card p-6 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
                 <MapPin
                   className="size-6 shrink-0 text-brand-red"
@@ -285,19 +277,30 @@ export default function Contact() {
                   Our Office
                 </h3>
               </div>
-              <div className="flex flex-col gap-2 pl-0 sm:pl-0">
+              <address className="flex flex-col gap-2 not-italic">
                 <p className="text-base leading-6 text-body-secondary">
-                  123 Business District,
-                  <br />
-                  Victoria Island,
-                  <br />
-                  Lagos, Nigeria
+                  {COMPANY_OFFICE_ADDRESS_LINES.map((line, index) => (
+                    <span key={line}>
+                      {line}
+                      {index < COMPANY_OFFICE_ADDRESS_LINES.length - 1 ? (
+                        <br />
+                      ) : null}
+                    </span>
+                  ))}
                 </p>
+                <a
+                  href={COMPANY_OFFICE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-footer-bar transition-opacity hover:opacity-80"
+                >
+                  View on Google Maps
+                </a>
                 <p className="text-sm leading-5 text-ink-muted">
                   Office hours: Monday - Friday, 9:00 AM - 5:00 PM WAT
                 </p>
-              </div>
-            </div> */}
+              </address>
+            </div>
 
             <div className="rounded-2xl border border-black/10 bg-card p-6 shadow-sm">
               <div className="flex flex-col gap-3">
