@@ -16,8 +16,10 @@ import { NotificationChannelsCard } from '@/components/sections/vendor/settings/
 import { SecurityAccessCard } from '@/components/sections/vendor/settings/SecurityAccessCard'
 import { TwoFactorSetupModal } from '@/components/sections/vendor/settings/TwoFactorSetupModal'
 import { VerifiedStatusCard } from '@/components/sections/vendor/settings/VerifiedStatusCard'
+import { AccountVerificationSection } from '@/components/settings/AccountVerificationSection'
 import { EmailVerificationSection } from '@/components/settings/EmailVerificationSection'
 import { useAuth } from '@/auth/useAuth'
+import { isUserAccountVerified } from '@/lib/accountVerification'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { alert, Swal } from '@/lib/sweetAlert'
 
@@ -47,7 +49,7 @@ function payloadToForm(data: VendorSettingsPayload): FormState {
 
 export default function VendorSettings() {
   const queryClient = useQueryClient()
-  const { refreshSession } = useAuth()
+  const { user, refreshSession } = useAuth()
 
   const settingsQuery = useQuery({
     queryKey: VENDOR_SETTINGS_QUERY_KEY,
@@ -268,6 +270,14 @@ export default function VendorSettings() {
       />
 
       <section className="space-y-6 md:space-y-8">
+        {!isUserAccountVerified(user) ? (
+          <AccountVerificationSection
+            user={user}
+            onVerified={() => {
+              void settingsQuery.refetch()
+            }}
+          />
+        ) : null}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start">
           <div className="space-y-6">
             <BusinessProfileCard

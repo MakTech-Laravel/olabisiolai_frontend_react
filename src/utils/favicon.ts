@@ -1,5 +1,5 @@
 const ICON_FALLBACK = '/favicon.svg'
-const CACHE_KEY = 'react-vite-laravel.favicon.cache.v1'
+const CACHE_KEY = 'gidira.favicon.cache.v1'
 
 type CacheEntry = {
   url: string

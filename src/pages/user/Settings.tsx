@@ -19,11 +19,13 @@ import { Link } from "react-router-dom"
 import { changeUserPassword } from "@/api/userPassword"
 import { fetchUserSettings, patchUserSettings, type UserSettingsPayload } from "@/api/userSettings"
 import { useAuth } from "@/auth/useAuth"
+import { AccountVerificationSection } from "@/components/settings/AccountVerificationSection"
 import { EmailVerificationSection } from "@/components/settings/EmailVerificationSection"
 import { UserShell } from "@/components/partials/user/UserShell"
 import { HeaderAvatar } from "@/components/ui/HeaderAvatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { isUserAccountVerified } from "@/lib/accountVerification"
 import { getLaravelErrorMessage } from "@/lib/laravelApiError"
 import { resolveMediaUrl } from "@/lib/mediaUrl"
 import { cn } from "@/lib/utils"
@@ -337,6 +339,7 @@ export default function SettingsPage() {
   const avatarSrc = profileImagePreview || savedAvatarSrc || null
 
   const busy = settingsQuery.isLoading || saveAllMutation.isPending
+  const accountVerified = isUserAccountVerified(user)
 
   function onProfileImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -385,6 +388,16 @@ export default function SettingsPage() {
                 Retry
               </Button>
             </div>
+          ) : null}
+
+          {!accountVerified ? (
+            <AccountVerificationSection
+              user={user}
+              className="mb-4"
+              onVerified={() => {
+                void settingsQuery.refetch()
+              }}
+            />
           ) : null}
 
           <div className="rounded-xl bg-card p-4 shadow-sm sm:p-6">

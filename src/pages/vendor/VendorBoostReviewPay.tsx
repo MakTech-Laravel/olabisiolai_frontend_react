@@ -215,7 +215,7 @@ export default function VendorBoostReviewPayPage() {
         : boostSelection?.renewType === "extend"
           ? "Extend boost campaign"
           : "Boost plan purchase",
-      logo: "/favicon.ico",
+      logo: "/favicon.svg",
     },
   });
 

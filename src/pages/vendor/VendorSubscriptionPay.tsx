@@ -247,7 +247,7 @@ export default function VendorSubscriptionPayPage() {
     customizations: {
       title: "Gidira Premium Subscription",
       description: "Annual premium subscription",
-      logo: "/favicon.ico",
+      logo: "/favicon.svg",
     },
   });
 
