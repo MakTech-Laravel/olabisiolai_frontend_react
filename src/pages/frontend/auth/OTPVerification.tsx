@@ -229,9 +229,7 @@ export default function OTPVerification() {
           return;
         }
 
-        navigate(await resolvePostLoginPath(loginResult.user, role, { vendorPlan }), {
-          replace: true,
-        });
+        navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
       } catch (err) {
         setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
       } finally {
@@ -377,7 +375,7 @@ export default function OTPVerification() {
                   : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Codes are valid for 15 minutes. If you request a new code, use the latest one only.
+                Codes are valid for 10 minutes. If you request a new code, use the latest one only.
               </p>
             </div>
 

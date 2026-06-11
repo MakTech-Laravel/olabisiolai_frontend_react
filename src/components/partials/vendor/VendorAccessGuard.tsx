@@ -57,7 +57,7 @@ export function VendorAccessGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (data && !data.has_business) {
-    return <Navigate to="/vendor/choose-your-plan" replace />;
+    return <Navigate to="/vendor/plan-form" replace />;
   }
 
   return <>{children}</>;

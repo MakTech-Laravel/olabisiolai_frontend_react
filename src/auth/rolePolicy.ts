@@ -13,7 +13,7 @@ export type RolePolicy = Record<string, RolePolicyEntry>
 
 export const defaultRolePolicy: RolePolicy = {
   admin: { dashboard: '/admin', fallback: '/admin/login' },
-  vendor: { dashboard: '/vendor/choose-your-plan', fallback: '/login' },
+  vendor: { dashboard: '/vendor/dashboard', fallback: '/login' },
   user: { dashboard: '/user/dashboard', fallback: '/login' },
 }
 
