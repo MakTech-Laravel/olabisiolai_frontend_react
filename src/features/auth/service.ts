@@ -26,7 +26,6 @@ import {
 } from '@/features/auth/types'
 import { resolveVendorPostLoginPath } from '@/features/subscription/vendorOnboardingApi'
 import {
-  getSavedVendorPlan,
   saveVendorPlan,
   vendorPostVerificationPath,
   type VendorPlanChoice,
@@ -407,7 +406,7 @@ export async function verifyRegistrationOtp(
 export function resolveDashboardPath(user: unknown, selectedRole: AuthRole) {
   const roles = getUserRoles(extractUserFromAuthPayload(user))
   if (roles.includes('admin')) return '/admin'
-  if (roles.includes('vendor')) return '/vendor/choose-your-plan'
+  if (roles.includes('vendor')) return '/vendor/dashboard'
   if (roles.includes('user')) return '/user/dashboard'
 
   const dashboardFromPolicy = roles
@@ -415,7 +414,7 @@ export function resolveDashboardPath(user: unknown, selectedRole: AuthRole) {
     .find((value): value is string => Boolean(value))
 
   if (dashboardFromPolicy) return dashboardFromPolicy
-  return selectedRole === 'vendor' ? '/vendor/choose-your-plan' : '/user/dashboard'
+  return selectedRole === 'vendor' ? '/vendor/dashboard' : '/user/dashboard'
 }
 
 export async function resolvePostLoginPath(
@@ -427,10 +426,11 @@ export async function resolvePostLoginPath(
   const isVendor = roles.includes('vendor') || selectedRole === 'vendor'
 
   if (isVendor) {
-    const savedPlan = options?.vendorPlan ?? getSavedVendorPlan()
-    if (savedPlan) {
-      saveVendorPlan(savedPlan)
-      return vendorPostVerificationPath(savedPlan)
+    // Only the registration OTP flow passes an explicit plan — never reuse
+    // localStorage during normal login.
+    if (options?.vendorPlan) {
+      saveVendorPlan(options.vendorPlan)
+      return vendorPostVerificationPath(options.vendorPlan)
     }
 
     return resolveVendorPostLoginPath()

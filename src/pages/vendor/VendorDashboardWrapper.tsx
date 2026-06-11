@@ -38,7 +38,7 @@ export default function VendorDashboardWrapper() {
     }
 
     if (isError || !data) {
-      navigate("/vendor/choose-your-plan", { replace: true });
+      navigate("/vendor/plan-form", { replace: true });
       return;
     }
 
