@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { isAxiosError } from 'axios'
 
 type LaravelErrorBody = {
   message?: string
@@ -7,8 +7,22 @@ type LaravelErrorBody = {
 
 export type FieldErrorMap = Record<string, string>
 
+function firstValidationMessage(errors: Record<string, string[] | string>): string | null {
+  for (const value of Object.values(errors)) {
+    if (Array.isArray(value)) {
+      const message = value.find(Boolean)
+      if (message) return message
+      continue
+    }
+    if (typeof value === 'string' && value.trim()) {
+      return value
+    }
+  }
+  return null
+}
+
 export function getAuthFieldErrors(error: unknown): FieldErrorMap {
-  if (!axios.isAxiosError(error)) return {}
+  if (!isAxiosError(error)) return {}
   const data = error.response?.data as LaravelErrorBody | undefined
   const out: FieldErrorMap = {}
   if (data?.errors) {
@@ -36,13 +50,11 @@ export function getAuthFieldErrors(error: unknown): FieldErrorMap {
 }
 
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
     const data = error.response?.data as LaravelErrorBody | undefined
     if (data?.message) return data.message
 
-    const firstValidationError = data?.errors
-      ? Object.values(data.errors).flat().find(Boolean)
-      : null
+    const firstValidationError = data?.errors ? firstValidationMessage(data.errors) : null
     if (firstValidationError) return firstValidationError
   }
 

@@ -8,6 +8,12 @@ import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMe
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { registerAndLoginUser } from "@/features/auth/service";
 import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
+import {
+  getSavedVendorPlan,
+  saveVendorPlan,
+  vendorSignupPlanPath,
+  type VendorPlanChoice,
+} from "@/features/vendor/vendorPlanStorage";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -27,12 +33,33 @@ export default function Register() {
   const [error, setError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [vendorPlan, setVendorPlan] = React.useState<VendorPlanChoice | null>(null);
 
   React.useEffect(() => {
     const selectedRole = resolveAuthRole(searchParams.get("role"));
     setRole(selectedRole);
     saveAuthRole(selectedRole);
-  }, [searchParams]);
+
+    if (selectedRole !== "vendor") {
+      setVendorPlan(null);
+      return;
+    }
+
+    const planFromQuery = searchParams.get("plan");
+    if (planFromQuery === "free" || planFromQuery === "premium") {
+      saveVendorPlan(planFromQuery);
+      setVendorPlan(planFromQuery);
+      return;
+    }
+
+    const savedPlan = getSavedVendorPlan();
+    if (savedPlan) {
+      setVendorPlan(savedPlan);
+      return;
+    }
+
+    navigate(vendorSignupPlanPath(), { replace: true });
+  }, [searchParams, navigate]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -88,6 +115,9 @@ export default function Register() {
       } else {
         params.set("phone", trimmedPhone);
       }
+      if (role === "vendor" && vendorPlan) {
+        params.set("plan", vendorPlan);
+      }
 
       navigate(`/otp-verification?${params.toString()}`, { replace: true });
     } catch (err) {
@@ -104,9 +134,25 @@ export default function Register() {
       <div className="max-w-2xl w-full bg-card p-8 rounded-lg shadow-lg">
         <div className="space-y-6">
           <div className="text-left mb-8">
+            {role === "vendor" ? (
+              <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-red">
+                Step 2 of 2 · Create your vendor account
+              </p>
+            ) : null}
             <h2 className="text-2xl font-inter font-semibold text-foreground mb-2">
               Welcome to Gidira Marketplace
             </h2>
+            {role === "vendor" && vendorPlan ? (
+              <p className="mb-2 text-sm font-medium text-foreground">
+                Selected plan:{" "}
+                <span className="font-semibold text-brand-red">
+                  {vendorPlan === "premium" ? "Premium" : "Free"}
+                </span>{" "}
+                <Link to={vendorSignupPlanPath()} className="text-primary hover:underline">
+                  Change plan
+                </Link>
+              </p>
+            ) : null}
             <p className="text-sm font-inter text-muted-foreground">
               Already have an account?{" "}
               <Link to={`/login/email?role=${role}`} className="text-primary hover:underline">

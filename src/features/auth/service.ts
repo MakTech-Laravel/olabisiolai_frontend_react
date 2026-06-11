@@ -24,6 +24,13 @@ import {
   type VerificationChannel,
   type VerifyOtpPayload,
 } from '@/features/auth/types'
+import { resolveVendorPostLoginPath } from '@/features/subscription/vendorOnboardingApi'
+import {
+  getSavedVendorPlan,
+  saveVendorPlan,
+  vendorPostVerificationPath,
+  type VendorPlanChoice,
+} from '@/features/vendor/vendorPlanStorage'
 
 type AuthHandlers = Pick<
   AuthContextValue,
@@ -318,9 +325,23 @@ export async function requestPasswordResetOtp(payload: PasswordResetOtpPayload) 
   logOtpFromResponse(res.data, 'password reset')
 }
 
-export async function resendRegistrationOtp(payload: PasswordResetOtpPayload) {
-  const res = await request.post<unknown>('/auth/otp/resend', payload)
-  logOtpFromResponse(res.data, 'register resend')
+export async function resendRegistrationOtp(payload: {
+  email?: string
+  phone?: string
+}) {
+  try {
+    const res = await request.post<unknown>('/auth/register/resend-otp', payload, {
+      skipAuthRedirect: true,
+    })
+    logOtpFromResponse(res.data, 'register resend')
+    return
+  } catch {
+    // Fall back to authenticated resend when a session token is still available.
+    const res = await request.post<unknown>('/auth/otp/resend', payload, {
+      skipAuthRedirect: true,
+    })
+    logOtpFromResponse(res.data, 'register resend')
+  }
 }
 
 export async function verifyRegistrationOtp(
@@ -335,8 +356,19 @@ export async function verifyRegistrationOtp(
     ...(payload.phone ? { phone: payload.phone } : {}),
     ...(payload.verification_channel ? { verification_channel: payload.verification_channel } : {}),
   }
-  const res = await request.post<unknown>('/auth/otp/verify', verifyPayload)
+  const res = await request.post<unknown>('/auth/otp/verify', verifyPayload, {
+    skipAuthRedirect: true,
+  })
   logOtpFromResponse(res.data, 'verify-otp')
+
+  const refreshedToken = extractBearerTokenFromLoginBody(res.data)
+  if (refreshedToken) {
+    handlers.setToken(refreshedToken)
+    const refresh = extractRefreshTokenFromLoginBody(res.data)
+    if (refresh) {
+      setRefreshToken(refresh)
+    }
+  }
 
   // Registration already writes the login token to storage.
   // OTP verification should validate/activate that session, not require a new token.
@@ -386,20 +418,20 @@ export function resolveDashboardPath(user: unknown, selectedRole: AuthRole) {
   return selectedRole === 'vendor' ? '/vendor/choose-your-plan' : '/user/dashboard'
 }
 
-/**
- * Post-login destination (vendor uses onboarding API so new vendors land on choose-your-plan, not dashboard).
- */
 export async function resolvePostLoginPath(
   user: unknown,
   selectedRole: AuthRole,
+  options?: { vendorPlan?: VendorPlanChoice | null },
 ): Promise<string> {
   const roles = getUserRoles(extractUserFromAuthPayload(user))
   const isVendor = roles.includes('vendor') || selectedRole === 'vendor'
 
   if (isVendor) {
-    const { resolveVendorPostLoginPath } = await import(
-      '@/features/subscription/vendorOnboardingApi'
-    )
+    const savedPlan = options?.vendorPlan ?? getSavedVendorPlan()
+    if (savedPlan) {
+      saveVendorPlan(savedPlan)
+      return vendorPostVerificationPath(savedPlan)
+    }
 
     return resolveVendorPostLoginPath()
   }

@@ -15,6 +15,12 @@ import {
   verifyRegistrationOtp,
 } from "@/features/auth/service";
 import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
+import {
+  getSavedVendorPlan,
+  parseVendorPlan,
+  saveVendorPlan,
+  type VendorPlanChoice,
+} from "@/features/vendor/vendorPlanStorage";
 
 const OTP_LENGTH = 6;
 const RESEND_WINDOW_MS = 5 * 60 * 1000;
@@ -87,6 +93,20 @@ export default function OTPVerification() {
   const phone = searchParams.get("phone")?.trim() ?? "";
   const channel = (searchParams.get("channel") as VerificationChannel | null) ?? (phone ? "phone" : "email");
   const role: AuthRole = resolveAuthRole(searchParams.get("role"));
+  const vendorPlan = React.useMemo((): VendorPlanChoice | null => {
+    const fromQuery = parseVendorPlan(searchParams.get("plan"));
+    if (fromQuery) {
+      return fromQuery;
+    }
+    return role === "vendor" ? getSavedVendorPlan() : null;
+  }, [searchParams, role]);
+
+  React.useEffect(() => {
+    if (vendorPlan) {
+      saveVendorPlan(vendorPlan);
+    }
+  }, [vendorPlan]);
+
   const identifier =
     purpose === "login" || (purpose === "register" && channel === "phone") ? phone : email;
   const limiterKey = React.useMemo(() => {
@@ -209,7 +229,9 @@ export default function OTPVerification() {
           return;
         }
 
-        navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
+        navigate(await resolvePostLoginPath(loginResult.user, role, { vendorPlan }), {
+          replace: true,
+        });
       } catch (err) {
         setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
       } finally {
@@ -252,7 +274,9 @@ export default function OTPVerification() {
         { authStrategy, setToken, setUser, refreshSession, resetAuthState },
         role,
       );
-      navigate(await resolvePostLoginPath(loggedInUser, role), { replace: true });
+      navigate(await resolvePostLoginPath(loggedInUser, role, { vendorPlan }), {
+        replace: true,
+      });
     } catch (err) {
       setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
     } finally {
@@ -310,7 +334,13 @@ export default function OTPVerification() {
     setResending(true);
     try {
       if (purpose === "register") {
-        await resendRegistrationOtp({ email: normalizedEmail });
+        if (channel === "phone" && phone) {
+          await resendRegistrationOtp({ phone });
+        } else if (normalizedEmail) {
+          await resendRegistrationOtp({ email: normalizedEmail });
+        } else {
+          throw new Error("Missing contact details for OTP resend.");
+        }
       } else if (purpose === "login") {
         await resendPhoneLoginOtp({ phone, role });
       } else {
@@ -345,6 +375,9 @@ export default function OTPVerification() {
                 {purpose === "register" && channel === "email"
                   ? `Enter the verification code we just sent to ${email || "your email"}.`
                   : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Codes are valid for 15 minutes. If you request a new code, use the latest one only.
               </p>
             </div>
 

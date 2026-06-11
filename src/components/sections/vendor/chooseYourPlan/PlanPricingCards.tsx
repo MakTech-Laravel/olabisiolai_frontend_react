@@ -4,24 +4,48 @@ import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ensureCanStartVendorSignup } from "@/features/vendor/vendorSignupFromCustomerGuard";
+import {
+  saveVendorPlan,
+  vendorRegisterPath,
+  type VendorPlanChoice,
+} from "@/features/vendor/vendorPlanStorage";
 import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
 
 import { PlanFeatureCheck, PlanFeatureLocked } from "./PlanFeature";
 
-export function PlanPricingCards() {
+type PlanPricingCardsProps = {
+  signupMode?: boolean;
+};
+
+export function PlanPricingCards({ signupMode = false }: PlanPricingCardsProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { goToPremiumPayment } = useVendorSubscriptionAccess();
 
+  const startSignupWithPlan = (plan: VendorPlanChoice) => {
+    saveVendorPlan(plan);
+    navigate(vendorRegisterPath(plan));
+  };
+
   const handleFreePlan = async () => {
+    if (signupMode && !user) {
+      startSignupWithPlan("free");
+      return;
+    }
+
     if (!(await ensureCanStartVendorSignup(user, logout))) return;
-    localStorage.setItem("vendorPlan", "free");
+    saveVendorPlan("free");
     navigate("/vendor/plan-form");
   };
 
   const handlePremiumPlan = async () => {
+    if (signupMode && !user) {
+      startSignupWithPlan("premium");
+      return;
+    }
+
     if (!(await ensureCanStartVendorSignup(user, logout))) return;
-    localStorage.setItem("vendorPlan", "premium");
+    saveVendorPlan("premium");
     goToPremiumPayment();
   };
 
@@ -30,9 +54,12 @@ export function PlanPricingCards() {
       <Card className="overflow-hidden border-border-light bg-card text-card-foreground shadow-sm">
         <CardContent className="space-y-6 p-8">
           <div>
-            <h2 className="text-2xl font-bold font-manrope">Basic</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Free plan
+            </p>
+            <h2 className="text-2xl font-bold font-manrope">Free</h2>
             <p className="mt-3 text-4xl font-bold tracking-tight font-manrope">
-              Free
+              ₦0
             </p>
             <p className="mt-2 text-sm text-muted-foreground font-inter">
               Perfect for getting started on Gidira.
@@ -52,7 +79,7 @@ export function PlanPricingCards() {
             className="w-full border-border py-6 text-base font-inter font-semibold hover:bg-muted/50"
             onClick={() => void handleFreePlan()}
           >
-            Get started free
+            {signupMode ? "Continue with Free" : "Get started free"}
           </Button>
         </CardContent>
       </Card>
@@ -63,6 +90,9 @@ export function PlanPricingCards() {
         </div>
         <CardContent className="space-y-6 p-8 pt-12">
           <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-red">
+              Premium plan
+            </p>
             <h2 className="text-2xl font-bold font-manrope">Premium</h2>
             <p className="mt-3 text-4xl font-bold tracking-tight font-manrope">
               ₦25,000
@@ -76,7 +106,7 @@ export function PlanPricingCards() {
             </p>
           </div>
           <ul className="space-y-3">
-            <PlanFeatureCheck>Everything in Basic</PlanFeatureCheck>
+            <PlanFeatureCheck>Everything in Free</PlanFeatureCheck>
             <PlanFeatureCheck>Up to 20 photos</PlanFeatureCheck>
             <PlanFeatureCheck>Full analytics dashboard</PlanFeatureCheck>
             <PlanFeatureLocked>Verified badge (separate verification fee)</PlanFeatureLocked>
@@ -88,7 +118,7 @@ export function PlanPricingCards() {
             className="w-full bg-brand-red py-6 text-base font-inter font-semibold text-white shadow-sm hover:bg-brand-red/90"
             onClick={() => void handlePremiumPlan()}
           >
-            Start premium
+            {signupMode ? "Continue with Premium" : "Start premium"}
           </Button>
         </CardContent>
       </Card>

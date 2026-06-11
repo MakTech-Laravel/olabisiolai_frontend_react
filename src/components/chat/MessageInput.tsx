@@ -1,13 +1,46 @@
 import * as React from 'react'
-import { Paperclip, Send, Smile, X } from 'lucide-react'
+import { FileImage, FileText, Film, Paperclip, Send, Smile, X } from 'lucide-react'
 
 import { EmojiPicker } from '@/components/chat/EmojiPicker'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
-import { TYPING_DEBOUNCE_MS, MESSAGING_ATTACHMENT_ACCEPT, MESSAGING_ATTACHMENT_MAX_COUNT } from '@/constants/config'
+import { TYPING_DEBOUNCE_MS, MESSAGING_ATTACHMENT_MAX_COUNT } from '@/constants/config'
 import type { Message } from '@/types/message'
 import { cn } from '@/lib/utils'
 import { getMessagePreviewText } from '@/utils/messageUtils'
+
+const ATTACHMENT_OPTIONS = [
+  {
+    id: 'images',
+    label: 'Photos',
+    accept: '.jpg,.jpeg,.png,.gif,.webp',
+    icon: FileImage,
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    accept: '.pdf,.doc,.docx',
+    icon: FileText,
+  },
+  {
+    id: 'videos',
+    label: 'Videos & audio',
+    accept: '.mp4,.mp3,.wav',
+    icon: Film,
+  },
+  {
+    id: 'all',
+    label: 'All supported files',
+    accept: '.jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.mp4,.mp3,.wav',
+    icon: Paperclip,
+  },
+] as const
 
 interface MessageInputProps {
   value: string
@@ -42,6 +75,7 @@ export function MessageInput({
   const emojiAnchorRef = React.useRef<HTMLDivElement>(null)
   const typingTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const fileRef = React.useRef<HTMLInputElement>(null)
+  const pendingAcceptRef = React.useRef<string>(ATTACHMENT_OPTIONS[3].accept)
 
   const handleChange = (v: string) => {
     onChange(v)
@@ -61,6 +95,14 @@ export function MessageInput({
       e.preventDefault()
       onSend()
     }
+  }
+
+  const openFilePicker = (accept: string) => {
+    pendingAcceptRef.current = accept
+    if (fileRef.current) {
+      fileRef.current.accept = accept
+    }
+    window.setTimeout(() => fileRef.current?.click(), 0)
   }
 
   const canSend =
@@ -106,7 +148,7 @@ export function MessageInput({
           ref={fileRef}
           type="file"
           multiple
-          accept={MESSAGING_ATTACHMENT_ACCEPT}
+          accept={pendingAcceptRef.current}
           className="hidden"
           onChange={(e) => {
             const list = e.target.files
@@ -117,16 +159,35 @@ export function MessageInput({
             e.target.value = ''
           }}
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-11 shrink-0 rounded-xl text-ink hover:bg-muted"
-          aria-label="Attach file"
-          onClick={() => fileRef.current?.click()}
-        >
-          <Paperclip className="size-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-11 shrink-0 rounded-xl text-ink hover:bg-muted"
+              aria-label="Attach file"
+              disabled={disabled}
+            >
+              <Paperclip className="size-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            {ATTACHMENT_OPTIONS.map((option) => {
+              const Icon = option.icon
+              return (
+                <DropdownMenuItem
+                  key={option.id}
+                  onClick={() => openFilePicker(option.accept)}
+                  className="gap-2"
+                >
+                  <Icon className="size-4" />
+                  {option.label}
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="relative min-w-0 flex-1">
           <Textarea
             value={value}

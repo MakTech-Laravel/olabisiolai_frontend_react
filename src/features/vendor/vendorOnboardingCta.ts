@@ -2,6 +2,7 @@ import type { NavigateFunction } from "react-router-dom";
 
 import { hasAnyRole } from "@/auth/roles";
 import type { AuthUser } from "@/auth/types";
+import { vendorSignupPlanPath } from "@/features/vendor/vendorPlanStorage";
 
 export type VendorOnboardingGuestDestination = "trade-plans" | "vendor-register";
 export type VendorOnboardingVendorDestination = "dashboard" | "choose-plan";
@@ -59,7 +60,7 @@ export async function handleVendorOnboardingCta(
   }
 
   if (guestDestination === "vendor-register") {
-    navigate("/register?role=vendor");
+    navigate(vendorSignupPlanPath());
     return;
   }
 

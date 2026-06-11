@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
 import { fetchVendorOnboardingStatus } from '@/features/subscription/vendorOnboardingApi';
+import { getSavedVendorPlan } from '@/features/vendor/vendorPlanStorage';
 
 type Props = {
   children: React.ReactNode;
@@ -26,7 +27,9 @@ export function VendorPremiumPaymentGate({ children }: Props) {
     }
 
     if (!data.has_business) {
-      navigate('/vendor/choose-your-plan', { replace: true });
+      navigate(getSavedVendorPlan() ? '/vendor/plan-form' : '/vendor/choose-your-plan', {
+        replace: true,
+      });
       return;
     }
 

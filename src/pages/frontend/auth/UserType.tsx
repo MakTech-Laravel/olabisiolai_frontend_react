@@ -2,6 +2,7 @@ import { Briefcase, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { saveAuthRole } from "@/features/auth/roleSelection";
 import { type AuthRole } from "@/features/auth/types";
+import { vendorSignupPlanPath } from "@/features/vendor/vendorPlanStorage";
 
 export default function UserType() {
   function onSelectRole(role: AuthRole) {
@@ -53,7 +54,7 @@ export default function UserType() {
 
           {/* Business Owner Option */}
           <Link
-            to="/login/phone?role=vendor"
+            to={vendorSignupPlanPath()}
             className="block"
             onClick={() => onSelectRole("vendor")}
           >

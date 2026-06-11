@@ -2,6 +2,7 @@ import type { NavigateFunction } from "react-router-dom";
 
 import type { AuthUser } from "@/auth/types";
 import { handleVendorOnboardingCta } from "@/features/vendor/vendorOnboardingCta";
+import { vendorSignupPlanPath } from "@/features/vendor/vendorPlanStorage";
 
 export const TRADE_CHOOSE_PLAN_SECTION_ID = "choose-your-plan";
 
@@ -39,7 +40,7 @@ export function tradePlanActionPath(
   isAuthenticated: boolean,
 ): string {
   if (!isAuthenticated) {
-    return "/register?role=vendor";
+    return vendorSignupPlanPath();
   }
 
   return "/vendor/choose-your-plan";

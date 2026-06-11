@@ -2,6 +2,10 @@ import { isAxiosError } from 'axios';
 
 import { request } from '@/api/request';
 import type { VendorSubscriptionState } from '@/features/subscription/vendorSubscriptionApi';
+import {
+  getSavedVendorPlan,
+  vendorPostVerificationPath,
+} from '@/features/vendor/vendorPlanStorage';
 
 export type VendorOnboardingStatus = {
   has_business: boolean;
@@ -59,6 +63,11 @@ export function onboardingRedirectPath(status: VendorOnboardingStatus): string {
 
 /** After vendor login — skip `/vendor` shell; go straight to plan, payment, or dashboard. */
 export async function resolveVendorPostLoginPath(): Promise<string> {
+  const savedPlan = getSavedVendorPlan()
+  if (savedPlan) {
+    return vendorPostVerificationPath(savedPlan)
+  }
+
   const status = await fetchVendorOnboardingStatus();
 
   return onboardingRedirectPath(status);

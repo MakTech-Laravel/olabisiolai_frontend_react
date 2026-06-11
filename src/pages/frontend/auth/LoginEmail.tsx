@@ -10,6 +10,7 @@ import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMe
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { getUserRoles } from "@/auth/roles";
 import { extractUserFromAuthPayload } from "@/api/laravelResponse";
+import { signUpPathForRole } from "@/features/vendor/vendorPlanStorage";
 import {
   buildRegisterOtpVerificationPath,
   loginUserWithRole,
@@ -200,7 +201,7 @@ export default function LoginEmail() {
               <p className="text-base font-inter font-normal text-muted-foreground">
                 Don't have an account?
               </p>
-              <Link to={`/register?role=${role}`} className="text-primary hover:underline">
+              <Link to={signUpPathForRole(role)} className="text-primary hover:underline">
                 Sign Up
               </Link>
             </div>

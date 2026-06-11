@@ -1,3 +1,5 @@
+import { useSearchParams } from "react-router-dom";
+
 import { ChoosePlanHeader } from "@/components/sections/vendor/chooseYourPlan/ChoosePlanHeader";
 import { PlanComparisonTable } from "@/components/sections/vendor/chooseYourPlan/PlanComparisonTable";
 import { PlanFaq } from "@/components/sections/vendor/chooseYourPlan/PlanFaq";
@@ -6,11 +8,14 @@ import { PlanPricingCards } from "@/components/sections/vendor/chooseYourPlan/Pl
 import { PlanPromoBanner } from "@/components/sections/vendor/chooseYourPlan/PlanPromoBanner";
 
 export default function ChooseYourVendorPlan() {
+    const [searchParams] = useSearchParams();
+    const signupMode = searchParams.get("signup") === "1";
+
     return (
         <div className="p-4 md:p-6">
             <div className="mx-auto max-w-5xl space-y-12 text-foreground md:space-y-16">
-                <ChoosePlanHeader />
-                <PlanPricingCards />
+                <ChoosePlanHeader signupMode={signupMode} />
+                <PlanPricingCards signupMode={signupMode} />
                 <PlanComparisonTable />
                 <PlanPromoBanner />
                 <PlanFaq />

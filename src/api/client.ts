@@ -27,7 +27,9 @@ function isLoginRoute(pathname: string) {
   return (
     pathname === '/login' ||
     pathname.startsWith('/login/') ||
-    pathname === '/admin/login'
+    pathname === '/admin/login' ||
+    pathname === '/otp-verification' ||
+    pathname === '/register'
   )
 }
 

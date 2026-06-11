@@ -66,6 +66,10 @@ export function AccountVerificationSection({ user, className, onVerified }: Prop
 
   const resendMutation = useMutation({
     mutationFn: async () => {
+      if (channel === 'phone' && user?.phone) {
+        await resendRegistrationOtp({ phone: user.phone })
+        return
+      }
       await resendRegistrationOtp({ email: user?.email ?? '' })
     },
     onSuccess: () => {
