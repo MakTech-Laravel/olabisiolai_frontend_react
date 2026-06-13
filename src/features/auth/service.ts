@@ -1,10 +1,12 @@
 import { isAxiosError } from 'axios'
 import {
   extractBearerTokenFromLoginBody,
+  extractDeviceVerificationToken,
   extractLoginVerificationChannel,
   extractRefreshTokenFromLoginBody,
   extractTwoFactorLoginToken,
   extractUserFromAuthPayload,
+  isDeviceVerificationRequired,
   isLoginVerificationRequired,
   isTwoFactorLoginRequired,
 } from '@/api/laravelResponse'
@@ -28,12 +30,20 @@ import {
   type VerifyOtpPayload,
 } from '@/features/auth/types'
 import {
+  buildPasswordResetOtpPath,
   clearPasswordResetSession,
   markPasswordResetOtpVerified,
+  passwordResetContactPayload,
   savePasswordResetSession,
 } from '@/features/auth/passwordResetStorage'
+import {
+  clearDeviceVerificationSession,
+  getDeviceVerificationSession,
+  saveDeviceVerificationSession,
+} from '@/features/auth/deviceVerificationStorage'
 import { resolveVendorPostLoginPath } from '@/features/subscription/vendorOnboardingApi'
 import { toNigerianPhonePayload } from '@/lib/nigerianPhone'
+import { getAuthDevicePayload } from '@/lib/deviceId'
 import {
   saveVendorPlan,
   vendorPostVerificationPath,
@@ -123,6 +133,13 @@ export type LoginUserResult =
   | { kind: 'authenticated'; user: AuthUser }
   | { kind: 'two_factor'; twoFactorToken: string }
   | {
+      kind: 'device_verification'
+      deviceVerificationToken: string
+      verificationChannel: VerificationChannel
+      email?: string
+      phone?: string
+    }
+  | {
       kind: 'verification_required'
       user: AuthUser
       verificationChannel: VerificationChannel
@@ -150,6 +167,26 @@ export function buildRegisterOtpVerificationPath(options: {
   return `/otp-verification?${params.toString()}`
 }
 
+export function buildNewDeviceOtpVerificationPath(options: {
+  role: AuthRole
+  channel: VerificationChannel
+  email?: string
+  phone?: string
+}): string {
+  const params = new URLSearchParams({
+    purpose: 'new_device',
+    role: options.role,
+    channel: options.channel,
+  })
+  if (options.channel === 'email' && options.email) {
+    params.set('email', options.email)
+  }
+  if (options.channel === 'phone' && options.phone) {
+    params.set('phone', options.phone)
+  }
+  return `/otp-verification?${params.toString()}`
+}
+
 function buildVerificationRequiredUser(
   payload: LoginPayload,
   body: unknown,
@@ -163,6 +200,38 @@ function buildVerificationRequiredUser(
     phone: payload.phone,
     role: payload.role,
     roles: [payload.role],
+  }
+}
+
+function parseDeviceVerificationResult(
+  body: unknown,
+  payload: LoginPayload,
+): LoginUserResult | null {
+  if (!isDeviceVerificationRequired(body)) {
+    return null
+  }
+
+  const deviceVerificationToken = extractDeviceVerificationToken(body)
+  if (!deviceVerificationToken) {
+    throw new Error('New device verification is required, but the verification token is missing.')
+  }
+
+  const verificationChannel = extractLoginVerificationChannel(body)
+
+  saveDeviceVerificationSession({
+    token: deviceVerificationToken,
+    channel: verificationChannel,
+    email: payload.email,
+    phone: payload.phone,
+    role: payload.role,
+  })
+
+  return {
+    kind: 'device_verification',
+    deviceVerificationToken,
+    verificationChannel,
+    email: payload.email,
+    phone: payload.phone,
   }
 }
 
@@ -192,6 +261,7 @@ export async function loginUserWithRole(
 ): Promise<LoginUserResult> {
   const loginPayload = {
     ...payload,
+    ...getAuthDevicePayload(),
     ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
   }
 
@@ -203,6 +273,12 @@ export async function loginUserWithRole(
     if (verificationResult) {
       handlers.resetAuthState()
       return verificationResult
+    }
+
+    const deviceVerificationResult = parseDeviceVerificationResult(res.data, payload)
+    if (deviceVerificationResult) {
+      handlers.resetAuthState()
+      return deviceVerificationResult
     }
 
     if (isTwoFactorLoginRequired(res.data)) {
@@ -224,6 +300,7 @@ export async function loginUserWithRole(
       throw new Error('Unable to restore your session after login.')
     }
     ensureRoleMatchesExpected(user, payload.role)
+    clearDeviceVerificationSession()
     return { kind: 'authenticated', user }
   } catch (error) {
     if (isAxiosError(error)) {
@@ -231,6 +308,12 @@ export async function loginUserWithRole(
       if (verificationResult) {
         handlers.resetAuthState()
         return verificationResult
+      }
+
+      const deviceVerificationResult = parseDeviceVerificationResult(error.response?.data, payload)
+      if (deviceVerificationResult) {
+        handlers.resetAuthState()
+        return deviceVerificationResult
       }
     }
 
@@ -242,9 +325,22 @@ export async function loginUserWithRole(
 export async function verifyLoginTwoFactor(
   payload: { two_factor_token: string; code: string; role: AuthRole },
   handlers: AuthHandlers,
-): Promise<AuthUser> {
+): Promise<LoginUserResult> {
   try {
-    const res = await request.post<unknown>('/auth/two-factor/verify', payload)
+    const res = await request.post<unknown>('/auth/two-factor/verify', {
+      ...payload,
+      ...getAuthDevicePayload(),
+    })
+
+    if (isTwoFactorLoginRequired(res.data)) {
+      const twoFactorToken = extractTwoFactorLoginToken(res.data)
+      if (!twoFactorToken) {
+        throw new Error('Two-factor authentication is required, but the login token is missing.')
+      }
+      handlers.resetAuthState()
+      return { kind: 'two_factor', twoFactorToken }
+    }
+
     const user = await hydrateSessionFromLoginBody(
       res.data,
       handlers,
@@ -255,7 +351,65 @@ export async function verifyLoginTwoFactor(
       throw new Error('Unable to restore your session after two-factor verification.')
     }
     ensureRoleMatchesExpected(user, payload.role)
-    return user
+    clearDeviceVerificationSession()
+    return { kind: 'authenticated', user }
+  } catch (error) {
+    handlers.resetAuthState()
+    throw error
+  }
+}
+
+export async function resendNewDeviceLoginOtp(deviceVerificationToken: string) {
+  const res = await request.post<unknown>(
+    '/auth/device/resend-otp',
+    { device_verification_token: deviceVerificationToken },
+    { skipAuthRedirect: true },
+  )
+  logOtpFromResponse(res.data, 'new device login resend')
+}
+
+export async function verifyNewDeviceLoginOtp(
+  payload: { code: string; role: AuthRole },
+  handlers: AuthHandlers,
+): Promise<LoginUserResult> {
+  const session = getDeviceVerificationSession()
+  if (!session?.token) {
+    throw new Error('Your device verification session expired. Please sign in again.')
+  }
+
+  try {
+    const res = await request.post<unknown>(
+      '/auth/device/verify-otp',
+      {
+        device_verification_token: session.token,
+        code: payload.code,
+        role: payload.role,
+      },
+      { skipAuthRedirect: true },
+    )
+
+    if (isTwoFactorLoginRequired(res.data)) {
+      const twoFactorToken = extractTwoFactorLoginToken(res.data)
+      if (!twoFactorToken) {
+        throw new Error('Two-factor authentication is required, but the login token is missing.')
+      }
+      clearDeviceVerificationSession()
+      handlers.resetAuthState()
+      return { kind: 'two_factor', twoFactorToken }
+    }
+
+    const user = await hydrateSessionFromLoginBody(
+      res.data,
+      handlers,
+      'Unable to restore your session after device verification.',
+      'Login response is missing access token.',
+    )
+    if (!user) {
+      throw new Error('Unable to restore your session after device verification.')
+    }
+    ensureRoleMatchesExpected(user, payload.role)
+    clearDeviceVerificationSession()
+    return { kind: 'authenticated', user }
   } catch (error) {
     handlers.resetAuthState()
     throw error
@@ -391,9 +545,17 @@ function extractPasswordResetCredentials(body: unknown): { otp: string | null; t
 }
 
 export async function requestPasswordResetOtp(payload: PasswordResetOtpPayload) {
-  const res = await request.post<unknown>('/auth/forgot-password', {
-    email: payload.email.trim().toLowerCase(),
-  })
+  const apiPayload = {
+    ...passwordResetContactPayload({
+      channel: payload.channel,
+      email: payload.email,
+      phone: payload.phone,
+      token: '',
+      otpVerified: false,
+    }),
+  }
+
+  const res = await request.post<unknown>('/auth/forgot-password', apiPayload)
   logOtpFromResponse(res.data, 'password reset')
 
   const { token } = extractPasswordResetCredentials(res.data)
@@ -402,7 +564,9 @@ export async function requestPasswordResetOtp(payload: PasswordResetOtpPayload) 
   }
 
   savePasswordResetSession({
-    email: payload.email.trim().toLowerCase(),
+    channel: payload.channel,
+    email: payload.email,
+    phone: payload.phone,
     token,
     otpVerified: false,
   })
@@ -410,11 +574,17 @@ export async function requestPasswordResetOtp(payload: PasswordResetOtpPayload) 
   return { token }
 }
 
-export async function resendForgotPasswordOtp(payload: { email: string; token: string }) {
+export async function resendForgotPasswordOtp(payload: VerifyForgotPasswordOtpPayload) {
   const res = await request.post<unknown>(
     '/auth/forgot-password/resend-otp',
     {
-      email: payload.email.trim().toLowerCase(),
+      ...passwordResetContactPayload({
+        channel: payload.channel,
+        email: payload.email,
+        phone: payload.phone,
+        token: payload.token,
+        otpVerified: false,
+      }),
       token: payload.token,
     },
     { skipAuthRedirect: true },
@@ -426,7 +596,13 @@ export async function verifyForgotPasswordOtp(payload: VerifyForgotPasswordOtpPa
   await request.post<unknown>(
     '/auth/forgot-password/verify-otp',
     {
-      email: payload.email.trim().toLowerCase(),
+      ...passwordResetContactPayload({
+        channel: payload.channel,
+        email: payload.email,
+        phone: payload.phone,
+        token: payload.token,
+        otpVerified: false,
+      }),
       code: payload.code,
       token: payload.token,
     },
@@ -439,7 +615,13 @@ export async function resetPassword(payload: ResetPasswordPayload) {
   await request.post<unknown>(
     '/auth/reset-password',
     {
-      email: payload.email.trim().toLowerCase(),
+      ...passwordResetContactPayload({
+        channel: payload.channel,
+        email: payload.email,
+        phone: payload.phone,
+        token: payload.token,
+        otpVerified: true,
+      }),
       token: payload.token,
       password: payload.password,
       password_confirmation: payload.password_confirmation,
@@ -448,6 +630,8 @@ export async function resetPassword(payload: ResetPasswordPayload) {
   )
   clearPasswordResetSession()
 }
+
+export { buildPasswordResetOtpPath }
 
 export async function resendRegistrationOtp(payload: {
   email?: string
@@ -471,6 +655,7 @@ export async function verifyRegistrationOtp(
   const verifyPayload = {
     code: payload.otp,
     verification_code: payload.otp,
+    ...getAuthDevicePayload(),
     ...(payload.email ? { email: payload.email } : {}),
     ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
     ...(payload.verification_channel ? { verification_channel: payload.verification_channel } : {}),

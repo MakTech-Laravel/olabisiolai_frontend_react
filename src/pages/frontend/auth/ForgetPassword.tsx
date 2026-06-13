@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuthErrorMessage } from "@/features/auth/errorMessage";
+import { buildPasswordResetOtpPath, getPasswordResetSession } from "@/features/auth/passwordResetStorage";
 import { requestPasswordResetOtp } from "@/features/auth/service";
+import { parseAuthContactInput } from "@/lib/parseAuthContact";
 
 export default function ForgetPassword() {
   const navigate = useNavigate();
-  const [email, setEmail] = React.useState("");
+  const [contact, setContact] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -17,12 +19,19 @@ export default function ForgetPassword() {
     setError(null);
     setLoading(true);
     try {
-      await requestPasswordResetOtp({ email });
-      navigate(`/otp-verification?purpose=reset&email=${encodeURIComponent(email)}`, {
-        replace: true,
-      });
+      const parsed = parseAuthContactInput(contact);
+      await requestPasswordResetOtp(parsed);
+      const resetSession = getPasswordResetSession();
+      if (!resetSession) {
+        throw new Error("Password reset started, but your session could not be saved. Please try again.");
+      }
+      navigate(buildPasswordResetOtpPath(resetSession), { replace: true });
     } catch (err) {
-      setError(getAuthErrorMessage(err, "Failed to send reset code. Please try again."));
+      if (err instanceof Error && err.message.includes("valid email")) {
+        setError(err.message);
+      } else {
+        setError(getAuthErrorMessage(err, "Failed to send reset code. Please try again."));
+      }
     } finally {
       setLoading(false);
     }
@@ -34,7 +43,6 @@ export default function ForgetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-auth-bg p-4">
         <div className="max-w-md w-full bg-card p-8 rounded-lg shadow-lg">
           <div className="space-y-6">
-            {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-2xl font-inter font-semibold text-foreground mb-2">
                 Forget Password
@@ -45,18 +53,19 @@ export default function ForgetPassword() {
               </p>
             </div>
 
-            {/* Email Login Form */}
             <form className="space-y-4" onSubmit={onSubmit}>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Email/phone
                 </label>
                 <Input
-                  type="email"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="username"
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Enter your email or phone number"
+                  value={contact}
+                  onChange={(event) => setContact(event.target.value)}
                   required
                 />
               </div>
@@ -82,7 +91,6 @@ export default function ForgetPassword() {
               </div>
             </form>
 
-            {/* Sign Up Link */}
             <div className="flex items-center gap-2 mb-2">
               <p className="text-base font-inter font-normal text-muted-foreground">
                 Already have account?
@@ -100,7 +108,6 @@ export default function ForgetPassword() {
               </Link>
             </div>
 
-            {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t-2 border-border"></div>

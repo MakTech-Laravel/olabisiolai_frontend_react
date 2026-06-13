@@ -7,16 +7,18 @@ import { getAuthErrorMessage } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { getAccessToken, getStoredAuthUser } from "@/auth/token";
 import {
-  requestPasswordResetOtp,
   resendForgotPasswordOtp,
+  resendNewDeviceLoginOtp,
   resendPhoneLoginOtp,
   resendRegistrationOtp,
   resolvePostLoginPath,
   verifyForgotPasswordOtp,
+  verifyNewDeviceLoginOtp,
   verifyPhoneLoginOtp,
   verifyRegistrationOtp,
 } from "@/features/auth/service";
-import { getPasswordResetSession } from "@/features/auth/passwordResetStorage";
+import { getPasswordResetSession, passwordResetContactPayload } from "@/features/auth/passwordResetStorage";
+import { getDeviceVerificationSession } from "@/features/auth/deviceVerificationStorage";
 import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
 import {
   applyOtpInputAtIndex,
@@ -116,7 +118,12 @@ export default function OTPVerification() {
   }, [vendorPlan]);
 
   const identifier =
-    purpose === "login" || (purpose === "register" && channel === "phone") ? phone : email;
+    purpose === "login" ||
+    (purpose === "register" && channel === "phone") ||
+    (purpose === "new_device" && channel === "phone") ||
+    (purpose === "reset" && channel === "phone")
+      ? phone
+      : email;
   const limiterKey = React.useMemo(() => {
     if (!identifier) return null;
     return getLimiterStorageKey(purpose, identifier);
@@ -137,6 +144,12 @@ export default function OTPVerification() {
       }
     }
   }, [purpose, setToken, setUser]);
+
+  React.useEffect(() => {
+    if (purpose !== "new_device") return;
+    if (getDeviceVerificationSession()?.token) return;
+    navigate("/login/email", { replace: true });
+  }, [navigate, purpose]);
 
   React.useEffect(() => {
     saveAuthRole(role);
@@ -209,15 +222,9 @@ export default function OTPVerification() {
     // Password reset: verify OTP before allowing new password entry.
     if (purpose === "reset") {
       const resetSession = getPasswordResetSession();
-      const resetEmail = (email || resetSession?.email || "").trim().toLowerCase();
       const resetToken = resetSession?.token;
 
-      if (!resetEmail) {
-        setError("Missing email for password reset. Please start again.");
-        return;
-      }
-
-      if (!resetToken) {
+      if (!resetSession || !resetToken) {
         setError("Your reset session expired. Please request a new code.");
         return;
       }
@@ -225,11 +232,56 @@ export default function OTPVerification() {
       setLoading(true);
       try {
         await verifyForgotPasswordOtp({
-          email: resetEmail,
+          channel: resetSession.channel,
+          ...passwordResetContactPayload(resetSession),
           code: otpCode,
           token: resetToken,
         });
         navigate("/reset-password", { replace: true });
+      } catch (err) {
+        setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (purpose === "new_device") {
+      const session = getDeviceVerificationSession();
+      if (!session?.token) {
+        setError("Your verification session expired. Please sign in again.");
+        return;
+      }
+
+      setLoading(true);
+      saveAuthRole(role);
+
+      try {
+        const returnTo = (location.state as { from?: unknown } | null)?.from;
+        const loginResult = await verifyNewDeviceLoginOtp(
+          { code: otpCode, role },
+          { authStrategy, setToken, setUser, refreshSession, resetAuthState },
+        );
+
+        if (loginResult.kind === "two_factor") {
+          navigate("/login/two-factor", {
+            replace: true,
+            state: {
+              twoFactorToken: loginResult.twoFactorToken,
+              role,
+              from: returnTo,
+            },
+          });
+          return;
+        }
+
+        if (loginResult.kind !== "authenticated") {
+          throw new Error("Unexpected login state after device verification.");
+        }
+
+        navigate(await resolvePostLoginPath(loginResult.user, role, { vendorPlan }), {
+          replace: true,
+        });
       } catch (err) {
         setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
       } finally {
@@ -266,6 +318,10 @@ export default function OTPVerification() {
           return;
         }
 
+        if (loginResult.kind !== "authenticated") {
+          throw new Error("Unexpected login state after phone OTP verification.");
+        }
+
         navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
       } catch (err) {
         setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
@@ -275,7 +331,7 @@ export default function OTPVerification() {
       return;
     }
 
-    if (purpose !== "register") {
+    if (purpose !== "register" && purpose !== "new_device") {
       setError("Unsupported verification flow. Please start password reset again.");
       return;
     }
@@ -378,23 +434,39 @@ export default function OTPVerification() {
         }
       } else if (purpose === "login") {
         await resendPhoneLoginOtp({ phone, role });
+      } else if (purpose === "new_device") {
+        const session = getDeviceVerificationSession();
+        if (!session?.token) {
+          throw new Error("Your verification session expired. Please sign in again.");
+        }
+        await resendNewDeviceLoginOtp(session.token);
       } else if (purpose === "reset") {
         const resetSession = getPasswordResetSession();
-        const resetEmail = (normalizedEmail || resetSession?.email || "").trim().toLowerCase();
-        if (!resetEmail || !resetSession?.token) {
+        if (!resetSession?.token) {
           throw new Error("Reset session expired. Please request a new code.");
         }
-        await resendForgotPasswordOtp({ email: resetEmail, token: resetSession.token });
+        await resendForgotPasswordOtp({
+          channel: resetSession.channel,
+          ...passwordResetContactPayload(resetSession),
+          code: "",
+          token: resetSession.token,
+        });
       } else {
-        await requestPasswordResetOtp({ email: normalizedEmail });
+        throw new Error("Unsupported verification purpose.");
       }
       limiter.attempts += 1;
       writeLimiterState(limiterKey, limiter);
-      setResendMessage(
-        channel === "phone" || purpose === "login"
-          ? "A new OTP has been sent to your phone."
-          : "A new OTP has been sent to your email.",
-      );
+      if (purpose === "new_device") {
+        setResendMessage(
+          channel === "phone"
+            ? "A new verification code has been sent to your phone."
+            : "A new verification code has been sent to your email.",
+        );
+      } else if (channel === "phone" || purpose === "login") {
+        setResendMessage("A new OTP has been sent to your phone.");
+      } else {
+        setResendMessage("A new OTP has been sent to your email.");
+      }
       setOtp(createEmptyOtpDigits(OTP_LENGTH));
       inputRefs.current[0]?.focus();
     } catch (err) {
@@ -414,8 +486,14 @@ export default function OTPVerification() {
                 OTP Verification
               </h2>
               <p className="text-base font-inter font-normal text-muted-foreground text-start">
-                {purpose === "reset"
-                  ? `Enter the reset code we sent to ${email || "your email"}.`
+                {purpose === "reset" && channel === "phone"
+                  ? `Enter the reset code we sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`
+                  : purpose === "reset"
+                    ? `Enter the reset code we sent to ${email || "your email"}.`
+                  : purpose === "new_device" && channel === "email"
+                    ? `We noticed a sign-in from a new device. Enter the code we sent to ${email || "your email"}.`
+                    : purpose === "new_device"
+                      ? `We noticed a sign-in from a new device. Enter the code we sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`
                   : purpose === "register" && channel === "email"
                     ? `Enter the verification code we just sent to ${email || "your email"}.`
                     : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}

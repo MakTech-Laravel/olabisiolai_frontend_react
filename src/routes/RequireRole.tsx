@@ -9,10 +9,10 @@ export function RequireRole({
   role: string
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isSessionLoading, user } = useAuth()
+  const { isAuthenticated, isSessionLoading, isUserLoading, user } = useAuth()
   const location = useLocation()
 
-  if (isSessionLoading) {
+  if (isSessionLoading || isUserLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">
         Loading…

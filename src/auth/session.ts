@@ -1,10 +1,18 @@
+import { isAxiosError } from 'axios'
+
 import { api } from '@/api/client'
 import { extractUserFromAuthPayload } from '@/api/laravelResponse'
 import { env } from '@/config/env'
 import { type AuthUser } from '@/auth/types'
 
+export type FetchCurrentUserResult = {
+  user: AuthUser | null
+  /** True when the API rejected the Bearer token (401). */
+  unauthorized: boolean
+}
+
 /** GET current user — Laravel Passport Bearer or cookie session. */
-export async function fetchCurrentUser(): Promise<AuthUser | null> {
+export async function fetchCurrentUser(): Promise<FetchCurrentUserResult> {
   // Order matters: this API has no `GET /me`; `/auth/profile` and `/admin/me` are the real probes.
   const primary = ['/auth/profile', '/admin/me'] as const
   const custom =
@@ -15,16 +23,22 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
       : []
   const pathCandidates = Array.from(new Set([...primary, ...custom, env.authMePath].filter(Boolean)))
 
+  let sawUnauthorized = false
+
   for (const path of pathCandidates) {
     try {
       const res = await api.get<unknown>(path, {
         skipAuthRedirect: true,
       })
       const user = extractUserFromAuthPayload(res.data)
-      if (user) return user
-    } catch {
+      if (user) return { user, unauthorized: false }
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 401) {
+        sawUnauthorized = true
+      }
       // try next candidate path
     }
   }
-  return null
+
+  return { user: null, unauthorized: sawUnauthorized }
 }

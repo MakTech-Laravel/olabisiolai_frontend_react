@@ -1,3 +1,4 @@
+import { broadcastAuthStorageChange } from '@/auth/authSync'
 import { env, type BearerTokenPersistence } from '@/config/env'
 import { type AuthUser } from '@/auth/types'
 
@@ -129,7 +130,38 @@ function clearAllAuthStorage() {
   } catch {
     // ignore
   }
+  broadcastAuthStorageChange()
 }
+
+/** Move a prior sessionStorage login into localStorage when persistence mode changed. */
+function migrateSessionAuthToLocalIfNeeded() {
+  if (typeof window === 'undefined') return
+  if (env.authStrategy !== 'bearer_memory') return
+  if (env.bearerTokenPersistence !== 'local') return
+
+  try {
+    if (localStorage.getItem(STORAGE_KEY_ACCESS)) return
+
+    const sessionToken = sessionStorage.getItem(STORAGE_KEY_ACCESS)
+    if (!sessionToken) return
+
+    localStorage.setItem(STORAGE_KEY_ACCESS, sessionToken)
+
+    const sessionRefresh = sessionStorage.getItem(STORAGE_KEY_REFRESH)
+    if (sessionRefresh) {
+      localStorage.setItem(STORAGE_KEY_REFRESH, sessionRefresh)
+    }
+
+    const sessionUser = sessionStorage.getItem(STORAGE_KEY_USER)
+    if (sessionUser) {
+      localStorage.setItem(STORAGE_KEY_USER, sessionUser)
+    }
+  } catch {
+    // ignore quota / privacy errors
+  }
+}
+
+migrateSessionAuthToLocalIfNeeded()
 
 /**
  * Passport Bearer access token (only for `bearer_memory` strategy).
@@ -142,6 +174,7 @@ export function getAccessToken(): string | null {
 export function setAccessToken(token: string) {
   if (env.authStrategy === 'http_only_cookie') return
   writeAccess(env.bearerTokenPersistence, token)
+  broadcastAuthStorageChange()
 }
 
 /**
@@ -157,6 +190,7 @@ export function getRefreshToken(): string | null {
 export function setRefreshToken(token: string) {
   if (env.authStrategy === 'http_only_cookie' || !env.refreshTokenEnabled) return
   writeRefresh(env.bearerTokenPersistence, token)
+  broadcastAuthStorageChange()
 }
 
 /** Persist the last known authenticated user for Bearer auth reload recovery. */
@@ -168,6 +202,7 @@ export function getStoredAuthUser(): AuthUser | null {
 export function setStoredAuthUser(user: AuthUser | null) {
   if (env.authStrategy === 'http_only_cookie') return
   writeUser(env.bearerTokenPersistence, user)
+  broadcastAuthStorageChange()
 }
 
 /** Clears access + refresh tokens (logout / invalid session). */

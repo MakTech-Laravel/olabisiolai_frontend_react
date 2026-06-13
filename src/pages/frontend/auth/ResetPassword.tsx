@@ -5,7 +5,8 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMessage";
-import { getPasswordResetSession } from "@/features/auth/passwordResetStorage";
+import { formatNigerianPhoneDisplay } from "@/lib/nigerianPhone";
+import { getPasswordResetSession, passwordResetContactPayload } from "@/features/auth/passwordResetStorage";
 import { resetPassword } from "@/features/auth/service";
 
 const PASSWORD_HINT =
@@ -33,12 +34,16 @@ export default function ResetPassword() {
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [success, setSuccess] = React.useState<string | null>(null);
 
-  if (!session?.email || !session.token || !session.otpVerified) {
+  if (!session || !session.token || !session.otpVerified) {
     return <Navigate to="/forget-password" replace />;
   }
 
-  const resetEmail = session.email;
-  const resetToken = session.token;
+  const resetSession = session;
+  const resetContactLabel =
+    resetSession.channel === "phone" && resetSession.phone
+      ? formatNigerianPhoneDisplay(resetSession.phone)
+      : resetSession.email ?? "your account";
+  const resetToken = resetSession.token;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,7 +64,8 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await resetPassword({
-        email: resetEmail,
+        channel: resetSession.channel,
+        ...passwordResetContactPayload(resetSession),
         token: resetToken,
         password,
         password_confirmation: passwordConfirmation,
@@ -86,7 +92,7 @@ export default function ResetPassword() {
               Reset your password
             </h2>
             <p className="text-base font-inter font-normal text-muted-foreground text-center">
-              Set a new password for <span className="font-medium text-foreground">{resetEmail}</span>.
+              Set a new password for <span className="font-medium text-foreground">{resetContactLabel}</span>.
             </p>
           </div>
 

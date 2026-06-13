@@ -15,6 +15,7 @@ import { type AuthUser } from '@/auth/types'
 import { isSpatieSuperAdmin } from '@/auth/adminSpatie'
 import { getRoleLogoutPath } from '@/auth/rolePolicy'
 import { getUserRoles, hasAnyRole } from '@/auth/roles'
+import { subscribeAuthStorageChange } from '@/auth/authSync'
 import { env } from '@/config/env'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -59,23 +60,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsUserLoading(true)
     }
     try {
-      const u = await fetchCurrentUser()
-      if (u) {
+      const { user: fetchedUser, unauthorized } = await fetchCurrentUser()
+      if (fetchedUser) {
         // Profile probe must not replace a valid admin session with a misparsed object (missing route role).
         if (
           prev &&
           (hasAnyRole(prev, 'admin') || isSpatieSuperAdmin(prev)) &&
-          !hasAnyRole(u, 'admin') &&
-          !isSpatieSuperAdmin(u)
+          !hasAnyRole(fetchedUser, 'admin') &&
+          !isSpatieSuperAdmin(fetchedUser)
         ) {
           return prev
         }
-        setUser(u)
-        return u
+        setUser(fetchedUser)
+        return fetchedUser
       }
-      // Expired or invalid Bearer token — clear client session without forcing /login on public pages.
-      if (env.authStrategy === 'bearer_memory' && getAccessToken()) {
+
+      // Only clear the session when the API explicitly rejected the token.
+      if (unauthorized && env.authStrategy === 'bearer_memory' && getAccessToken()) {
         resetAuthState()
+        return null
+      }
+
+      // Network / server errors: keep the last known user so other tabs stay signed in.
+      if (prev) {
+        return prev
       }
       return null
     } finally {
@@ -93,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false
     void (async () => {
-      const u = await fetchCurrentUser()
+      const { user: u } = await fetchCurrentUser()
       if (!cancelled) {
         setUser(u)
         setIsSessionLoading(false)
@@ -131,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refreshSession()
   }, [refreshSession])
 
-  // Keep auth in sync across browser tabs (localStorage only).
+  // Keep auth in sync across browser tabs (localStorage + BroadcastChannel).
   React.useEffect(() => {
     if (env.authStrategy !== 'bearer_memory') return
     if (env.bearerTokenPersistence !== 'local') return
@@ -142,13 +150,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedUser = getStoredAuthUser()
 
       if (!token) {
-        resetAuthState()
+        if (userRef.current || accessTokenState) {
+          setAccessTokenState(null)
+          setUserState(null)
+          userRef.current = null
+          setIsUserLoading(false)
+        }
         return
       }
 
       setAccessTokenState(token)
       if (storedUser) {
-        setUser(storedUser)
+        setUserState(storedUser)
+        userRef.current = storedUser
+        setIsUserLoading(false)
         return
       }
 
@@ -169,9 +184,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       syncFromStorage()
     }
 
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromStorage()
+      }
+    }
+
     window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [refreshSession, resetAuthState, setUser])
+    document.addEventListener('visibilitychange', onVisible)
+    const unsubscribeBroadcast = subscribeAuthStorageChange(syncFromStorage)
+
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      document.removeEventListener('visibilitychange', onVisible)
+      unsubscribeBroadcast()
+    }
+  }, [accessTokenState, refreshSession])
 
   const setToken = React.useCallback((token: string) => {
     setAccessToken(token)
@@ -242,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated:
         env.authStrategy === 'http_only_cookie'
           ? Boolean(user)
-          : Boolean(accessTokenState) && Boolean(user),
+          : Boolean(accessTokenState) && (Boolean(user) || isUserLoading),
       isSessionLoading,
       isUserLoading,
       user,

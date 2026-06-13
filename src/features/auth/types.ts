@@ -44,17 +44,23 @@ export type VerifyOtpPayload = {
 }
 
 export type PasswordResetOtpPayload = {
-  email: string
+  channel: VerificationChannel
+  email?: string
+  phone?: string
 }
 
 export type VerifyForgotPasswordOtpPayload = {
-  email: string
+  channel: VerificationChannel
+  email?: string
+  phone?: string
   code: string
   token: string
 }
 
 export type ResetPasswordPayload = {
-  email: string
+  channel: VerificationChannel
+  email?: string
+  phone?: string
   token: string
   password: string
   password_confirmation: string

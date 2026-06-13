@@ -3,10 +3,10 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isSessionLoading } = useAuth()
+  const { isAuthenticated, isSessionLoading, isUserLoading } = useAuth()
   const location = useLocation()
 
-  if (isSessionLoading) {
+  if (isSessionLoading || isUserLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">
         Loading…

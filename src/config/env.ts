@@ -93,8 +93,8 @@ export const env = {
    */
   authStrategy: authStrategyFromEnv(),
   /**
-   * Only for `bearer_memory`. `session` (default) survives Ctrl+Shift+R in this tab.
-   * `local` = cross-tab until logout. `memory` = never survives reload.
+   * Only for `bearer_memory`. `local` (default) shares login across tabs until logout.
+   * `session` = per-tab only. `memory` = never survives reload.
    */
   bearerTokenPersistence: bearerTokenPersistenceFromEnv(),
   /** Profile endpoint path (Laravel12 auth routes commonly use `/auth/profile`). */

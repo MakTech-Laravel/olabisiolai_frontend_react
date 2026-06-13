@@ -12,6 +12,7 @@ import { getUserRoles } from "@/auth/roles";
 import { extractUserFromAuthPayload } from "@/api/laravelResponse";
 import { signUpPathForRole } from "@/features/vendor/vendorPlanStorage";
 import {
+  buildNewDeviceOtpVerificationPath,
   buildRegisterOtpVerificationPath,
   loginUserWithRole,
   resendRegistrationOtp,
@@ -81,6 +82,22 @@ export default function LoginEmail() {
             phone: loginResult.phone,
           }),
           { replace: true },
+        );
+        return;
+      }
+
+      if (loginResult.kind === "device_verification") {
+        navigate(
+          buildNewDeviceOtpVerificationPath({
+            role,
+            channel: loginResult.verificationChannel,
+            email: loginResult.email ?? identifier.trim(),
+            phone: loginResult.phone,
+          }),
+          {
+            replace: true,
+            state: { from: returnTo },
+          },
         );
         return;
       }

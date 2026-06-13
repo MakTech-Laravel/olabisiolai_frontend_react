@@ -91,6 +91,21 @@ export function extractTwoFactorLoginToken(body: unknown): string | null {
   return typeof data?.two_factor_token === 'string' ? data.two_factor_token : null
 }
 
+export function isDeviceVerificationRequired(body: unknown): boolean {
+  const data = unwrapLaravelData<Record<string, unknown>>(body)
+  return (
+    data?.device_verification_required === true ||
+    data?.verification_status === 'device_verification_required'
+  )
+}
+
+export function extractDeviceVerificationToken(body: unknown): string | null {
+  const data = unwrapLaravelData<Record<string, unknown>>(body)
+  return typeof data?.device_verification_token === 'string'
+    ? data.device_verification_token
+    : null
+}
+
 export function unwrapLaravelData<T = unknown>(body: unknown): T | null {
   if (body === null || body === undefined) return null
   if (typeof body !== 'object') return null

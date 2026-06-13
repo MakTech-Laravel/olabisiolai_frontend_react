@@ -72,7 +72,7 @@ export default function LoginTwoFactor() {
     setFieldErrors({})
 
     try {
-      const loggedInUser = await verifyLoginTwoFactor(
+      const loginResult = await verifyLoginTwoFactor(
         {
           two_factor_token: state.twoFactorToken,
           code,
@@ -81,6 +81,11 @@ export default function LoginTwoFactor() {
         { authStrategy, setToken, setUser, refreshSession, resetAuthState },
       )
 
+      if (loginResult.kind !== 'authenticated') {
+        throw new Error('Unable to restore your session after two-factor verification.')
+      }
+
+      const loggedInUser = loginResult.user
       const roles = getUserRoles(extractUserFromAuthPayload(loggedInUser))
       const isVendor = roles.includes('vendor') || role === 'vendor'
 
