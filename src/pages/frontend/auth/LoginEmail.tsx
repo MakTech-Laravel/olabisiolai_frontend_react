@@ -14,6 +14,7 @@ import { signUpPathForRole } from "@/features/vendor/vendorPlanStorage";
 import {
   buildRegisterOtpVerificationPath,
   loginUserWithRole,
+  resendRegistrationOtp,
   resolvePostLoginPath,
 } from "@/features/auth/service";
 import { type AuthRole } from "@/features/auth/types";
@@ -62,6 +63,16 @@ export default function LoginEmail() {
       );
 
       if (loginResult.kind === "verification_required") {
+        try {
+          await resendRegistrationOtp({
+            ...(loginResult.verificationChannel === "email"
+              ? { email: loginResult.email ?? identifier.trim() }
+              : { phone: loginResult.phone }),
+          });
+        } catch {
+          // User can resend manually on the OTP page.
+        }
+
         navigate(
           buildRegisterOtpVerificationPath({
             role,

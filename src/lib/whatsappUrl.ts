@@ -1,3 +1,5 @@
+import { formatNigerianPhoneDisplay, normalizeNigerianPhone } from '@/lib/nigerianPhone'
+
 /** Prefer dedicated WhatsApp number; fall back to business phone. */
 export function resolveBusinessContactPhone(
   whatsapp?: string | null,
@@ -11,9 +13,9 @@ export function resolveBusinessContactPhone(
 
 /** Build a WhatsApp chat URL from a phone number (digits only in path). */
 export function buildWhatsAppUrl(phone: string | null | undefined): string | null {
-  const digits = (phone ?? '').replace(/\D/g, '');
-  if (!digits) return null;
-  return `https://wa.me/${digits}`;
+  const digits = phone ? phoneDigitsForUrl(phone) : ''
+  if (!digits) return null
+  return `https://wa.me/${digits}`
 }
 
 export function buildBusinessWhatsAppUrl(
@@ -23,12 +25,12 @@ export function buildBusinessWhatsAppUrl(
   return buildWhatsAppUrl(resolveBusinessContactPhone(whatsapp, phone));
 }
 
-/** Human-readable label for revealed phone UI. */
+/** Human-readable label for revealed phone UI (+234 812 345 6789). */
 export function formatPhoneDisplay(phone: string): string {
-  const trimmed = phone.trim();
-  if (!trimmed) return '';
-  if (trimmed.startsWith('+') || /\s/.test(trimmed)) return trimmed;
-  const digits = trimmed.replace(/\D/g, '');
-  if (!digits) return trimmed;
-  return `+${digits}`;
+  return formatNigerianPhoneDisplay(phone)
+}
+
+/** Digits-only string suitable for wa.me links. */
+export function phoneDigitsForUrl(phone: string): string {
+  return normalizeNigerianPhone(phone) ?? phone.replace(/\D/g, '')
 }

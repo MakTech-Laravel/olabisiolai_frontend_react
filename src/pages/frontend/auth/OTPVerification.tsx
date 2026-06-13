@@ -8,12 +8,15 @@ import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { getAccessToken, getStoredAuthUser } from "@/auth/token";
 import {
   requestPasswordResetOtp,
+  resendForgotPasswordOtp,
   resendPhoneLoginOtp,
   resendRegistrationOtp,
   resolvePostLoginPath,
+  verifyForgotPasswordOtp,
   verifyPhoneLoginOtp,
   verifyRegistrationOtp,
 } from "@/features/auth/service";
+import { getPasswordResetSession } from "@/features/auth/passwordResetStorage";
 import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
 import {
   getSavedVendorPlan,
@@ -195,9 +198,35 @@ export default function OTPVerification() {
       return;
     }
 
-    // Existing forgot-password flow still uses this screen without register context.
+    // Password reset: verify OTP before allowing new password entry.
     if (purpose === "reset") {
-      navigate("/reset-password", { replace: true });
+      const resetSession = getPasswordResetSession();
+      const resetEmail = (email || resetSession?.email || "").trim().toLowerCase();
+      const resetToken = resetSession?.token;
+
+      if (!resetEmail) {
+        setError("Missing email for password reset. Please start again.");
+        return;
+      }
+
+      if (!resetToken) {
+        setError("Your reset session expired. Please request a new code.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await verifyForgotPasswordOtp({
+          email: resetEmail,
+          code: otpCode,
+          token: resetToken,
+        });
+        navigate("/reset-password", { replace: true });
+      } catch (err) {
+        setError(getAuthErrorMessage(err, "OTP verification failed. Please try again."));
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -239,7 +268,7 @@ export default function OTPVerification() {
     }
 
     if (purpose !== "register") {
-      navigate("/reset-password", { replace: true });
+      setError("Unsupported verification flow. Please start password reset again.");
       return;
     }
 
@@ -341,6 +370,13 @@ export default function OTPVerification() {
         }
       } else if (purpose === "login") {
         await resendPhoneLoginOtp({ phone, role });
+      } else if (purpose === "reset") {
+        const resetSession = getPasswordResetSession();
+        const resetEmail = (normalizedEmail || resetSession?.email || "").trim().toLowerCase();
+        if (!resetEmail || !resetSession?.token) {
+          throw new Error("Reset session expired. Please request a new code.");
+        }
+        await resendForgotPasswordOtp({ email: resetEmail, token: resetSession.token });
       } else {
         await requestPasswordResetOtp({ email: normalizedEmail });
       }
@@ -370,9 +406,11 @@ export default function OTPVerification() {
                 OTP Verification
               </h2>
               <p className="text-base font-inter font-normal text-muted-foreground text-start">
-                {purpose === "register" && channel === "email"
-                  ? `Enter the verification code we just sent to ${email || "your email"}.`
-                  : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}
+                {purpose === "reset"
+                  ? `Enter the reset code we sent to ${email || "your email"}.`
+                  : purpose === "register" && channel === "email"
+                    ? `Enter the verification code we just sent to ${email || "your email"}.`
+                    : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Codes are valid for 10 minutes. If you request a new code, use the latest one only.

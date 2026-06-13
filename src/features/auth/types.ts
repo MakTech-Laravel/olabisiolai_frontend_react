@@ -46,3 +46,16 @@ export type VerifyOtpPayload = {
 export type PasswordResetOtpPayload = {
   email: string
 }
+
+export type VerifyForgotPasswordOtpPayload = {
+  email: string
+  code: string
+  token: string
+}
+
+export type ResetPasswordPayload = {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}

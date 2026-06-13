@@ -63,9 +63,8 @@ function isAdminResourceShape(o: Record<string, unknown>): boolean {
 export function isLoginVerificationRequired(body: unknown): boolean {
   const data = unwrapLaravelData<Record<string, unknown>>(body)
   return (
-    data?.verification_status === 'unverified' &&
-    typeof data.token === 'string' &&
-    data.token.length > 0
+    data?.verification_required === true ||
+    data?.verification_status === 'unverified'
   )
 }
 

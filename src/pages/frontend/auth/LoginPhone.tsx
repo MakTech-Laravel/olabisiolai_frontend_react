@@ -14,6 +14,7 @@ import { signUpPathForRole } from "@/features/vendor/vendorPlanStorage";
 import {
   buildRegisterOtpVerificationPath,
   loginUserWithRole,
+  resendRegistrationOtp,
   resolvePostLoginPath,
 } from "@/features/auth/service";
 import { type AuthRole } from "@/features/auth/types";
@@ -62,6 +63,16 @@ export default function LoginPhone() {
       );
 
       if (loginResult.kind === "verification_required") {
+        try {
+          await resendRegistrationOtp({
+            ...(loginResult.verificationChannel === "phone"
+              ? { phone: loginResult.phone ?? phone.trim() }
+              : { email: loginResult.email }),
+          });
+        } catch {
+          // User can resend manually on the OTP page.
+        }
+
         navigate(
           buildRegisterOtpVerificationPath({
             role,
@@ -133,7 +144,7 @@ export default function LoginPhone() {
                 inputMode="tel"
                 autoComplete="tel"
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="e.g. 08012345678"
+                placeholder="e.g. 08012345678 or +234 812 345 6789"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 required

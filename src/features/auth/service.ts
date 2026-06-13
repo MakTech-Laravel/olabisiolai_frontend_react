@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import {
   extractBearerTokenFromLoginBody,
   extractLoginVerificationChannel,
@@ -11,20 +12,28 @@ import { request } from '@/api/request'
 import { type AuthContextValue } from '@/auth/context'
 import { rolePolicy } from '@/auth/rolePolicy'
 import { getUserRoles } from '@/auth/roles'
-import { setAccessToken, setRefreshToken, setStoredAuthUser } from '@/auth/token'
+import { setRefreshToken, setStoredAuthUser } from '@/auth/token'
 import { type AuthUser } from '@/auth/types'
 import {
   type AdminLoginPayload,
   type AuthRole,
   type LoginPayload,
   type PasswordResetOtpPayload,
+  type ResetPasswordPayload,
+  type VerifyForgotPasswordOtpPayload,
   type PhoneLoginRequestPayload,
   type PhoneVerifyOtpPayload,
   type RegisterPayload,
   type VerificationChannel,
   type VerifyOtpPayload,
 } from '@/features/auth/types'
+import {
+  clearPasswordResetSession,
+  markPasswordResetOtpVerified,
+  savePasswordResetSession,
+} from '@/features/auth/passwordResetStorage'
 import { resolveVendorPostLoginPath } from '@/features/subscription/vendorOnboardingApi'
+import { toNigerianPhonePayload } from '@/lib/nigerianPhone'
 import {
   saveVendorPlan,
   vendorPostVerificationPath,
@@ -141,33 +150,59 @@ export function buildRegisterOtpVerificationPath(options: {
   return `/otp-verification?${params.toString()}`
 }
 
+function buildVerificationRequiredUser(
+  payload: LoginPayload,
+  body: unknown,
+): AuthUser {
+  const fromBody = extractUserFromAuthPayload(body)
+  if (fromBody) return fromBody
+
+  return {
+    id: payload.email ?? payload.phone ?? 'unknown',
+    email: payload.email,
+    phone: payload.phone,
+    role: payload.role,
+    roles: [payload.role],
+  }
+}
+
+function parseLoginVerificationResult(
+  body: unknown,
+  payload: LoginPayload,
+): LoginUserResult | null {
+  if (!isLoginVerificationRequired(body)) {
+    return null
+  }
+
+  const user = buildVerificationRequiredUser(payload, body)
+  ensureRoleMatchesExpected(user, payload.role)
+
+  return {
+    kind: 'verification_required',
+    user,
+    verificationChannel: extractLoginVerificationChannel(body),
+    email: payload.email,
+    phone: payload.phone,
+  }
+}
+
 export async function loginUserWithRole(
   payload: LoginPayload,
   handlers: AuthHandlers,
 ): Promise<LoginUserResult> {
+  const loginPayload = {
+    ...payload,
+    ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
+  }
+
   try {
-    const res = await request.post<unknown>('/auth/login', payload)
+    const res = await request.post<unknown>('/auth/login', loginPayload)
     logOtpFromResponse(res.data, 'login verification')
 
-    if (isLoginVerificationRequired(res.data)) {
-      const user = await hydrateSessionFromLoginBody(
-        res.data,
-        handlers,
-        'Unable to restore your session for account verification.',
-        'Login response is missing access token.',
-      )
-      if (!user) {
-        throw new Error('Unable to restore your session for account verification.')
-      }
-      ensureRoleMatchesExpected(user, payload.role)
-      const verificationChannel = extractLoginVerificationChannel(res.data)
-      return {
-        kind: 'verification_required',
-        user,
-        verificationChannel,
-        email: payload.email,
-        phone: payload.phone,
-      }
+    const verificationResult = parseLoginVerificationResult(res.data, payload)
+    if (verificationResult) {
+      handlers.resetAuthState()
+      return verificationResult
     }
 
     if (isTwoFactorLoginRequired(res.data)) {
@@ -191,6 +226,14 @@ export async function loginUserWithRole(
     ensureRoleMatchesExpected(user, payload.role)
     return { kind: 'authenticated', user }
   } catch (error) {
+    if (isAxiosError(error)) {
+      const verificationResult = parseLoginVerificationResult(error.response?.data, payload)
+      if (verificationResult) {
+        handlers.resetAuthState()
+        return verificationResult
+      }
+    }
+
     handlers.resetAuthState()
     throw error
   }
@@ -289,10 +332,13 @@ export async function registerUser(payload: RegisterPayload) {
 }
 
 export async function registerAndLoginUser(payload: RegisterPayload) {
-  const res = await request.post<unknown>('/auth/register', payload)
+  const apiPayload = {
+    ...payload,
+    ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
+  }
+  const res = await request.post<unknown>('/auth/register', apiPayload)
   logOtpFromResponse(res.data, 'register')
 
-  const token = extractBearerTokenFromLoginBody(res.data)
   const responseUser = extractUserFromAuthPayload(res.data)
   const contactId =
     payload.verification_channel === 'phone'
@@ -309,38 +355,112 @@ export async function registerAndLoginUser(payload: RegisterPayload) {
       roles: [payload.role],
     } satisfies AuthUser)
 
-  if (token) {
-    setAccessToken(token)
-    const refresh = extractRefreshTokenFromLoginBody(res.data)
-    if (refresh) setRefreshToken(refresh)
-  }
   setStoredAuthUser(storedUser)
 
   return storedUser
 }
 
+function extractPasswordResetCredentials(body: unknown): { otp: string | null; token: string | null } {
+  const pick = (record: Record<string, unknown>) => {
+    const otp =
+      (typeof record.Otp === 'string' && record.Otp) ||
+      (typeof record.otp === 'string' && record.otp) ||
+      null
+    const token =
+      (typeof record.Token === 'string' && record.Token) ||
+      (typeof record.token === 'string' && record.token) ||
+      null
+    return { otp, token }
+  }
+
+  if (!body || typeof body !== 'object') {
+    return { otp: null, token: null }
+  }
+
+  const root = body as Record<string, unknown>
+  const direct = pick(root)
+  if (direct.otp || direct.token) {
+    return direct
+  }
+
+  if (root.data && typeof root.data === 'object') {
+    return pick(root.data as Record<string, unknown>)
+  }
+
+  return { otp: null, token: null }
+}
+
 export async function requestPasswordResetOtp(payload: PasswordResetOtpPayload) {
-  const res = await request.post<unknown>('/auth/forgot-password', payload)
+  const res = await request.post<unknown>('/auth/forgot-password', {
+    email: payload.email.trim().toLowerCase(),
+  })
   logOtpFromResponse(res.data, 'password reset')
+
+  const { token } = extractPasswordResetCredentials(res.data)
+  if (!token) {
+    throw new Error('Password reset started, but the reset token is missing. Please try again.')
+  }
+
+  savePasswordResetSession({
+    email: payload.email.trim().toLowerCase(),
+    token,
+    otpVerified: false,
+  })
+
+  return { token }
+}
+
+export async function resendForgotPasswordOtp(payload: { email: string; token: string }) {
+  const res = await request.post<unknown>(
+    '/auth/forgot-password/resend-otp',
+    {
+      email: payload.email.trim().toLowerCase(),
+      token: payload.token,
+    },
+    { skipAuthRedirect: true },
+  )
+  logOtpFromResponse(res.data, 'password reset resend')
+}
+
+export async function verifyForgotPasswordOtp(payload: VerifyForgotPasswordOtpPayload) {
+  await request.post<unknown>(
+    '/auth/forgot-password/verify-otp',
+    {
+      email: payload.email.trim().toLowerCase(),
+      code: payload.code,
+      token: payload.token,
+    },
+    { skipAuthRedirect: true },
+  )
+  markPasswordResetOtpVerified()
+}
+
+export async function resetPassword(payload: ResetPasswordPayload) {
+  await request.post<unknown>(
+    '/auth/reset-password',
+    {
+      email: payload.email.trim().toLowerCase(),
+      token: payload.token,
+      password: payload.password,
+      password_confirmation: payload.password_confirmation,
+    },
+    { skipAuthRedirect: true },
+  )
+  clearPasswordResetSession()
 }
 
 export async function resendRegistrationOtp(payload: {
   email?: string
   phone?: string
 }) {
-  try {
-    const res = await request.post<unknown>('/auth/register/resend-otp', payload, {
-      skipAuthRedirect: true,
-    })
-    logOtpFromResponse(res.data, 'register resend')
-    return
-  } catch {
-    // Fall back to authenticated resend when a session token is still available.
-    const res = await request.post<unknown>('/auth/otp/resend', payload, {
-      skipAuthRedirect: true,
-    })
-    logOtpFromResponse(res.data, 'register resend')
+  const apiPayload = {
+    ...payload,
+    ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
   }
+  const res = await request.post<unknown>('/auth/register/resend-otp', apiPayload, {
+    skipAuthRedirect: true,
+  })
+  logOtpFromResponse(res.data, 'register resend')
 }
 
 export async function verifyRegistrationOtp(
@@ -352,7 +472,7 @@ export async function verifyRegistrationOtp(
     code: payload.otp,
     verification_code: payload.otp,
     ...(payload.email ? { email: payload.email } : {}),
-    ...(payload.phone ? { phone: payload.phone } : {}),
+    ...(payload.phone ? { phone: toNigerianPhonePayload(payload.phone) } : {}),
     ...(payload.verification_channel ? { verification_channel: payload.verification_channel } : {}),
   }
   const res = await request.post<unknown>('/auth/otp/verify', verifyPayload, {
