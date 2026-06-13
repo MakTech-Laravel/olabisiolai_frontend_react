@@ -28,8 +28,8 @@ function bearerTokenPersistenceFromEnv(): BearerTokenPersistence {
   if (raw === 'memory' || raw === 'ram') return 'memory'
   if (raw === 'local' || raw === 'localstorage') return 'local'
   if (raw === 'session' || raw === 'sessionstorage') return 'session'
-  // Default: survives hard refresh in this tab; standard SPA compromise when API only returns Bearer JSON
-  return 'session'
+  // Default: shared across tabs in the same browser until logout
+  return 'local'
 }
 
 function roleModeFromEnv(): RoleMode {

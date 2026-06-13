@@ -14,6 +14,11 @@ import { type AuthRole } from '@/features/auth/types'
 import { type LoginReturnTarget } from '@/features/auth/loginReturn'
 import { navigateAfterLogin } from '@/features/auth/navigateAfterLogin'
 import { fulfillPendingFavoriteSave } from '@/features/auth/pendingFavoriteSave'
+import {
+  applyOtpInputAtIndex,
+  applyOtpPasteAtIndex,
+  createEmptyOtpDigits,
+} from '@/lib/otpDigitsInput'
 
 const CODE_LENGTH = 6
 
@@ -30,7 +35,7 @@ export default function LoginTwoFactor() {
   const state = (location.state ?? {}) as LocationState
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth()
 
-  const [digits, setDigits] = React.useState<string[]>(Array.from({ length: CODE_LENGTH }, () => ''))
+  const [digits, setDigits] = React.useState<string[]>(() => createEmptyOtpDigits(CODE_LENGTH))
   const [recoveryMode, setRecoveryMode] = React.useState(false)
   const [recoveryCode, setRecoveryCode] = React.useState('')
   const [loading, setLoading] = React.useState(false)
@@ -101,15 +106,23 @@ export default function LoginTwoFactor() {
   }
 
   function handleDigitChange(index: number, value: string) {
-    const cleaned = value.replace(/\D/g, '').slice(-1)
     setDigits((prev) => {
-      const next = [...prev]
-      next[index] = cleaned
+      const { next, focusIndex } = applyOtpInputAtIndex(prev, index, value, CODE_LENGTH)
+      inputRefs.current[focusIndex]?.focus()
       return next
     })
-    if (cleaned && index < CODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus()
-    }
+  }
+
+  function handleDigitPaste(index: number, event: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = event.clipboardData.getData('text')
+    if (!pasted.replace(/\D/g, '')) return
+
+    event.preventDefault()
+    setDigits((prev) => {
+      const { next, focusIndex } = applyOtpPasteAtIndex(prev, index, pasted, CODE_LENGTH)
+      inputRefs.current[focusIndex]?.focus()
+      return next
+    })
   }
 
   function handleDigitKeyDown(index: number, key: string) {
@@ -161,6 +174,7 @@ export default function LoginTwoFactor() {
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleDigitChange(index, e.target.value)}
+                  onPaste={(e) => handleDigitPaste(index, e)}
                   onKeyDown={(e) => handleDigitKeyDown(index, e.key)}
                   className="h-12 w-11 text-center text-lg"
                   aria-label={`Digit ${index + 1}`}

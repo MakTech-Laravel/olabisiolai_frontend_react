@@ -5,6 +5,12 @@ const STORAGE_KEY_ACCESS = 'react-vite-laravel.bearer_token'
 const STORAGE_KEY_REFRESH = 'react-vite-laravel.refresh_token'
 const STORAGE_KEY_USER = 'react-vite-laravel.auth_user'
 
+export const AUTH_STORAGE_KEYS = {
+  access: STORAGE_KEY_ACCESS,
+  refresh: STORAGE_KEY_REFRESH,
+  user: STORAGE_KEY_USER,
+} as const
+
 /** In-RAM only — lost on full reload. */
 let memoryAccessToken: string | null = null
 let memoryRefreshToken: string | null = null

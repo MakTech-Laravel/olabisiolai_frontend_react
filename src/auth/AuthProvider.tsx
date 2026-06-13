@@ -4,6 +4,7 @@ import { api } from '@/api/client'
 import { AuthContext, type AuthContextValue } from '@/auth/context'
 import { fetchCurrentUser } from '@/auth/session'
 import {
+  AUTH_STORAGE_KEYS,
   clearAccessToken,
   getAccessToken,
   getStoredAuthUser,
@@ -129,6 +130,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void refreshSession()
   }, [refreshSession])
+
+  // Keep auth in sync across browser tabs (localStorage only).
+  React.useEffect(() => {
+    if (env.authStrategy !== 'bearer_memory') return
+    if (env.bearerTokenPersistence !== 'local') return
+    if (typeof window === 'undefined') return
+
+    const syncFromStorage = () => {
+      const token = getAccessToken()
+      const storedUser = getStoredAuthUser()
+
+      if (!token) {
+        resetAuthState()
+        return
+      }
+
+      setAccessTokenState(token)
+      if (storedUser) {
+        setUser(storedUser)
+        return
+      }
+
+      void refreshSession()
+    }
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return
+      if (
+        event.key !== null &&
+        event.key !== AUTH_STORAGE_KEYS.access &&
+        event.key !== AUTH_STORAGE_KEYS.user &&
+        event.key !== AUTH_STORAGE_KEYS.refresh
+      ) {
+        return
+      }
+
+      syncFromStorage()
+    }
+
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [refreshSession, resetAuthState, setUser])
 
   const setToken = React.useCallback((token: string) => {
     setAccessToken(token)

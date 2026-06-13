@@ -19,6 +19,11 @@ import {
 import { getPasswordResetSession } from "@/features/auth/passwordResetStorage";
 import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
 import {
+  applyOtpInputAtIndex,
+  applyOtpPasteAtIndex,
+  createEmptyOtpDigits,
+} from "@/lib/otpDigitsInput";
+import {
   getSavedVendorPlan,
   parseVendorPlan,
   saveVendorPlan,
@@ -82,7 +87,7 @@ export default function OTPVerification() {
   const [searchParams] = useSearchParams();
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
 
-  const [otp, setOtp] = React.useState<string[]>(Array.from({ length: OTP_LENGTH }, () => ""));
+  const [otp, setOtp] = React.useState<string[]>(() => createEmptyOtpDigits(OTP_LENGTH));
   const [loading, setLoading] = React.useState(false);
   const [resending, setResending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -170,16 +175,19 @@ export default function OTPVerification() {
   }, [limiterKey]);
 
   function updateOtpAtIndex(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
+    const { next, focusIndex } = applyOtpInputAtIndex(otp, index, value, OTP_LENGTH);
+    setOtp(next);
+    inputRefs.current[focusIndex]?.focus();
+  }
 
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
+  function onPaste(index: number, event: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = event.clipboardData.getData("text");
+    if (!pasted.replace(/\D/g, "")) return;
+
+    event.preventDefault();
+    const { next, focusIndex } = applyOtpPasteAtIndex(otp, index, pasted, OTP_LENGTH);
+    setOtp(next);
+    inputRefs.current[focusIndex]?.focus();
   }
 
   function onKeyDown(index: number, event: React.KeyboardEvent<HTMLInputElement>) {
@@ -387,7 +395,7 @@ export default function OTPVerification() {
           ? "A new OTP has been sent to your phone."
           : "A new OTP has been sent to your email.",
       );
-      setOtp(Array.from({ length: OTP_LENGTH }, () => ""));
+      setOtp(createEmptyOtpDigits(OTP_LENGTH));
       inputRefs.current[0]?.focus();
     } catch (err) {
       setError(getAuthErrorMessage(err, "Unable to resend OTP. Please try again."));
@@ -435,6 +443,7 @@ export default function OTPVerification() {
                       maxLength={1}
                       value={digit}
                       onChange={(event) => updateOtpAtIndex(index, event.target.value)}
+                      onPaste={(event) => onPaste(index, event)}
                       onKeyDown={(event) => onKeyDown(index, event)}
                       className="w-12 h-12 text-center text-lg font-semibold border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       placeholder="0"
