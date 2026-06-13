@@ -182,7 +182,7 @@ export default function ServiceCard({
           goToService();
         }
       }}
-      className="bg-card rounded-lg shadow-md overflow-hidden flex mb-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="bg-card rounded-lg shadow-md overflow-hidden flex mb-6 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 flex-col xl:flex-row"
     >
       <div className="w-full relative">
         <img

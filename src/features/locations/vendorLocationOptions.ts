@@ -227,3 +227,23 @@ export function parseVendorLocationOptions(raw: unknown): ParsedLocationOption[]
     })
     .filter((entry): entry is ParsedLocationOption => entry !== null);
 }
+
+export function uniqueLocationStates(locations: ParsedLocationOption[]): string[] {
+  return [...new Set(locations.map((entry) => entry.state))].sort((a, b) => a.localeCompare(b));
+}
+
+export function uniqueLocationCities(locations: ParsedLocationOption[], state: string): string[] {
+  if (!state) return [];
+  return [...new Set(locations.filter((entry) => entry.state === state).map((entry) => entry.city))].sort(
+    (a, b) => a.localeCompare(b),
+  );
+}
+
+export function locationEntriesForStateCity(
+  locations: ParsedLocationOption[],
+  state: string,
+  city: string,
+): ParsedLocationOption[] {
+  if (!state || !city) return [];
+  return locations.filter((entry) => entry.state === state && entry.city === city);
+}

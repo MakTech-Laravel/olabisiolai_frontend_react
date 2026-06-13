@@ -1,7 +1,7 @@
 ﻿import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, MapPin, Plus, Upload, X } from "lucide-react";
+import { ChevronRight, Plus, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -34,7 +34,7 @@ import {
 import { useAuth } from "@/auth/useAuth";
 import { formatPhoneDisplay } from "@/lib/whatsappUrl";
 import {
-  normalizeSocialUrl,
+  normalizeSocialAccount,
   type SocialAccount,
   validateSocialAccounts,
 } from "@/features/business/socialAccounts";
@@ -43,7 +43,10 @@ import {
   formatNaira,
   formatTierPriceRange,
   getSelectableDurationsForTier,
+  locationEntriesForStateCity,
   parseVendorLocationOptions,
+  uniqueLocationCities,
+  uniqueLocationStates,
 } from "@/features/locations/vendorLocationOptions";
 
 function Label({ children }: { children: ReactNode }) {
@@ -185,10 +188,7 @@ export default function ChoosePlanForm() {
     useVendorBusinessFormOptions();
   const categories = formOptions?.categories ?? [];
   const parsedLocations = useMemo(() => parseVendorLocationOptions(formOptions?.locations), [formOptions?.locations]);
-  const locationOptions = useMemo(
-    () => parsedLocations.map((entry) => ({ value: entry.id, label: entry.label })),
-    [parsedLocations],
-  );
+  const allStates = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations]);
   const [categoryId, setCategoryId] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [locationId, setLocationId] = useState("");
@@ -209,6 +209,14 @@ export default function ChoosePlanForm() {
   /** Server or client validation messages keyed by API field name (e.g. location_id, services). */
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const showLocationSection = true;
+  const citiesForState = useMemo(
+    () => uniqueLocationCities(parsedLocations, state),
+    [parsedLocations, state],
+  );
+  const lgaOptions = useMemo(
+    () => locationEntriesForStateCity(parsedLocations, state, city),
+    [parsedLocations, state, city],
+  );
 
   const addService = () => setServices((s) => [...s, ""]);
   const setServiceAt = (index: number, value: string) =>
@@ -226,14 +234,8 @@ export default function ChoosePlanForm() {
     () => parsedLocations.find((entry) => entry.id === locationId) ?? null,
     [locationId, parsedLocations],
   );
-  const stateOptions = useMemo(
-    () => (selectedLocation?.state ? [selectedLocation.state] : []),
-    [selectedLocation?.state],
-  );
-  const cityOptions = useMemo(
-    () => (selectedLocation?.city ? [selectedLocation.city] : []),
-    [selectedLocation?.city],
-  );
+  const stateOptions = allStates;
+  const cityOptions = citiesForState;
   const selectedTopSlot = useMemo(
     () => selectedLocation?.boost?.tiers.find((tier) => tier.key === selectedTopSlotKey) ?? null,
     [selectedLocation?.boost?.tiers, selectedTopSlotKey],
@@ -282,9 +284,6 @@ export default function ChoosePlanForm() {
 
   useEffect(() => {
     if (!selectedLocation) {
-      setState("");
-      setCity("");
-      setLgaInput("");
       return;
     }
     setState(selectedLocation.state);
@@ -292,7 +291,21 @@ export default function ChoosePlanForm() {
     setLgaInput(selectedLocation.lga);
     setSelectedTopSlotKey("");
     setSelectedDurationDays("");
-  }, [selectedLocation]);
+  }, [selectedLocation?.id]);
+
+  useEffect(() => {
+    if (!state) {
+      setCity("");
+      setLgaInput("");
+      setLocationId("");
+      return;
+    }
+    if (city && !citiesForState.includes(city)) {
+      setCity("");
+      setLgaInput("");
+      setLocationId("");
+    }
+  }, [state, city, citiesForState]);
 
   useEffect(() => {
     setSelectedDurationDays("");
@@ -350,7 +363,7 @@ export default function ChoosePlanForm() {
     const formData = new FormData(e.currentTarget);
     const normalizedServices = services.map((service) => service.trim()).filter(Boolean);
 
-    const lga = showLocationSection ? String(formData.get("lga") ?? "").trim() : "";
+    const lga = showLocationSection ? (selectedLocation?.lga ?? lgaInput).trim() : "";
     if (!categoryId && !locationId) {
       setFieldErrors({
         category_id: "Please select a category.",
@@ -388,7 +401,7 @@ export default function ChoosePlanForm() {
     }
 
     const activeSocialAccounts = socialAccounts
-      .map((account) => ({ ...account, url: normalizeSocialUrl(account.url) }))
+      .map((account) => normalizeSocialAccount(account))
       .filter((account) => account.url);
     const socialError = validateSocialAccounts(activeSocialAccounts);
     if (socialError) {
@@ -585,63 +598,74 @@ export default function ChoosePlanForm() {
               </div>
             ) : null}
 
-            <div className="space-y-0">
-              <SelectField
-                label={
-                  <>
-                    Location <span className="text-destructive">*</span>
-                  </>
-                }
-                rightIcon={MapPin}
-                value={locationId}
-                onChange={(e) => {
-                  setLocationId(e.target.value);
-                  setFieldErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.location_id;
-                    return next;
-                  });
-                }}
-                disabled={formOptionsLoading || locationOptions.length === 0}
-                required
-              >
-                <option value="">
-                  {formOptionsLoading
-                    ? "Loading locationsâ€¦"
-                    : locationOptions.length === 0
-                      ? "No locations"
-                      : "Select location"}
-                </option>
-                {locationOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
-              <FieldErrorText id="err-location_id" message={fieldErrors.location_id} />
-            </div>
           </div>
+
+          <div>
+            <Label>Street address</Label>
+            <Textarea
+              name="fullAddress"
+              placeholder="Street name and number, building name, landmark…"
+              rows={2}
+              className="min-h-[72px] resize-y border-border-light bg-secondary/80 text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
+            />
+          </div>
+
+          <SelectField
+            label={
+              <>
+                State <span className="text-destructive">*</span>
+              </>
+            }
+            value={state}
+            onChange={(e) => {
+              const nextState = e.target.value;
+              setState(nextState);
+              const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
+              setCity(nextCity);
+              const nextEntry = locationEntriesForStateCity(parsedLocations, nextState, nextCity)[0];
+              setLocationId(nextEntry?.id ?? "");
+              setLgaInput(nextEntry?.lga ?? "");
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.location_id;
+                return next;
+              });
+            }}
+            disabled={formOptionsLoading || allStates.length === 0}
+            required={showLocationSection}
+          >
+            <option value="">
+              {formOptionsLoading ? "Loading states…" : "Select state"}
+            </option>
+            {stateOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectField>
+          <FieldErrorText id="err-location_id" message={fieldErrors.location_id} />
 
           <div className="grid gap-5 sm:grid-cols-2">
             <SelectField
-              label="State"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              disabled={!selectedLocation || stateOptions.length === 0}
-              required={showLocationSection}
-            >
-              <option value="">Select state</option>
-              {stateOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField
-              label="City"
+              label={
+                <>
+                  City <span className="text-destructive">*</span>
+                </>
+              }
               value={city}
-              onChange={(e) => setCity(e.target.value)}
-              disabled={!selectedLocation || cityOptions.length === 0}
+              onChange={(e) => {
+                const nextCity = e.target.value;
+                setCity(nextCity);
+                const nextEntry = locationEntriesForStateCity(parsedLocations, state, nextCity)[0];
+                setLocationId(nextEntry?.id ?? "");
+                setLgaInput(nextEntry?.lga ?? "");
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.location_id;
+                  return next;
+                });
+              }}
+              disabled={!state || cityOptions.length === 0}
               required={showLocationSection}
             >
               <option value="">Select city</option>
@@ -651,25 +675,38 @@ export default function ChoosePlanForm() {
                 </option>
               ))}
             </SelectField>
-          </div>
 
-          <div>
-            <Label>
-              LGA (Local Government Area) <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              name="lga"
-              value={lgaInput}
-              onChange={(e) => setLgaInput(e.target.value)}
-              placeholder="Enter your local government area"
-              className="h-11 border-border-light bg-secondary/80 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
-              readOnly={Boolean(selectedLocation?.lga)}
-              required
-              aria-invalid={Boolean(fieldErrors.lga)}
-              aria-describedby={fieldErrors.lga ? "err-lga" : undefined}
-            />
-            <FieldErrorText id="err-lga" message={fieldErrors.lga} />
+            <SelectField
+              label={
+                <>
+                  LGA (Local Government Area) <span className="text-destructive">*</span>
+                </>
+              }
+              value={locationId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setLocationId(nextId);
+                const entry = parsedLocations.find((item) => item.id === nextId);
+                setLgaInput(entry?.lga ?? "");
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.location_id;
+                  delete next.lga;
+                  return next;
+                });
+              }}
+              disabled={!city || lgaOptions.length === 0}
+              required={showLocationSection}
+            >
+              <option value="">Select LGA</option>
+              {lgaOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.lga}
+                </option>
+              ))}
+            </SelectField>
           </div>
+          <FieldErrorText id="err-lga" message={fieldErrors.lga} />
 
           {selectedLocation ? (
             <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
@@ -826,16 +863,6 @@ export default function ChoosePlanForm() {
               )}
             </div>
           ) : null}
-
-          <div>
-            <Label>Full address</Label>
-            <Textarea
-              name="fullAddress"
-              placeholder="Enter your complete business address (street number, building name, landmark, etc.)"
-              rows={3}
-              className="min-h-20 resize-y border-border-light bg-secondary/80 text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
-            />
-          </div>
 
           <div>
             <Label>

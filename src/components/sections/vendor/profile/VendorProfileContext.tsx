@@ -16,7 +16,7 @@ import {
 } from "@/features/business/vendorBusinessProfileApi";
 import { updateVendorBusiness } from "@/features/business/vendorBusinessApi";
 import { validateBusinessHours } from "@/features/business/businessHours";
-import { normalizeSocialUrl, validateSocialAccounts } from "@/features/business/socialAccounts";
+import { normalizeSocialAccount, validateSocialAccounts } from "@/features/business/socialAccounts";
 import { parseVendorBusinessApiFailure } from "@/features/business/vendorBusinessFormErrors";
 import {
   profileToDraft,
@@ -182,6 +182,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       return {
         ...prev,
+        existingCoverPaths: prev.existingCoverPaths.filter((_, i) => i !== index),
         existingCoverUrls: prev.existingCoverUrls.filter((_, i) => i !== index),
       };
     });
@@ -233,7 +234,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       }
 
       const activeSocialAccounts = draft.socialAccounts
-        .map((account) => ({ ...account, url: normalizeSocialUrl(account.url) }))
+        .map((account) => normalizeSocialAccount(account))
         .filter((account) => account.url);
       const socialError = validateSocialAccounts(activeSocialAccounts);
       if (socialError) {
@@ -245,6 +246,10 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       const profile = query.data;
       const selectedLocation = parsedLocations.find((l) => l.id === draft.locationId);
       const coverPhotos = draft.newCoverFiles.length > 0 ? draft.newCoverFiles : undefined;
+      const totalCovers = totalCoverCount(draft);
+      if (totalCovers < 1) {
+        throw new Error("Please keep or add at least one gallery photo.");
+      }
 
       return updateVendorBusiness({
         category_id: draft.categoryId,
@@ -255,6 +260,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         state: selectedLocation?.state ?? profile?.state ?? "",
         city: selectedLocation?.city ?? profile?.city ?? "",
         lga: selectedLocation?.lga ?? profile?.lga ?? "",
+        full_address: draft.streetAddress.trim() || undefined,
         business_description: draft.description,
         services,
         phone: draft.phone,
@@ -262,6 +268,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         website: draft.website || undefined,
         social_accounts: activeSocialAccounts,
         logo: draft.logoFile,
+        keep_cover_paths: draft.existingCoverPaths,
         cover_photos: coverPhotos,
         business_hours: draft.businessHours,
       });

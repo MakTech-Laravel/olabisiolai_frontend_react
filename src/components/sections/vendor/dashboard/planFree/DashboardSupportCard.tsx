@@ -29,7 +29,7 @@ export function DashboardSupportCard({ dashboard }: VendorDashboardCardProps) {
           className="gap-2 rounded-lg border-0 bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-950 shadow-none hover:bg-sky-200/90"
           asChild
         >
-          <Link to="/vendor/leads">
+          <Link to="/vendor/leads?channel=admin">
             <Headset className="size-4" aria-hidden />
             Contact Support
           </Link>

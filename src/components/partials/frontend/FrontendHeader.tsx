@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
+  CircleUserRound,
   Home,
   LocateFixed,
   LogIn,
@@ -15,7 +16,7 @@ import { GlobalBusinessSearch } from "@/components/search/GlobalBusinessSearch";
 import { useEffect, useState } from "react";
 
 import { getRoleDashboard } from "@/auth/rolePolicy";
-import { getUserRoles } from "@/auth/roles";
+import { getUserRoles, hasAnyRole } from "@/auth/roles";
 import { useAuth } from "@/auth/useAuth";
 import { HeaderAvatar } from "@/components/ui/HeaderAvatar";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,8 @@ function HeaderToolbar({
 }) {
   const { isAuthenticated, logout, user } = useAuth();
   const avatarSrc = resolveUserAvatar(user);
+  const isVendor = hasAnyRole(user, "vendor");
+  const profilePath = isVendor ? "/vendor/profile" : "/user/settings";
 
   const regionTrigger = cn(
     "h-11 rounded-full border border-[#9CA3AF] bg-[#E5E7EB] px-5 text-base font-medium text-[#191B23] shadow-none",
@@ -110,27 +113,35 @@ function HeaderToolbar({
       {isAuthenticated ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                "h-10 w-10 rounded-full p-0",
-                isLightHeader
-                  ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
-                  : "border-border-gray bg-white text-ink-heading",
-              )}
-            >
-              <span className="overflow-hidden rounded-full">
-                <HeaderAvatar src={avatarSrc} alt="User profile" className="w-10 h-10" />
-              </span>
-              <span className="sr-only">Open user menu</span>
-            </Button>
+            {isVendor ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-10 gap-1.5 px-2 text-sm font-medium text-ink-heading"
+              >
+                <CircleUserRound className="size-6" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "h-10 w-10 overflow-hidden rounded-full p-0",
+                  isLightHeader
+                    ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
+                    : "border-border-gray bg-white text-ink-heading",
+                )}
+                aria-label="My account"
+              >
+                <HeaderAvatar src={avatarSrc} alt="Account" />
+              </Button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/user/settings" className="flex items-center gap-2">
+              <Link to={profilePath} className="flex items-center gap-2">
                 <User className="size-4" aria-hidden />
                 Profile
               </Link>
@@ -176,12 +187,16 @@ function MobileMenu({
   logout,
   avatarSrc,
   dashboardPath,
+  isVendor,
+  profilePath,
 }: {
   showTradeNav: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
   avatarSrc: string;
   dashboardPath: string;
+  isVendor: boolean;
+  profilePath: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -196,10 +211,12 @@ function MobileMenu({
         >
           {open ? (
             <X className="size-5" aria-hidden />
-          ) : (
-            <span className="overflow-hidden rounded-full">
-              <HeaderAvatar src={avatarSrc} alt="User profile" className="size-6" />
+          ) : isAuthenticated && !isVendor ? (
+            <span className="block size-8 overflow-hidden rounded-full">
+              <HeaderAvatar src={avatarSrc} alt="Account" className="size-8" />
             </span>
+          ) : (
+            <CircleUserRound className="size-5" aria-hidden />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -249,6 +266,12 @@ function MobileMenu({
         {isAuthenticated ? (
           <>
             <DropdownMenuItem asChild className="rounded-lg">
+              <Link to={profilePath} className="flex items-center gap-2 py-2">
+                <User className="size-4" aria-hidden />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="rounded-lg">
               <Link to={dashboardPath} className="flex items-center gap-2 py-2">
                 <Settings className="size-4" aria-hidden />
                 Dashboard
@@ -283,6 +306,8 @@ export function FrontendHeader() {
   const { isAuthenticated, logout, user } = useAuth();
   const primaryRole = getUserRoles(user)[0];
   const dashboardPath = primaryRole ? getRoleDashboard(primaryRole) ?? "/user/dashboard" : "/user/dashboard";
+  const isVendor = hasAnyRole(user, "vendor");
+  const profilePath = isVendor ? "/vendor/profile" : "/user/settings";
   const isLightHeader =
     pathname === "/" ||
     pathname === "/trade" ||
@@ -329,6 +354,8 @@ export function FrontendHeader() {
             logout={logout}
             avatarSrc={avatarSrc}
             dashboardPath={dashboardPath}
+            isVendor={isVendor}
+            profilePath={profilePath}
           />
         </div>
         {showHeaderSearch ? <GlobalBusinessSearch variant="header" className="min-w-0 w-full" /> : null}

@@ -31,6 +31,26 @@ import { resolveMediaUrl } from "@/lib/mediaUrl"
 import { cn } from "@/lib/utils"
 
 const LOGO_FOOTER = "/images/landing/gidira-logo-footer.svg"
+const DEFAULT_HEADER_AVATAR = "/images/avatar/default-header-avatar.png"
+
+function resolveProfileAvatarUrl(
+  profile: { image_path?: string | null; image_url?: string | null } | undefined,
+  user: { image_path?: string | null; image_url?: string | null } | null | undefined,
+  cacheKey?: number,
+): string {
+  const path = profile?.image_path ?? user?.image_path ?? null
+  const url = profile?.image_url ?? user?.image_url ?? null
+  const base = path
+    ? resolveMediaUrl(path, DEFAULT_HEADER_AVATAR)
+    : resolveMediaUrl(url, DEFAULT_HEADER_AVATAR) || DEFAULT_HEADER_AVATAR
+
+  if (!cacheKey || !path) {
+    return base || DEFAULT_HEADER_AVATAR
+  }
+
+  const separator = base.includes("?") ? "&" : "?"
+  return `${base}${separator}v=${cacheKey}`
+}
 
 const footerColumns = [
   {
@@ -182,6 +202,7 @@ export default function SettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
   const [profileImageFile, setProfileImageFile] = React.useState<File | null>(null)
   const [profileImagePreview, setProfileImagePreview] = React.useState<string | null>(null)
+  const [avatarCacheKey, setAvatarCacheKey] = React.useState(0)
   const profileImageInputRef = React.useRef<HTMLInputElement>(null)
 
   const settingsQuery = useQuery({
@@ -215,6 +236,36 @@ export default function SettingsPage() {
       URL.revokeObjectURL(url)
     }
   }, [profileImageFile])
+
+  const applySavedProfile = React.useCallback(
+    async (payload: UserSettingsPayload) => {
+      queryClient.setQueryData(["user-settings"], payload)
+      setProfileImageFile(null)
+      if (profileImageInputRef.current) {
+        profileImageInputRef.current.value = ""
+      }
+      if (payload.profile.image_path) {
+        setAvatarCacheKey(Date.now())
+      }
+      await refreshSession()
+    },
+    [queryClient, refreshSession],
+  )
+
+  const uploadProfileImageMutation = useMutation({
+    mutationFn: (file: File) => patchUserSettings({}, { image: file }),
+    onSuccess: async (payload) => {
+      await applySavedProfile(payload)
+      setBanner({ type: "ok", text: "Profile photo updated." })
+    },
+    onError: (err) => {
+      setProfileImageFile(null)
+      if (profileImageInputRef.current) {
+        profileImageInputRef.current.value = ""
+      }
+      setBanner({ type: "error", text: getLaravelErrorMessage(err, "Could not update profile photo.") })
+    },
+  })
 
   const saveAllMutation = useMutation({
     mutationFn: async () => {
@@ -264,24 +315,19 @@ export default function SettingsPage() {
       return { payload, changedPassword: wantsPw }
     },
     onSuccess: async ({ payload, changedPassword }) => {
-      queryClient.setQueryData(["user-settings"], payload)
+      await applySavedProfile(payload)
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
       setShowCurrentPassword(false)
       setShowNewPassword(false)
       setShowConfirmPassword(false)
-      setProfileImageFile(null)
-      if (profileImageInputRef.current) {
-        profileImageInputRef.current.value = ""
-      }
       setBanner({
         type: "ok",
         text: changedPassword
           ? "All changes saved, including your new password."
           : "Your details were saved.",
       })
-      await refreshSession()
     },
     onError: (err) => {
       setBanner({ type: "error", text: getLaravelErrorMessage(err) })
@@ -328,17 +374,17 @@ export default function SettingsPage() {
     "Your account"
   const displayEmail = settingsQuery.data?.profile.email ?? user?.email ?? ""
 
-  const savedAvatarSrc = resolveMediaUrl(
-    settingsQuery.data?.profile.image_url ??
-    user?.image_url ??
-    settingsQuery.data?.profile.image_path ??
-    user?.image_path ??
-    null,
-    "",
+  const savedAvatarSrc = resolveProfileAvatarUrl(
+    settingsQuery.data?.profile,
+    user,
+    avatarCacheKey || undefined,
   )
-  const avatarSrc = profileImagePreview || savedAvatarSrc || null
+  const avatarSrc = profileImagePreview || savedAvatarSrc
 
-  const busy = settingsQuery.isLoading || saveAllMutation.isPending
+  const busy =
+    settingsQuery.isLoading ||
+    saveAllMutation.isPending ||
+    uploadProfileImageMutation.isPending
   const accountVerified = isUserAccountVerified(user)
 
   function onProfileImageChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -356,6 +402,7 @@ export default function SettingsPage() {
     }
     setBanner(null)
     setProfileImageFile(file)
+    uploadProfileImageMutation.mutate(file)
   }
 
   return (
@@ -435,7 +482,11 @@ export default function SettingsPage() {
                   onClick={() => profileImageInputRef.current?.click()}
                   className="mt-1 text-sm font-medium text-chat-accent hover:underline disabled:opacity-60"
                 >
-                  {profileImageFile ? "Photo selected — save to apply" : "Change profile photo"}
+                  {uploadProfileImageMutation.isPending
+                    ? "Uploading photo…"
+                    : profileImageFile
+                      ? "Uploading selected photo…"
+                      : "Change profile photo"}
                 </button>
               </div>
             </div>

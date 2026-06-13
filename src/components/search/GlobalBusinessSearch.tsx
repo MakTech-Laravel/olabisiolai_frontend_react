@@ -115,11 +115,18 @@ export function GlobalBusinessSearch({
           placeholder={PLACEHOLDER}
           aria-label="Search businesses"
           className={cn(
-            "h-10 w-full min-w-0 rounded-xl border border-border-light bg-card pl-9 pr-3 text-sm text-foreground sm:h-11 sm:pl-10 sm:text-base",
+            "h-10 w-full min-w-0 rounded-xl border border-border-light bg-card pl-9 pr-12 text-sm text-foreground sm:h-11 sm:pl-10 sm:pr-14 sm:text-base",
             "outline-none ring-0 transition focus:border-brand/50",
             "placeholder:text-xs sm:placeholder:text-sm",
           )}
         />
+        <button
+          type="submit"
+          className="absolute right-1.5 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-lg bg-brand-red text-white transition hover:bg-brand-red/90 sm:size-9"
+          aria-label="Search"
+        >
+          <Search className="size-4 sm:size-[18px]" aria-hidden />
+        </button>
       </div>
     </form>
   );

@@ -12,29 +12,6 @@ function Label({ children }: { children: string }) {
   );
 }
 
-function VisibilityToggle({ checked, disabled }: { checked: boolean; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      className={cn(
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2",
-        checked ? "bg-sky-600" : "bg-muted",
-        disabled && "cursor-not-allowed opacity-60",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none block size-6 rounded-full bg-white shadow-md ring-0 transition-transform",
-          checked ? "translate-x-5" : "translate-x-0.5",
-        )}
-      />
-    </button>
-  );
-}
-
 function verificationLabel(status: string, isFlagged: boolean): string {
   if (status === "approved") return "Verified";
   if (isFlagged) return "Verification flagged";
@@ -57,23 +34,20 @@ export function ProfileVisibilityCard() {
         <CardTitle className="text-lg font-bold text-foreground font-manrope">Profile Visibility</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <Eye className="size-5" aria-hidden />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground font-manrope">
-                {isActive ? "Profile visible" : "Profile hidden"}
-              </p>
-              <p className="text-sm text-muted-foreground font-inter">
-                {isActive
-                  ? "Your profile is visible to customers in search"
-                  : "Your profile is not shown while status is inactive or suspended"}
-              </p>
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+            <Eye className="size-5" aria-hidden />
           </div>
-          <VisibilityToggle checked={isActive} disabled />
+          <div>
+            <p className="font-semibold text-foreground font-manrope">
+              {isActive ? "Profile visible" : "Profile hidden"}
+            </p>
+            <p className="text-sm text-muted-foreground font-inter">
+              {isActive
+                ? "Your listing appears in customer search results."
+                : "Your listing is hidden while your account is inactive or suspended. Contact support if you need help."}
+            </p>
+          </div>
         </div>
 
         <div
@@ -91,7 +65,7 @@ export function ProfileVisibilityCard() {
           <div className="flex gap-3">
             <BadgeCheck
               className={cn(
-                "size-5",
+                "size-5 shrink-0",
                 isVerified
                   ? "text-emerald-600"
                   : isFlagged

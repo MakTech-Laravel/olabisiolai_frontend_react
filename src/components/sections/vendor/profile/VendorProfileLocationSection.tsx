@@ -4,9 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, MapPin } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
-import { parseVendorLocationOptions } from "@/features/locations/vendorLocationOptions";
+import {
+  locationEntriesForStateCity,
+  parseVendorLocationOptions,
+  uniqueLocationCities,
+  uniqueLocationStates,
+} from "@/features/locations/vendorLocationOptions";
 import { fetchVendorBoostCatalog } from "@/features/boost/vendorBoostApi";
 import { VendorProfileActiveBoostCard } from "@/components/sections/vendor/profile/VendorProfileActiveBoostCard";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
@@ -71,6 +77,20 @@ export function VendorProfileLocationSection() {
     [parsedLocations, locationId],
   );
 
+  const profileState = selectedLocation?.state || profile?.state || "";
+  const profileCity = selectedLocation?.city || profile?.city || "";
+  const profileLga = selectedLocation?.lga || profile?.lga || "";
+
+  const allStates = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations]);
+  const citiesForState = useMemo(
+    () => uniqueLocationCities(parsedLocations, profileState),
+    [parsedLocations, profileState],
+  );
+  const lgaOptions = useMemo(
+    () => locationEntriesForStateCity(parsedLocations, profileState, profileCity),
+    [parsedLocations, profileState, profileCity],
+  );
+
   const { data: boostCatalog } = useQuery({
     queryKey: ["vendor", "boost", "catalog"],
     queryFn: fetchVendorBoostCatalog,
@@ -96,14 +116,8 @@ export function VendorProfileLocationSection() {
       (boostCatalog.location?.id === locationId ||
         boostCatalog.location?.id === String(locationNumericId)));
 
-  if (!profile) return null;
-
-  const state = selectedLocation?.state || profile.state || "";
-  const city = selectedLocation?.city || profile.city || "";
-  const lga = selectedLocation?.lga || profile.lga || "";
-
   const savedLocationOption = useMemo(() => {
-    if (!profile.locationId || profile.locationId <= 0) return null;
+    if (!profile?.locationId || profile.locationId <= 0) return null;
     const id = String(profile.locationId);
     if (parsedLocations.some((entry) => entry.id === id)) return null;
     const label =
@@ -111,48 +125,129 @@ export function VendorProfileLocationSection() {
       [profile.state, profile.city, profile.lga].filter(Boolean).join(" / ") ||
       profile.locationLabel;
     if (!label.trim()) return null;
-    return { id, label };
+    return { id, label, state: profile.state, city: profile.city, lga: profile.lga };
   }, [parsedLocations, profile]);
+
+  if (!profile) return null;
+
+  const streetAddress = isEditing && draft ? draft.streetAddress : profile.streetAddress;
+
+  const handleStateChange = (nextState: string) => {
+    if (!draft) return;
+    const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
+    const nextEntry = locationEntriesForStateCity(parsedLocations, nextState, nextCity)[0];
+    setDraftField("locationId", nextEntry?.id ?? "");
+  };
+
+  const handleCityChange = (nextCity: string) => {
+    if (!draft) return;
+    const nextEntry = locationEntriesForStateCity(parsedLocations, profileState, nextCity)[0];
+    setDraftField("locationId", nextEntry?.id ?? "");
+  };
 
   return (
     <div className="space-y-5">
-      <SelectField
-        label="Location"
-        value={locationId}
-        disabled={!isEditing || isPending}
-        onChange={(e) => setDraftField("locationId", e.target.value)}
-      >
-        <option value="">
-          {isPending ? "Loading locations…" : "Select location"}
-        </option>
-        {savedLocationOption ? (
-          <option value={savedLocationOption.id}>{savedLocationOption.label}</option>
-        ) : null}
-        {parsedLocations.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </SelectField>
+      <div>
+        <Label>Street address</Label>
+        {isEditing && draft ? (
+          <Textarea
+            value={streetAddress}
+            onChange={(e) => setDraftField("streetAddress", e.target.value)}
+            rows={2}
+            placeholder="Street name and number, building, landmark…"
+            className="min-h-[72px] resize-y border-border-light bg-background text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
+          />
+        ) : (
+          <Input
+            value={streetAddress || "—"}
+            readOnly
+            className="h-11 border-border-light bg-background text-sm shadow-sm"
+          />
+        )}
+      </div>
+
+      {isEditing && draft ? (
+        <>
+          <SelectField
+            label="State"
+            value={profileState}
+            disabled={isPending || allStates.length === 0}
+            onChange={(e) => handleStateChange(e.target.value)}
+          >
+            <option value="">{isPending ? "Loading states…" : "Select state"}</option>
+            {savedLocationOption && !allStates.includes(savedLocationOption.state) ? (
+              <option value={savedLocationOption.state}>{savedLocationOption.state}</option>
+            ) : null}
+            {allStates.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectField>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <SelectField
+              label="City"
+              value={profileCity}
+              disabled={!profileState || citiesForState.length === 0}
+              onChange={(e) => handleCityChange(e.target.value)}
+            >
+              <option value="">Select city</option>
+              {savedLocationOption &&
+              savedLocationOption.state === profileState &&
+              !citiesForState.includes(savedLocationOption.city) ? (
+                <option value={savedLocationOption.city}>{savedLocationOption.city}</option>
+              ) : null}
+              {citiesForState.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              label="LGA (Local Government Area)"
+              value={locationId}
+              disabled={!profileCity || lgaOptions.length === 0}
+              onChange={(e) => setDraftField("locationId", e.target.value)}
+            >
+              <option value="">Select LGA</option>
+              {savedLocationOption &&
+              savedLocationOption.state === profileState &&
+              savedLocationOption.city === profileCity &&
+              !lgaOptions.some((entry) => entry.id === savedLocationOption.id) ? (
+                <option value={savedLocationOption.id}>{savedLocationOption.lga}</option>
+              ) : null}
+              {lgaOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.lga}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label>State</Label>
+              <Input value={profileState || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
+            </div>
+            <div>
+              <Label>City</Label>
+              <Input value={profileCity || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
+            </div>
+          </div>
+          <div>
+            <Label>LGA (Local Government Area)</Label>
+            <Input value={profileLga || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
+          </div>
+        </>
+      )}
+
       {isEditing && fieldErrors.location_id ? (
         <p className="text-xs text-destructive">{fieldErrors.location_id}</p>
       ) : null}
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <Label>State</Label>
-          <Input value={state} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
-        </div>
-        <div>
-          <Label>City</Label>
-          <Input value={city} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
-        </div>
-      </div>
-
-      <div>
-        <Label>LGA (Local Government Area)</Label>
-        <Input value={lga} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
-      </div>
 
       {selectedLocation && showBoostOnProfile ? (
         <VendorProfileActiveBoostCard
@@ -160,14 +255,14 @@ export function VendorProfileLocationSection() {
           pendingRequest={
             boostCatalog?.location?.id === locationId ||
               boostCatalog?.location?.id === String(locationNumericId)
-              ? boostCatalog.pendingRequest
+              ? boostCatalog?.pendingRequest ?? null
               : null
           }
           locationLabel={`${selectedLocation.state} / ${selectedLocation.city} / ${selectedLocation.lga}`}
         />
       ) : locationId && !selectedLocation && !savedLocationOption ? (
         <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
-          Location details could not be matched to the catalog. Please pick a location from the list, or
+          Location details could not be matched to the catalog. Please pick state, city, and LGA from the list, or
           keep your saved address:{" "}
           <span className="font-medium">{profile.locationFullName || profile.locationLabel}</span>
         </div>

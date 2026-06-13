@@ -25,7 +25,7 @@ export function ConciergeSupportCard() {
             className="flex-1 bg-brand-red font-inter font-semibold text-white hover:bg-brand-red/90 sm:flex-auto"
             asChild
           >
-            <Link to="/vendor/leads">Contact support</Link>
+            <Link to="/vendor/leads?channel=admin">Contact support</Link>
           </Button>
           <Button
             type="button"
@@ -35,7 +35,7 @@ export function ConciergeSupportCard() {
             aria-label="Open messages"
             asChild
           >
-            <Link to="/vendor/leads">
+            <Link to="/vendor/leads?channel=admin">
               <MessageSquare className="size-5" />
             </Link>
           </Button>

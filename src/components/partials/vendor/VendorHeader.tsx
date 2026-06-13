@@ -232,7 +232,7 @@ export function VendorHeader({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Desktop */}
       <div className="hidden p-3 md:flex md:items-center md:gap-4 lg:gap-6 lg:py-4">
-        <div className="flex min-w-0 flex-1 items-center gap-4 px-2">
+        <div className="flex justify-between min-w-0 flex-1 items-center gap-4 px-2">
           {showHeaderSearch ? (
             <GlobalBusinessSearch variant="header" className="min-w-0 w-full max-w-xl lg:max-w-2xl" />
           ) : (

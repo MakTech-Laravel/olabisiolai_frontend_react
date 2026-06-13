@@ -48,7 +48,7 @@ export function SocialAccountsEditor({
     <div className={cn("space-y-4", className)}>
       {showIntro ? (
         <p className="text-sm text-muted-foreground">
-          Add links to your social profiles. Visitors can tap the icons on your business page.
+          Add your social handles (e.g. @gidira) or full profile links. Visitors can tap the icons on your business page.
         </p>
       ) : null}
 
@@ -90,10 +90,10 @@ export function SocialAccountsEditor({
                   Profile link
                 </label>
                 <Input
-                  type="url"
+                  type="text"
                   value={row.url}
                   disabled={disabled}
-                  placeholder="https://instagram.com/yourbusiness"
+                  placeholder="@gidira or https://instagram.com/gidira"
                   onChange={(e) => updateRow(index, { url: e.target.value })}
                   className="h-11 border-border-light bg-background text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
                 />

@@ -8,6 +8,7 @@ export type VendorProfileDraft = {
   categoryId: string;
   subcategory: string;
   locationId: string;
+  streetAddress: string;
   description: string;
   services: string[];
   phone: string;
@@ -16,6 +17,7 @@ export type VendorProfileDraft = {
   socialAccounts: SocialAccount[];
   logoFile: File | null;
   logoPreview: string;
+  existingCoverPaths: string[];
   existingCoverUrls: string[];
   newCoverFiles: File[];
   newCoverPreviews: string[];
@@ -28,6 +30,7 @@ export function profileToDraft(profile: VendorBusinessProfile): VendorProfileDra
     categoryId: profile.categoryId > 0 ? String(profile.categoryId) : "",
     subcategory: profile.subcategory ?? "",
     locationId: profile.locationId > 0 ? String(profile.locationId) : "",
+    streetAddress: profile.streetAddress,
     description: profile.description,
     services: profile.services.length > 0 ? [...profile.services] : [""],
     phone: profile.phone,
@@ -36,6 +39,7 @@ export function profileToDraft(profile: VendorBusinessProfile): VendorProfileDra
     socialAccounts: profile.socialAccounts.map((account) => ({ ...account })),
     logoFile: null,
     logoPreview: profile.logoUrl,
+    existingCoverPaths: [...profile.coverPhotoPaths],
     existingCoverUrls: [...profile.coverPhotoUrls],
     newCoverFiles: [],
     newCoverPreviews: [],

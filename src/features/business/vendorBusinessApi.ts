@@ -122,6 +122,7 @@ export type UpdateVendorBusinessPayload = {
   state: string;
   city: string;
   lga: string;
+  full_address?: string;
   business_description: string;
   services: string[];
   phone: string;
@@ -129,6 +130,7 @@ export type UpdateVendorBusinessPayload = {
   website?: string;
   social_accounts?: SocialAccount[];
   logo?: File | null;
+  keep_cover_paths?: string[];
   cover_photos?: File[];
   business_hours?: BusinessHourEntry[];
 };
@@ -154,12 +156,18 @@ function buildUpdateVendorBusinessJsonBody(
   if (payload.website?.trim()) {
     body.website = payload.website.trim();
   }
+  if (payload.full_address?.trim()) {
+    body.full_address = payload.full_address.trim();
+  }
   body.social_accounts = (payload.social_accounts ?? []).map((account) => ({
     platform: account.platform,
     url: account.url.trim(),
   }));
   if (payload.business_hours?.length) {
     body.business_hours = serializeBusinessHoursForApi(payload.business_hours);
+  }
+  if (payload.keep_cover_paths !== undefined) {
+    body.keep_cover_paths = payload.keep_cover_paths;
   }
 
   return body;
@@ -182,6 +190,7 @@ function appendUpdateVendorBusinessFormData(
 
   appendIfTruthy(formData, "whatsapp", payload.whatsapp);
   appendIfTruthy(formData, "website", payload.website);
+  appendIfTruthy(formData, "full_address", payload.full_address);
   appendSocialAccountsToFormData(formData, payload.social_accounts ?? []);
 
   payload.services
@@ -197,6 +206,10 @@ function appendUpdateVendorBusinessFormData(
 
   (payload.cover_photos ?? []).forEach((photo, index) => {
     formData.append(`cover_photos[${index}]`, photo);
+  });
+
+  (payload.keep_cover_paths ?? []).forEach((path, index) => {
+    formData.append(`keep_cover_paths[${index}]`, path);
   });
 
   if (payload.business_hours?.length) {

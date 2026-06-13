@@ -24,6 +24,7 @@ export type VendorBusinessProfile = {
   lga: string;
   locationLabel: string;
   locationFullName: string;
+  streetAddress: string;
   description: string;
   services: string[];
   phone: string;
@@ -32,6 +33,7 @@ export type VendorBusinessProfile = {
   socialAccounts: SocialAccount[];
   logoUrl: string;
   coverPhotoUrls: string[];
+  coverPhotoPaths: string[];
   verificationStatus: string;
   isFlagged: boolean;
   businessStatus: string;
@@ -119,6 +121,7 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     lga,
     locationLabel: locationLabel || locationFullName,
     locationFullName,
+    streetAddress: pickString(item, ["street_address", "full_address"], ""),
     description: pickString(item, ["business_description", "description"], ""),
     services: parseStringArray(item.services_offered),
     phone: pickString(item, ["phone"], ""),
@@ -127,6 +130,7 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     socialAccounts: parseSocialAccounts(item.social_accounts ?? item.socialAccounts),
     logoUrl: resolveMediaUrl(pickString(item, ["logo_url", "logo"], "")),
     coverPhotoUrls: resolveMediaUrls(parseStringArray(item.cover_photo_urls)),
+    coverPhotoPaths: parseStringArray(item.cover_photo_paths),
     verificationStatus: pickString(item, ["verification_status"], "none").toLowerCase(),
     isFlagged: item.is_flagged === true || item.is_flagged === 1 || item.is_flagged === "1",
     businessStatus: pickString(item, ["business_status"], "active").toLowerCase(),

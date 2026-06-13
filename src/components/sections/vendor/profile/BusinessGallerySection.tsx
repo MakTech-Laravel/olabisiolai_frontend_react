@@ -118,12 +118,6 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
       )}
 
       <CardContent className="p-6">
-        {isEditing && draft?.newCoverFiles.length ? (
-          <p className="mb-3 text-xs text-amber-700">
-            New uploads will replace your current gallery photos when you save.
-          </p>
-        ) : null}
-
         {!hasPhotos && !isEditing ? (
           <p className="text-sm text-muted-foreground">No cover photos uploaded yet.</p>
         ) : (
