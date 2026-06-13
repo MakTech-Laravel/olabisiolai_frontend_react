@@ -331,7 +331,7 @@ export function FrontendHeader() {
             dashboardPath={dashboardPath}
           />
         </div>
-        {showHeaderSearch ? <GlobalBusinessSearch variant="header" /> : null}
+        {showHeaderSearch ? <GlobalBusinessSearch variant="header" className="min-w-0 w-full" /> : null}
       </div>
 
       <div
@@ -353,7 +353,7 @@ export function FrontendHeader() {
 
         <div className="flex min-w-0 flex-1 justify-center px-2">
           {showHeaderSearch ? (
-            <GlobalBusinessSearch variant="header" className="max-w-xl lg:max-w-2xl" />
+            <GlobalBusinessSearch variant="header" className="min-w-0 w-full max-w-xl lg:max-w-2xl" />
           ) : null}
         </div>
 

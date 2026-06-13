@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import { useAuth } from "@/auth/useAuth";
+import { GlobalBusinessSearch } from "@/components/search/GlobalBusinessSearch";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,27 +30,6 @@ import { VendorNotificationBell } from "@/components/partials/vendor/VendorNotif
 import { cn } from "@/lib/utils";
 
 const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
-
-function HeaderSearch({ className }: { className?: string }) {
-  return (
-    <div className={cn("w-full", className)}>
-      <div className="relative">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden
-        />
-        <input
-          type="search"
-          placeholder="Search by business name, category, or location..."
-          className={cn(
-            "h-11 w-full rounded-xl border border-border-light bg-[#F1F5F9] pl-10 pr-3 text-sm text-foreground",
-            "outline-none ring-0 transition focus:border-brand/50",
-          )}
-        />
-      </div>
-    </div>
-  );
-}
 
 function HeaderToolbar() {
   const navigate = useNavigate();
@@ -247,15 +227,17 @@ export function VendorHeader({ onMenuClick }: { onMenuClick?: () => void }) {
           </div>
         </div>
 
-        {showHeaderSearch ? <HeaderSearch /> : null}
+        {showHeaderSearch ? <GlobalBusinessSearch variant="header" className="min-w-0 w-full" /> : null}
       </div>
 
       {/* Desktop */}
-      <div className="hidden p-3 md:flex md:items-center md:gap-4 lg:gap-32 lg:py-4">
-        <div className="flex min-w-0 flex-1 justify-between px-2">
+      <div className="hidden p-3 md:flex md:items-center md:gap-4 lg:gap-6 lg:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4 px-2">
           {showHeaderSearch ? (
-            <HeaderSearch className="max-w-xl lg:max-w-2xl" />
-          ) : null}
+            <GlobalBusinessSearch variant="header" className="min-w-0 w-full max-w-xl lg:max-w-2xl" />
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
           <HeaderToolbar />
         </div>
       </div>

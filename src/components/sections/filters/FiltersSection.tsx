@@ -2,6 +2,7 @@ import { Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { CategoryDto } from "@/features/categories/types";
+import { cn } from "@/lib/utils";
 
 export type FiltersSectionProps = {
   /** Unique prefix so multiple filter panels on one page do not share radio `name` (breaks selection on mobile). */
@@ -22,6 +23,8 @@ export type FiltersSectionProps = {
   selectedMinRating: number | null;
   onSelectMinRating: (rating: number | null) => void;
   categoriesLoading?: boolean;
+  /** Drawer/mobile panel — drop sticky card chrome for narrow screens. */
+  layout?: "sidebar" | "drawer";
 };
 
 export default function FiltersSection({
@@ -42,6 +45,7 @@ export default function FiltersSection({
   selectedMinRating,
   onSelectMinRating,
   categoriesLoading,
+  layout = "sidebar",
 }: FiltersSectionProps) {
   const size = 24;
   const catName = `${radioGroupId}-category`;
@@ -78,22 +82,29 @@ export default function FiltersSection({
   }, [filteredLocationOptions, locationOptions, selectedLocationId]);
 
   return (
-    <div className="bg-card p-8 rounded-lg  sticky top-20">
-      <h2 className="text-2xl font-inter font-bold text-text-primary mb-6">
+    <div
+      className={cn(
+        layout === "drawer"
+          ? "bg-transparent p-0 shadow-none"
+          : "sticky top-16 rounded-lg bg-card p-4 sm:top-20 sm:p-6 lg:p-8",
+      )}
+    >
+      <h2 className="mb-4 text-xl font-inter font-bold text-text-primary sm:mb-6 sm:text-2xl">
         Filters
       </h2>
 
       {/* Search */}
-      <div className="mb-6">
-        <h3 className="font-inter font-semibold text-text-primary mb-3">
+      <div className="mb-5 sm:mb-6">
+        <h3 className="mb-2 font-inter text-sm font-semibold text-text-primary sm:mb-3 sm:text-base">
           Search
         </h3>
         <input
-          type="text"
+          type="search"
           value={searchTerm}
           onChange={(event) => onSearchTermChange(event.target.value)}
           placeholder="Search business name..."
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+          aria-label="Search businesses"
+          className="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
         />
       </div>
 
@@ -216,7 +227,7 @@ export default function FiltersSection({
             onChange={(event) => setLocationSearch(event.target.value)}
             placeholder="Search location..."
             aria-label="Search locations"
-            className="w-full rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
+            className="w-full min-w-0 rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
           />
         </div>
 

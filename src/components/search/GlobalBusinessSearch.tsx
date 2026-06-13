@@ -9,7 +9,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 const PLACEHOLDER =
-  "Search by business name, category, or location....";
+  "Search by business name, category, or location...";
 
 type GlobalBusinessSearchProps = {
   variant?: "hero" | "header";
@@ -22,7 +22,7 @@ export function GlobalBusinessSearch({
 }: GlobalBusinessSearchProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = (searchParams.get("search") ?? "").trim();
   const [query, setQuery] = useState(urlSearch);
 
@@ -32,47 +32,62 @@ export function GlobalBusinessSearch({
     }
   }, [pathname, urlSearch]);
 
-  const goToFilters = (raw: string) => {
+  const applySearch = (raw: string) => {
     const term = raw.trim();
+
+    if (pathname === "/filters") {
+      const next = new URLSearchParams(searchParams);
+      if (term) {
+        next.set("search", term);
+      } else {
+        next.delete("search");
+      }
+      next.delete("page");
+      setSearchParams(next, { replace: true });
+      return;
+    }
+
     const next = new URLSearchParams();
-    if (term) next.set("search", term);
+    if (term) {
+      next.set("search", term);
+    }
     const qs = next.toString();
     navigate(qs ? `/filters?${qs}` : "/filters");
   };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    goToFilters(query);
+    applySearch(query);
   };
 
   if (variant === "hero") {
     return (
       <form
         onSubmit={handleSubmit}
-        className={cn("flex justify-center", className)}
+        className={cn("mx-auto w-full max-w-2xl px-1 sm:px-0", className)}
         role="search"
         aria-label="Search businesses"
       >
-        <InputGroup className="max-w-2xl border-muted bg-transparent px-1 py-6">
+        <InputGroup className="w-full min-w-0 border-muted bg-transparent px-1 py-2 sm:py-4 lg:py-6">
           <InputGroupInput
             type="search"
             name="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={PLACEHOLDER}
-            className="text-sm text-text-primary placeholder:text-xs placeholder:text-muted-foreground sm:text-base sm:placeholder:text-sm"
+            className="min-w-0 text-sm text-text-primary placeholder:text-xs placeholder:text-muted-foreground sm:text-base sm:placeholder:text-sm"
             aria-label="Search businesses"
           />
           <InputGroupAddon
             align="inline-end"
-            className="cursor-pointer rounded-lg bg-primary p-3"
+            className="shrink-0 cursor-pointer rounded-lg bg-primary p-2 sm:p-3"
           >
             <button
               type="submit"
               className="inline-flex items-center justify-center"
               aria-label="Search"
             >
-              <Search className="h-6 w-6 text-primary-foreground" />
+              <Search className="size-5 text-primary-foreground sm:h-6 sm:w-6" />
             </button>
           </InputGroupAddon>
         </InputGroup>
@@ -83,11 +98,11 @@ export function GlobalBusinessSearch({
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn("w-full", className)}
+      className={cn("w-full min-w-0", className)}
       role="search"
       aria-label="Search businesses"
     >
-      <div className="relative">
+      <div className="relative min-w-0">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
@@ -100,8 +115,9 @@ export function GlobalBusinessSearch({
           placeholder={PLACEHOLDER}
           aria-label="Search businesses"
           className={cn(
-            "h-11 w-full rounded-xl border border-border-light bg-card pl-10 pr-3 text-sm text-foreground",
+            "h-10 w-full min-w-0 rounded-xl border border-border-light bg-card pl-9 pr-3 text-sm text-foreground sm:h-11 sm:pl-10 sm:text-base",
             "outline-none ring-0 transition focus:border-brand/50",
+            "placeholder:text-xs sm:placeholder:text-sm",
           )}
         />
       </div>

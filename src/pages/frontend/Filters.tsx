@@ -373,8 +373,8 @@ export default function Filters() {
   return (
     <div key={searchParams.toString() || "default"} className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card shadow-sm py-4 px-6">
-        <div className="container mx-auto px-4">
+      <div className="bg-card shadow-sm px-4 py-4 sm:px-6">
+        <div className="container mx-auto px-2 sm:px-4">
           <Link
             to="/"
             className="flex items-center font-inter font-normal text-base text-primary hover:text-primary/80"
@@ -439,7 +439,7 @@ export default function Filters() {
             onClick={() => setShowFilters(false)}
           />
           {/* Drawer */}
-          <div className="absolute left-0 top-0 bottom-0 w-4/5 max-w-sm bg-background overflow-y-auto shadow-xl">
+          <div className="absolute left-0 top-0 bottom-0 w-[min(100vw-2rem,24rem)] max-w-[85vw] bg-background overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background z-10">
               <span className="font-inter font-semibold text-text-primary text-lg">
                 Filters
@@ -452,10 +452,11 @@ export default function Filters() {
                 <X size={20} className="text-text-secondary" />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               <FiltersSection
                 key={searchParams.toString() || "default"}
                 radioGroupId="filters-mobile-drawer"
+                layout="drawer"
                 categories={apiCategories}
                 selectedCategoryId={filterCategoryId}
                 onSelectCategory={handleSelectCategory}
@@ -525,10 +526,10 @@ export default function Filters() {
       )}
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 lg:py-8 flex gap-6">
+      <div className="container mx-auto flex min-w-0 flex-col gap-6 px-3 py-4 sm:px-4 sm:py-6 lg:flex-row lg:px-4 lg:py-8">
 
         {/* Filters Sidebar — hidden on mobile, visible on lg+ */}
-        <aside className="hidden lg:block w-1/6 shrink-0 space-y-3">
+        <aside className="hidden w-full shrink-0 space-y-3 lg:block lg:w-1/4 xl:w-1/5">
           {hasActiveFilters && (
             <button
               type="button"
@@ -562,7 +563,7 @@ export default function Filters() {
         </aside>
 
         {/* Business Cards Section */}
-        <div className="w-full lg:w-3/6 min-w-0">
+        <div className="min-w-0 w-full lg:w-3/5 xl:w-3/5">
           <div className="mt-0 lg:mt-4 space-y-4">
             {businessesLoading ? (
               <div className="flex items-center justify-center py-16">
