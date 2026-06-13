@@ -13,9 +13,7 @@ export function DashboardProfileCompletionCard({ dashboard }: VendorDashboardCar
       ? "/vendor/profile"
       : profileCompletion.nextStepKey === "verified_id"
         ? "/vendor/verification"
-        : profileCompletion.nextStepKey === "bank_linked"
-          ? "/vendor/settings"
-          : "/vendor/profile";
+        : "/vendor/profile";
 
   return (
     <Card>
