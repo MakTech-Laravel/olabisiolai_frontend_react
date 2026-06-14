@@ -11,12 +11,14 @@ const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
 const SettingsHub = lazy(() => import("@/pages/user/SettingsHub"));
 const AccountSettings = lazy(() => import("@/pages/user/AccountSettings"));
+const MyReviews = lazy(() => import("@/pages/user/MyReviews"));
+const ReportIssue = lazy(() => import("@/pages/user/ReportIssue"));
 const Account = lazy(() => import("@/pages/frontend/Account"));
 
-/** Authenticated `user` role area. */
+/** Authenticated account area (customers + vendors share profile hub, settings, messages). */
 export const userRoutes: RouteObject = {
   element: (
-    <RoleGate allow="user" fallback="/unauthorized">
+    <RoleGate allow={["user", "vendor"]} fallback="/unauthorized">
       <Outlet />
     </RoleGate>
   ),
@@ -28,6 +30,8 @@ export const userRoutes: RouteObject = {
     { path: "/user/activity", element: suspensePage(UserActivity) },
     { path: "/user/settings", element: suspensePage(SettingsHub) },
     { path: "/user/settings/account", element: suspensePage(AccountSettings) },
+    { path: "/user/reviews", element: suspensePage(MyReviews) },
+    { path: "/user/report", element: suspensePage(ReportIssue) },
     { path: "/account", element: suspensePage(Account) },
   ],
 };

@@ -83,7 +83,7 @@ export async function fetchSubscriptionStatus(): Promise<{
 export async function initSubscriptionPayment(
   args?: {
     gateway?: PaymentGateway;
-    boost?: { tierKey: string; durationDays: number };
+    boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
   },
 ): Promise<SubscriptionCheckoutInit> {
   const boost = args?.boost;
@@ -94,6 +94,9 @@ export async function initSubscriptionPayment(
       ? {
         boost_tier_key: boost.tierKey,
         boost_duration_days: boost.durationDays,
+        ...(boost.budgetAmount != null
+          ? { boost_budget_amount: boost.budgetAmount }
+          : null),
       }
       : null),
   });

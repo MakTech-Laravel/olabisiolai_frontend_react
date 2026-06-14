@@ -37,6 +37,9 @@ const Service = lazy(() => import("@/pages/frontend/Service"));
 const DirectMessage = lazy(() => import("@/pages/frontend/DirectMessage"));
 const GiveReview = lazy(() => import("@/pages/frontend/GiveReview"));
 const ChooseYourVendorPlan = lazy(() => import("@/pages/vendor/ChooseYourVendorPlan"));
+const RefundPolicy = lazy(() => import("@/pages/frontend/RefundPolicy"));
+const CommunityGuidelines = lazy(() => import("@/pages/frontend/CommunityGuidelines"));
+const VendorAgreement = lazy(() => import("@/pages/frontend/VendorAgreement"));
 const LegacyVendorOnboardingRedirect = lazy(() => import("@/pages/vendor/LegacyVendorOnboardingRedirect"));
 
 /** Public marketing and content routes (no role gate). */
@@ -79,6 +82,9 @@ export const publicRoutes: RouteObject = {
     { path: "/terms", element: suspensePage(Terms) },
     { path: "/privacy-policy", element: suspensePage(PrivacyPolicy) },
     { path: "/cookies-policy", element: suspensePage(CookiesPolicy) },
+    { path: "/community-guidelines", element: suspensePage(CommunityGuidelines) },
+    { path: "/vendor-agreement", element: suspensePage(VendorAgreement) },
+    { path: "/refund-policy", element: suspensePage(RefundPolicy) },
     { path: "/careers", element: suspensePage(Careers) },
     { path: "/careers/:slug", element: suspensePage(CareerJobDetail) },
     {

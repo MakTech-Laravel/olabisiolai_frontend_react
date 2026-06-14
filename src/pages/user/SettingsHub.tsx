@@ -139,6 +139,7 @@ export default function SettingsHub() {
         <div className="space-y-4">
           <HubSection title="Saved & Reviews">
             <HubRow icon={<Heart className="size-4" />} label="Saved Vendors" to="/user/favorites" />
+            <HubRow icon={<Star className="size-4" />} label="My Reviews" to="/user/reviews" />
             <HubRow
               icon={<Star className="size-4" />}
               label="Write a Review"
@@ -184,19 +185,19 @@ export default function SettingsHub() {
               icon={<ShieldAlert className="size-4" />}
               label="Report a Vendor"
               description="Tell us about a listing concern"
-              to="/contact"
+              to="/user/report?type=vendor"
             />
             <HubRow
               icon={<ShieldAlert className="size-4" />}
               label="Report a Customer"
               description="Report inappropriate customer behaviour"
-              to="/contact"
+              to="/user/report?type=customer"
             />
             <HubRow
               icon={<ShieldAlert className="size-4" />}
               label="Report a Problem"
               description="Technical issues or general complaints"
-              to="/contact"
+              to="/user/report?type=problem"
             />
             <HubRow
               icon={<Share2 className="size-4" />}
@@ -231,9 +232,9 @@ export default function SettingsHub() {
           <HubSection title="Legal & Policies">
             <HubRow icon={<FileText className="size-4" />} label="Privacy Policy" to="/privacy-policy" />
             <HubRow icon={<FileText className="size-4" />} label="Terms & Conditions" to="/terms" />
-            <HubRow icon={<FileText className="size-4" />} label="Community Guidelines" to="/terms" />
-            <HubRow icon={<FileText className="size-4" />} label="Vendor Agreement" to="/terms" />
-            <HubRow icon={<FileText className="size-4" />} label="Refund Policy" to="/contact" />
+            <HubRow icon={<FileText className="size-4" />} label="Community Guidelines" to="/community-guidelines" />
+            <HubRow icon={<FileText className="size-4" />} label="Vendor Agreement" to="/vendor-agreement" />
+            <HubRow icon={<FileText className="size-4" />} label="Refund Policy" to="/refund-policy" />
             <HubRow icon={<FileText className="size-4" />} label="Cookie Policy" to="/cookies-policy" />
           </HubSection>
         </div>

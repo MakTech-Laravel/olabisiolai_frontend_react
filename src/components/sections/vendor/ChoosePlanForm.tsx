@@ -18,14 +18,13 @@ import {
   isPremiumPlanSelected,
 } from "@/features/business/vendorBusinessApi";
 import { clearBoostCheckoutSelection, saveBoostCheckoutSelection } from "@/features/boost/boostCheckoutSession";
-import { BoostSlotAvailabilityAlert } from "@/components/sections/vendor/boost/BoostSlotAvailabilityAlert";
+import { DynamicBoostSelectionFields } from "@/components/sections/vendor/boost/DynamicBoostSelectionFields";
 import {
-  isTierSlotAvailable,
-  locationHasAnyBoostSlot,
-  tierSlotFullMessage,
-  tierSlotStatusLabel,
-} from "@/features/boost/boostSlotAvailability";
-import { resolveBoostSelectionPrice } from "@/features/boost/locationBoostPlans";
+  clampBoostBudget,
+  DYNAMIC_BOOST_TIER_KEY,
+  type DynamicBoostDuration,
+} from "@/features/boost/dynamicBoostConfig";
+import { LocationCascadeSelects } from "@/components/locations/LocationCascadeSelects";
 import {
   cloneBusinessHours,
   defaultBusinessHours,
@@ -40,9 +39,6 @@ import {
 } from "@/features/business/socialAccounts";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import {
-  formatNaira,
-  formatTierPriceRange,
-  getSelectableDurationsForTier,
   locationEntriesForStateCity,
   parseVendorLocationOptions,
   uniqueLocationCities,
@@ -96,7 +92,7 @@ function SelectField({
           disabled={disabled}
           required={required}
           className={cn(
-            "h-11 w-full appearance-none rounded-md border border-border-light bg-secondary/80 px-3 pr-10 text-sm text-foreground shadow-sm transition-shadow",
+            "relative z-[1] h-11 w-full cursor-pointer appearance-none rounded-md border border-border-light bg-secondary/80 px-3 pr-10 text-sm text-foreground shadow-sm transition-shadow",
             Extra && "pr-12",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/25",
             disabled && "cursor-not-allowed opacity-70",
@@ -195,8 +191,9 @@ export default function ChoosePlanForm() {
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [lgaInput, setLgaInput] = useState("");
-  const [selectedTopSlotKey, setSelectedTopSlotKey] = useState("");
-  const [selectedDurationDays, setSelectedDurationDays] = useState("");
+  const [includeBoost, setIncludeBoost] = useState(false);
+  const [boostDurationDays, setBoostDurationDays] = useState<DynamicBoostDuration>(3);
+  const [boostBudgetAmount, setBoostBudgetAmount] = useState(1500);
   const [services, setServices] = useState<string[]>([""]);
   const [logo, setLogo] = useState<File | null>(null);
   const [coverPhotos, setCoverPhotos] = useState<File[]>([]);
@@ -236,25 +233,8 @@ export default function ChoosePlanForm() {
   );
   const stateOptions = allStates;
   const cityOptions = citiesForState;
-  const selectedTopSlot = useMemo(
-    () => selectedLocation?.boost?.tiers.find((tier) => tier.key === selectedTopSlotKey) ?? null,
-    [selectedLocation?.boost?.tiers, selectedTopSlotKey],
-  );
-  const enabledDurations = useMemo(() => {
-    if (!selectedLocation?.boost?.enabled || !selectedTopSlot) return [];
-    return getSelectableDurationsForTier(selectedTopSlot, selectedLocation.boost);
-  }, [selectedLocation?.boost, selectedTopSlot]);
-  const selectedDuration = useMemo(
-    () => enabledDurations.find((duration) => String(duration.days) === selectedDurationDays) ?? null,
-    [enabledDurations, selectedDurationDays],
-  );
-  const selectedCombinedPrice = useMemo(() => {
-    if (!selectedLocation || !selectedTopSlotKey || !selectedDurationDays) return 0;
-    return (
-      resolveBoostSelectionPrice(selectedLocation, selectedTopSlotKey, Number(selectedDurationDays))
-        ?.amount ?? 0
-    );
-  }, [selectedLocation, selectedTopSlotKey, selectedDurationDays]);
+  const boostBudget = clampBoostBudget(boostBudgetAmount);
+  const premiumSelected = isPremiumPlanSelected();
 
   const orphanFieldErrorSummary = useMemo(() => {
     const parts = Object.entries(fieldErrors)
@@ -289,8 +269,6 @@ export default function ChoosePlanForm() {
     setState(selectedLocation.state);
     setCity(selectedLocation.city);
     setLgaInput(selectedLocation.lga);
-    setSelectedTopSlotKey("");
-    setSelectedDurationDays("");
   }, [selectedLocation?.id]);
 
   useEffect(() => {
@@ -306,10 +284,6 @@ export default function ChoosePlanForm() {
       setLocationId("");
     }
   }, [state, city, citiesForState]);
-
-  useEffect(() => {
-    setSelectedDurationDays("");
-  }, [selectedTopSlotKey]);
 
   useEffect(() => {
     if (!logo) {
@@ -409,61 +383,33 @@ export default function ChoosePlanForm() {
       return;
     }
 
-    if (selectedLocation?.boost?.enabled) {
-      if (selectedTopSlotKey && !selectedDurationDays) {
-        setFieldErrors({
-          boost_duration: "You selected a boost plan. Please also choose a duration (7, 14, or 30 days).",
-        });
+    if (includeBoost && premiumSelected) {
+      if (!selectedLocation) {
+        setFieldErrors({ boost_duration: "Select a location before adding boost." });
         return;
       }
-      if (selectedDurationDays && !selectedTopSlotKey) {
+      if (!selectedLocation.boost?.enabled) {
         setFieldErrors({
-          boost_tier: "Please select a boost plan before choosing a duration.",
-        });
-        return;
-      }
-      if (
-        selectedTopSlotKey &&
-        selectedDurationDays &&
-        selectedCombinedPrice <= 0
-      ) {
-        setFieldErrors({
-          boost_duration: "No valid price found for this plan and duration. Pick another option or contact support.",
-        });
-        return;
-      }
-      if (selectedTopSlot && selectedLocation && !isTierSlotAvailable(selectedTopSlot)) {
-        setFieldErrors({
-          boost_tier: tierSlotFullMessage(selectedTopSlot, selectedLocation),
-        });
-        return;
-      }
-      if (
-        selectedTopSlotKey &&
-        selectedDurationDays &&
-        selectedLocation &&
-        !locationHasAnyBoostSlot(selectedLocation)
-      ) {
-        setFieldErrors({
-          boost_tier: "No boost slots are available for this location. Choose another LGA or skip boost for now.",
+          boost_duration: "Boost is not enabled for this LGA yet. Skip boost or choose another location.",
         });
         return;
       }
     }
 
     const boostCheckout =
-      selectedTopSlot && selectedDuration && selectedLocation && selectedCombinedPrice > 0
+      includeBoost && premiumSelected && selectedLocation?.boost?.enabled
         ? {
           locationId: selectedLocation.id,
           locationLabel: selectedLocation.label,
-          tierKey: selectedTopSlot.key,
-          tierLabel: selectedTopSlot.label,
-          durationDays: selectedDuration.days,
-          amount: selectedCombinedPrice,
+          tierKey: DYNAMIC_BOOST_TIER_KEY,
+          tierLabel: "Dynamic Boost",
+          durationDays: boostDurationDays,
+          amount: boostBudget,
+          budgetAmount: boostBudget,
         }
         : null;
 
-    if (boostCheckout && isPremiumPlanSelected()) {
+    if (boostCheckout && premiumSelected) {
       saveBoostCheckoutSelection(boostCheckout, { bundledWithPremium: true });
     } else {
       clearBoostCheckoutSelection();
@@ -610,15 +556,16 @@ export default function ChoosePlanForm() {
             />
           </div>
 
-          <SelectField
-            label={
-              <>
-                State <span className="text-destructive">*</span>
-              </>
-            }
-            value={state}
-            onChange={(e) => {
-              const nextState = e.target.value;
+          <LocationCascadeSelects
+            state={state}
+            city={city}
+            locationId={locationId}
+            states={stateOptions}
+            cities={cityOptions}
+            lgaOptions={lgaOptions}
+            disabled={formOptionsLoading}
+            stateLoading={formOptionsLoading}
+            onStateChange={(nextState) => {
               setState(nextState);
               const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
               setCity(nextCity);
@@ -631,236 +578,55 @@ export default function ChoosePlanForm() {
                 return next;
               });
             }}
-            disabled={formOptionsLoading || allStates.length === 0}
-            required={showLocationSection}
-          >
-            <option value="">
-              {formOptionsLoading ? "Loading states…" : "Select state"}
-            </option>
-            {stateOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+            onCityChange={(nextCity) => {
+              setCity(nextCity);
+              const nextEntry = locationEntriesForStateCity(parsedLocations, state, nextCity)[0];
+              setLocationId(nextEntry?.id ?? "");
+              setLgaInput(nextEntry?.lga ?? "");
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.location_id;
+                return next;
+              });
+            }}
+            onLocationChange={(nextId) => {
+              setLocationId(nextId);
+              const entry = parsedLocations.find((item) => item.id === nextId);
+              setLgaInput(entry?.lga ?? "");
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.location_id;
+                delete next.lga;
+                return next;
+              });
+            }}
+          />
           <FieldErrorText id="err-location_id" message={fieldErrors.location_id} />
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <SelectField
-              label={
-                <>
-                  City <span className="text-destructive">*</span>
-                </>
-              }
-              value={city}
-              onChange={(e) => {
-                const nextCity = e.target.value;
-                setCity(nextCity);
-                const nextEntry = locationEntriesForStateCity(parsedLocations, state, nextCity)[0];
-                setLocationId(nextEntry?.id ?? "");
-                setLgaInput(nextEntry?.lga ?? "");
-                setFieldErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.location_id;
-                  return next;
-                });
-              }}
-              disabled={!state || cityOptions.length === 0}
-              required={showLocationSection}
-            >
-              <option value="">Select city</option>
-              {cityOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              label={
-                <>
-                  LGA (Local Government Area) <span className="text-destructive">*</span>
-                </>
-              }
-              value={locationId}
-              onChange={(e) => {
-                const nextId = e.target.value;
-                setLocationId(nextId);
-                const entry = parsedLocations.find((item) => item.id === nextId);
-                setLgaInput(entry?.lga ?? "");
-                setFieldErrors((prev) => {
-                  const next = { ...prev };
-                  delete next.location_id;
-                  delete next.lga;
-                  return next;
-                });
-              }}
-              disabled={!city || lgaOptions.length === 0}
-              required={showLocationSection}
-            >
-              <option value="">Select LGA</option>
-              {lgaOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.lga}
-                </option>
-              ))}
-            </SelectField>
-          </div>
           <FieldErrorText id="err-lga" message={fieldErrors.lga} />
 
-          {selectedLocation ? (
+          {selectedLocation && premiumSelected ? (
             <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
-              <p className="text-sm font-semibold text-foreground">Boost options (optional)</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                If you pick a boost plan, you must also select a duration â€” partial selection is not allowed.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {selectedLocation.state} / {selectedLocation.city} / {selectedLocation.lga}
               </p>
 
               {selectedLocation.boost?.enabled ? (
-                <div className="mt-4 space-y-3">
-                  <BoostSlotAvailabilityAlert location={selectedLocation} />
-
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-                      <p className="text-[11px] uppercase text-muted-foreground">Total slots</p>
-                      <p className="text-lg font-semibold text-foreground">{selectedLocation.boost.stats.totalSlots}</p>
-                    </div>
-                    <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-                      <p className="text-[11px] uppercase text-muted-foreground">Sold</p>
-                      <p className="text-lg font-semibold text-foreground">{selectedLocation.boost.stats.slotsSold}</p>
-                    </div>
-                    <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-                      <p className="text-[11px] uppercase text-muted-foreground">Remaining</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {selectedLocation.boost.stats.slotsRemaining}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Top slots & price</p>
-                    {selectedLocation.boost.tiers.length > 0 ? (
-                      <ul className="grid gap-2 sm:grid-cols-2">
-                        {selectedLocation.boost.tiers.map((tier) => {
-                          const tierAvailable = isTierSlotAvailable(tier);
-                          return (
-                            <li
-                              key={tier.key}
-                              className={cn(
-                                "rounded-md border bg-white px-3 py-2 text-xs text-foreground",
-                                tierAvailable ? "border-sky-100" : "border-red-200 bg-red-50/50 opacity-80",
-                              )}
-                            >
-                              <label
-                                className={cn(
-                                  "flex flex-wrap items-center gap-2",
-                                  tierAvailable ? "cursor-pointer" : "cursor-not-allowed",
-                                )}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
-                                  checked={selectedTopSlotKey === tier.key}
-                                  disabled={!tierAvailable}
-                                  onChange={(e) => {
-                                    if (!tierAvailable) return;
-                                    setSelectedTopSlotKey(e.target.checked ? tier.key : "");
-                                    setFieldErrors((prev) => {
-                                      const next = { ...prev };
-                                      delete next.boost_tier;
-                                      delete next.boost_duration;
-                                      return next;
-                                    });
-                                  }}
-                                />
-                                <span className="font-semibold">{tier.label}</span>
-                                <span className={tierAvailable ? "text-muted-foreground" : "text-red-700"}>
-                                  {tierSlotStatusLabel(tier)}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  Price:{" "}
-                                  {selectedLocation.boost
-                                    ? formatTierPriceRange(tier, selectedLocation.boost.durations)
-                                    : formatNaira(tier.priceAmount)}
-                                </span>
-                              </label>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No top slot config found for this location.</p>
-                    )}
-                    {selectedTopSlot ? (
-                      <p className="text-xs text-sky-900">
-                        Selected: <span className="font-semibold">{selectedTopSlot.label}</span> | Slots:{" "}
-                        {selectedTopSlot.totalSlots} | From:{" "}
-                        {formatTierPriceRange(selectedTopSlot, selectedLocation.boost.durations)}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Durations</p>
-                    {!selectedTopSlot ? (
-                      <p className="text-xs text-muted-foreground">Select a boost plan above to see duration prices.</p>
-                    ) : enabledDurations.length > 0 ? (
-                      <ul className="flex flex-wrap gap-2">
-                        {enabledDurations.map((duration) => (
-                          <li
-                            key={duration.days}
-                            className="rounded-md border border-sky-100 bg-white px-2.5 py-1 text-xs text-foreground"
-                          >
-                            <label className="flex cursor-pointer items-center gap-2">
-                              <input
-                                type="checkbox"
-                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                checked={selectedDurationDays === String(duration.days)}
-                                onChange={(e) => {
-                                  setSelectedDurationDays(
-                                    e.target.checked ? String(duration.days) : "",
-                                  );
-                                  setFieldErrors((prev) => {
-                                    const next = { ...prev };
-                                    delete next.boost_duration;
-                                    return next;
-                                  });
-                                }}
-                              />
-                              <span>
-                                {duration.days} days - {formatNaira(duration.priceAmount)}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No duration pricing configured.</p>
-                    )}
-                    <FieldErrorText id="err-boost_duration" message={fieldErrors.boost_duration} />
-                    <FieldErrorText id="err-boost_tier" message={fieldErrors.boost_tier} />
-                    {selectedDuration ? (
-                      <p className="text-xs text-sky-900">
-                        Selected duration: <span className="font-semibold">{selectedDuration.days} days</span> | Price:{" "}
-                        {formatNaira(selectedDuration.priceAmount)}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {(selectedTopSlot || selectedDuration) && (
-                    <div className="rounded-md border border-sky-200 bg-white px-3 py-2">
-                      <p className="text-[11px] uppercase text-muted-foreground">Total selected price</p>
-                      <p className="text-base font-semibold text-foreground">{formatNaira(selectedCombinedPrice)}</p>
-                    </div>
-                  )}
-                </div>
+                <DynamicBoostSelectionFields
+                  className="mt-4"
+                  includeBoost={includeBoost}
+                  onIncludeBoostChange={setIncludeBoost}
+                  durationDays={boostDurationDays}
+                  budgetAmount={boostBudgetAmount}
+                  onDurationChange={setBoostDurationDays}
+                  onBudgetChange={setBoostBudgetAmount}
+                />
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  This location has no active slot configuration yet.
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Boost is not enabled for this LGA yet. You can add boost later from your business profile.
                 </p>
               )}
+
+              <FieldErrorText id="err-boost_duration" message={fieldErrors.boost_duration} />
             </div>
           ) : null}
 

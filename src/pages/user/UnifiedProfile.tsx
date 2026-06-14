@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, MapPin, Settings, UserPlus } from 'lucide-react'
+import { Crown, Loader2, MapPin, Settings, UserPlus } from 'lucide-react'
 
 import { fetchFollowStats } from '@/api/follows'
 import { fetchUserSettings } from '@/api/userSettings'
@@ -14,6 +14,7 @@ import {
   VendorBusinessNotFoundError,
 } from '@/features/business/vendorBusinessProfileApi'
 import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
+import { fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 
@@ -45,7 +46,19 @@ export default function UnifiedProfile() {
     retry: false,
   })
 
+  const subscriptionQuery = useQuery({
+    queryKey: ['vendor', 'subscription', 'status', 'profile-hub'],
+    queryFn: fetchSubscriptionStatus,
+    enabled: Boolean(user?.id) && activeMode === 'vendor',
+    staleTime: 60_000,
+  })
+
   const profile = settingsQuery.data?.profile
+  const bio =
+    typeof settingsQuery.data?.settings?.bio === 'string'
+      ? settingsQuery.data.settings.bio.trim()
+      : ''
+  const isPremiumActive = subscriptionQuery.data?.subscription?.is_premium_active === true
   const avatarUrl = resolveMediaUrl(
     profile?.image_path ?? user?.image_path ?? profile?.image_url ?? user?.image_url,
     DEFAULT_AVATAR,
@@ -66,9 +79,20 @@ export default function UnifiedProfile() {
           <div className="flex flex-col items-center text-center">
             <HeaderAvatar src={avatarUrl} alt={displayName} className="size-24 rounded-full border-4 border-surface-soft" />
             <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight">{displayName}</h1>
-            <p className="mt-1 text-sm text-chat-meta">
-              {activeMode === 'vendor' ? 'Vendor mode' : 'Customer mode'}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              <p className="text-sm text-chat-meta">
+                {activeMode === 'vendor' ? 'Vendor mode' : 'Customer mode'}
+              </p>
+              {activeMode === 'vendor' && isPremiumActive ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                  <Crown className="size-3.5" aria-hidden />
+                  Premium
+                </span>
+              ) : null}
+            </div>
+            {bio ? (
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-body-secondary">{bio}</p>
+            ) : null}
             {locationLabel ? (
               <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-body-secondary">
                 <MapPin className="size-4 shrink-0 text-brand" aria-hidden />

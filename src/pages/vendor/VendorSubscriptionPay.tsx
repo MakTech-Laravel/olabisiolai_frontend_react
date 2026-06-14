@@ -26,6 +26,7 @@ import {
   readBoostCheckoutSelection,
   readPremiumBundledBoostSelection,
   clearBoostCheckoutSelection,
+  type BoostCheckoutSelection,
 } from "@/features/boost/boostCheckoutSession";
 import { primeVendorSubscriptionCaches } from "@/features/subscription/primeVendorSubscriptionCaches";
 import {
@@ -101,7 +102,7 @@ function resolveSubscriptionPaymentId(checkout: SubscriptionCheckoutInit): numbe
 }
 
 async function loadFreshSubscriptionCheckout(
-  boost?: { tierKey: string; durationDays: number },
+  boost?: { tierKey: string; durationDays: number; budgetAmount?: number },
 ): Promise<SubscriptionCheckoutInit> {
   try {
     const resumed = normalizeCheckout(await resumeSubscriptionPayment());
@@ -122,6 +123,18 @@ async function loadFreshSubscriptionCheckout(
     throw new Error("Unable to prepare premium checkout.");
   }
   return created;
+}
+
+function subscriptionBoostPayload(
+  selection: BoostCheckoutSelection | null,
+): { tierKey: string; durationDays: number; budgetAmount?: number } | undefined {
+  if (!selection) return undefined;
+
+  return {
+    tierKey: selection.tierKey,
+    durationDays: selection.durationDays,
+    budgetAmount: selection.budgetAmount ?? selection.amount,
+  };
 }
 
 function readCheckoutFromSession(): SubscriptionCheckoutInit | null {
@@ -458,11 +471,7 @@ export default function VendorSubscriptionPayPage() {
           try {
             paymentId = resolveSubscriptionPaymentId(checkout);
           } catch {
-            const fresh = await loadFreshSubscriptionCheckout(
-              boostSelection
-                ? { tierKey: boostSelection.tierKey, durationDays: boostSelection.durationDays }
-                : undefined,
-            );
+            const fresh = await loadFreshSubscriptionCheckout(subscriptionBoostPayload(boostSelection));
             persistCheckout(fresh);
             paymentId = resolveSubscriptionPaymentId(fresh);
           }
@@ -543,9 +552,7 @@ export default function VendorSubscriptionPayPage() {
         normalizeCheckout(
           await initSubscriptionPayment({
             gateway: selectedGateway,
-            boost: boostSelection
-              ? { tierKey: boostSelection.tierKey, durationDays: boostSelection.durationDays }
-              : undefined,
+            boost: subscriptionBoostPayload(boostSelection),
           }),
         );
       if (!fresh) {

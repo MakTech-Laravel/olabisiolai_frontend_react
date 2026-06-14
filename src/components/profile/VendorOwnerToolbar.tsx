@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
-import { BarChart3, BadgeCheck, Bell, Crown, Lock, Pencil, Rocket, Settings, ShieldCheck } from 'lucide-react'
+import { BadgeCheck, Bell, Crown, Pencil, Settings, ShieldCheck } from 'lucide-react'
 
-import { PremiumAccessButton } from '@/components/partials/vendor/PremiumAccessButton'
 import { Button } from '@/components/ui/button'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { cn } from '@/lib/utils'
@@ -12,8 +11,7 @@ type VendorOwnerToolbarProps = {
 }
 
 const ownerLinks = [
-  { label: 'Analytics', to: '/vendor/analytics', icon: BarChart3 },
-  { label: 'Notifications', to: '/vendor/notifications', icon: Bell },
+  { label: 'Activity', to: '/user/activity', icon: Bell },
   { label: 'Verification', to: '/vendor/verification', icon: ShieldCheck },
 ] as const
 
@@ -21,7 +19,6 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
   const {
     isPremiumActive,
     isVerified,
-    canBoost,
     photoLimit,
     analyticsLocked,
     goToPremiumPayment,
@@ -90,29 +87,6 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {canBoost ? (
-          <Button asChild size="sm" className="rounded-lg">
-            <Link to="/vendor/boost">
-              <Rocket className="mr-1.5 size-4" aria-hidden />
-              Boost listing
-            </Link>
-          </Button>
-        ) : isPremiumActive && !isVerified ? (
-          <Button asChild size="sm" variant="outline" className="rounded-lg">
-            <Link to="/vendor/verification">
-              <Lock className="mr-1.5 size-4" aria-hidden />
-              Verify to unlock Boost
-            </Link>
-          </Button>
-        ) : (
-          <PremiumAccessButton size="sm" className="rounded-lg">
-            <Crown className="mr-1.5 size-4" aria-hidden />
-            Upgrade for Boost
-          </PremiumAccessButton>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
         {ownerLinks.map(({ label, to, icon: Icon }) => (
           <Button key={to} asChild variant="outline" size="sm" className="rounded-lg bg-card">
             <Link to={to}>

@@ -7,6 +7,8 @@ export type BoostCheckoutSelection = {
   tierLabel: string;
   durationDays: number;
   amount: number;
+  /** Dynamic boost budget (same as amount for dynamic tier). */
+  budgetAmount?: number;
   renewType?: BoostRenewType;
   sourceCampaignId?: number;
   paymentId?: number;

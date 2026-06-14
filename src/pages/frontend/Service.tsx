@@ -33,15 +33,14 @@ import {
   VendorOwnerServicesEditButton,
 } from "@/components/profile/VendorOwnerFieldEditors";
 import { VendorOwnerToolbar } from "@/components/profile/VendorOwnerToolbar";
+import { VendorProfileBoostButton } from "@/components/profile/VendorProfileBoostButton";
 import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
 import { useProfileViewMode } from "@/features/profile/useProfileViewMode";
 import { BusinessHoursDisplay } from "@/components/business/BusinessHoursDisplay";
 import { ServicePhotosModal } from "@/components/Modal/ServicePhotosModal";
-import { BusinessServiceAreaMap } from "@/components/maps/BusinessServiceAreaMap";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { Button } from "@/components/ui/button";
-import { env } from "@/config/env";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
@@ -252,9 +251,6 @@ export default function Service() {
   const locationText = business?.location ?? stateData?.location ?? "";
   const latitude = business?.latitude ?? stateData?.latitude ?? null;
   const longitude = business?.longitude ?? stateData?.longitude ?? null;
-  const mapsUrl = locationText
-    ? buildGoogleMapsSearchUrl(latitude, longitude, locationText)
-    : null;
   const verified = business?.verified ?? stateData?.verified ?? false;
   const memberSince =
     business?.memberSince ?? stateData?.memberSince ?? null;
@@ -409,17 +405,20 @@ export default function Service() {
               <div className="flex flex-col gap-10">
                 <div className="space-y-3 pt-10 sm:pt-12">
                   <div className="space-y-3 rounded-xl bg-surface-soft px-4 py-5 sm:px-6 sm:py-6">
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-wrap items-start gap-3">
                       <h1 className="min-w-0 flex-1 font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
                         {displayName || name}
                       </h1>
                       {isOwnerMode ? (
-                        <VendorOwnerInlineEditButton
-                          field="business_name"
-                          label="Business name"
-                          currentValue={displayName || name}
-                          onSaved={setDisplayName}
-                        />
+                        <>
+                          <VendorProfileBoostButton compact />
+                          <VendorOwnerInlineEditButton
+                            field="business_name"
+                            label="Business name"
+                            currentValue={displayName || name}
+                            onSaved={setDisplayName}
+                          />
+                        </>
                       ) : null}
                     </div>
                     {followersCount > 0 || vendorUserId ? (
@@ -481,18 +480,15 @@ export default function Service() {
                     {locationText ? (
                       <p className="flex items-start gap-1">
                         <MapPin className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
-                        {mapsUrl ? (
-                          <a
-                            href={mapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-brand hover:underline"
-                          >
-                            {locationText}
-                          </a>
-                        ) : (
-                          locationText
-                        )}
+                        <a
+                          href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand underline-offset-2 hover:underline"
+                          aria-label={`Open ${locationText} in Google Maps`}
+                        >
+                          {locationText}
+                        </a>
                       </p>
                     ) : null}
                     {memberSince ? (
@@ -785,22 +781,6 @@ export default function Service() {
             )}
           </section>
         ) : null}
-
-        <section className="mt-12 space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">Service Area</h2>
-            <button type="button" className="text-left text-sm font-semibold text-accent-foreground hover:underline sm:text-base">
-              {locationText}
-            </button>
-          </div>
-          <BusinessServiceAreaMap
-            apiKey={env.googleMapsApiKey}
-            businessName={name}
-            locationLabel={locationText}
-            latitude={latitude}
-            longitude={longitude}
-          />
-        </section>
 
         <section ref={reviewsRef} className="mt-12 space-y-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
