@@ -7,7 +7,7 @@ import { suspensePage, vendorSuspensePage } from "@/routes/routeUtils";
 
 const VendorDashboardWrapper = lazy(() => import("@/pages/vendor/VendorDashboardWrapper"));
 const VendorDashboard = lazy(() => import("@/pages/vendor/VendorDashboard"));
-const VendorProfile = lazy(() => import("@/pages/vendor/VendorProfile"));
+const VendorProfile = lazy(() => import("@/pages/vendor/RedirectToOwnerBusinessProfile"));
 const VendorLeads = lazy(() => import("@/pages/vendor/VendorLeads"));
 const VendorVerification = lazy(() => import("@/pages/vendor/VendorVerification"));
 const VendorBoost = lazy(() => import("@/pages/vendor/VendorBoost"));

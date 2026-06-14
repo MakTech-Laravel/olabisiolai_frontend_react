@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Settings, UserPlus } from 'lucide-react'
+import { Loader2, MapPin, Settings, UserPlus } from 'lucide-react'
 
 import { fetchFollowStats } from '@/api/follows'
 import { fetchUserSettings } from '@/api/userSettings'
@@ -52,6 +52,7 @@ export default function UnifiedProfile() {
   )
   const followersCount = followStatsQuery.data?.followers_count ?? 0
   const followingCount = followStatsQuery.data?.following_count ?? 0
+  const locationLabel = profile?.location?.trim() || null
   const vendorBusiness =
     vendorBusinessQuery.data ??
     (vendorBusinessQuery.error instanceof VendorBusinessNotFoundError ? null : undefined)
@@ -68,6 +69,12 @@ export default function UnifiedProfile() {
             <p className="mt-1 text-sm text-chat-meta">
               {activeMode === 'vendor' ? 'Vendor mode' : 'Customer mode'}
             </p>
+            {locationLabel ? (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-body-secondary">
+                <MapPin className="size-4 shrink-0 text-brand" aria-hidden />
+                {locationLabel}
+              </p>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               {followStatsQuery.isLoading ? (
@@ -89,6 +96,18 @@ export default function UnifiedProfile() {
               )}
             </div>
           </div>
+
+          {activeMode === 'vendor' ? (
+            <p className="mt-6 text-center text-sm leading-relaxed text-body-secondary">
+              Your business profile is edited inline on your public listing. Switch modes here, then open your
+              business page and use the pencil icons to update photos, services, hours, and contact details.
+            </p>
+          ) : (
+            <p className="mt-6 text-center text-sm leading-relaxed text-body-secondary">
+              Browse businesses, save favourites, and follow vendors. Switch to vendor mode when you are ready to
+              list your business on Gidira.
+            </p>
+          )}
 
           <div className="mt-8 space-y-3">
             <SwitchProfileModeButton fullWidth />

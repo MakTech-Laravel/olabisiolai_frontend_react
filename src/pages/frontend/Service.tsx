@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchPublicBusinessById,
   resolvePublicBusinessSubcategory,
@@ -25,6 +25,13 @@ import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { BusinessListingSecondaryActions } from "@/components/business/BusinessListingSecondaryActions";
 import { VendorOwnerInlineEditButton } from "@/components/profile/VendorOwnerInlineEditButton";
+import {
+  VendorOwnerContactEditButton,
+  VendorOwnerGalleryEditButton,
+  VendorOwnerHoursEditButton,
+  VendorOwnerLogoEditButton,
+  VendorOwnerServicesEditButton,
+} from "@/components/profile/VendorOwnerFieldEditors";
 import { VendorOwnerToolbar } from "@/components/profile/VendorOwnerToolbar";
 import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
 import { useProfileViewMode } from "@/features/profile/useProfileViewMode";
@@ -177,6 +184,13 @@ export default function Service() {
   const routeState = (location.state as ServiceLocationState | null) ?? null;
   const { slug } = useParams<{ slug: string }>();
   const { requireAuthNavigate, isAuthReady } = useRequireAuthNavigate();
+  const queryClient = useQueryClient();
+
+  const refreshBusinessProfile = () => {
+    if (businessId !== null) {
+      void queryClient.invalidateQueries({ queryKey: ["business", businessId] });
+    }
+  };
 
   const businessId = slug ? resolveBusinessIdFromSlug(slug) : null;
   const stateData = routeState?.business ?? null;
@@ -348,6 +362,14 @@ export default function Service() {
               <VendorOwnerToolbar businessId={businessId} />
             ) : null}
             <div className="relative">
+              {isOwnerMode ? (
+                <div className="absolute right-4 top-4 z-30">
+                  <VendorOwnerGalleryEditButton
+                    label="Cover photos"
+                    onProfileUpdated={refreshBusinessProfile}
+                  />
+                </div>
+              ) : null}
               <AspectCover
                 src={heroCover}
                 className="w-full rounded-2xl shadow-md aspect-16/10 sm:aspect-2/1 lg:aspect-[2.65/1]"
@@ -365,11 +387,21 @@ export default function Service() {
                   </Button>
                 </div>
               ) : null}
-              <div className="absolute -bottom-1 left-4 z-20 overflow-hidden rounded-xl border border-stat-muted bg-card shadow-sm sm:left-8 md:left-12">
-                <AspectCover
-                  src={logoUrl}
-                  className="size-20 sm:size-24 md:h-[90px] md:w-[110px] md:max-w-[110px]"
-                />
+              <div className="absolute -bottom-1 left-4 z-20 overflow-visible sm:left-8 md:left-12">
+                <div className="relative overflow-hidden rounded-xl border border-stat-muted bg-card shadow-sm">
+                  {isOwnerMode ? (
+                    <div className="absolute -right-2 -top-2 z-30">
+                      <VendorOwnerLogoEditButton
+                        label="Business logo"
+                        onProfileUpdated={refreshBusinessProfile}
+                      />
+                    </div>
+                  ) : null}
+                  <AspectCover
+                    src={logoUrl}
+                    className="size-20 sm:size-24 md:h-[90px] md:w-[110px] md:max-w-[110px]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -539,6 +571,11 @@ export default function Service() {
 
               <aside className="w-full shrink-0 space-y-6 lg:max-w-md lg:pt-24">
                 <div className="relative rounded-3xl border border-border-light bg-card p-8 shadow-xl">
+                  {isOwnerMode ? (
+                    <div className="absolute right-4 top-4">
+                      <VendorOwnerContactEditButton onProfileUpdated={refreshBusinessProfile} />
+                    </div>
+                  ) : null}
                   <div className="flex flex-col gap-6">
                     <ShowPhoneNumberReveal
                       useShadcnButton
@@ -653,16 +690,28 @@ export default function Service() {
                     </ul>
                   </div>
                 ) : businessFetched && business ? (
-                  <BusinessHoursDisplay
-                    hours={business.businessHours}
-                    displayRows={business.businessHoursDisplay}
-                  />
+                  <div className="relative">
+                    {isOwnerMode ? (
+                      <div className="mb-2 flex justify-end">
+                        <VendorOwnerHoursEditButton onProfileUpdated={refreshBusinessProfile} />
+                      </div>
+                    ) : null}
+                    <BusinessHoursDisplay
+                      hours={business.businessHours}
+                      displayRows={business.businessHoursDisplay}
+                    />
+                  </div>
                 ) : null}
               </aside>
             </div>
 
             <section className="border-t border-border-gray pt-6">
-              <h2 className="font-heading text-xl font-semibold text-ink-heading">Services</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="font-heading text-xl font-semibold text-ink-heading">Services</h2>
+                {isOwnerMode ? (
+                  <VendorOwnerServicesEditButton onProfileUpdated={refreshBusinessProfile} />
+                ) : null}
+              </div>
               {servicesList.length > 0 ? (
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                   {servicesList.map((item) => (
@@ -681,11 +730,17 @@ export default function Service() {
           </div>
         </div>
 
-        {coverPhotos.length > 0 ? (
+        {(coverPhotos.length > 0 || isOwnerMode) ? (
           <section className="mt-12 space-y-4 rounded-2xl border border-stat-muted bg-card-ice p-6 md:p-8">
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              Photos
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+                Photos
+              </h2>
+              {isOwnerMode ? (
+                <VendorOwnerGalleryEditButton onProfileUpdated={refreshBusinessProfile} />
+              ) : null}
+            </div>
+            {coverPhotos.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {coverPhotos.slice(0, 6).map((src, index) => {
                 const isLastWithMore = index === 5 && coverPhotos.length > 6;
@@ -723,6 +778,11 @@ export default function Service() {
                 );
               })}
             </div>
+            ) : (
+              <p className="text-base text-body-secondary">
+                No photos yet. Use the pencil icon to add gallery images.
+              </p>
+            )}
           </section>
         ) : null}
 

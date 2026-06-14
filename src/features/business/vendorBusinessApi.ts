@@ -1,4 +1,5 @@
 import { request } from "@/api/request";
+import axios from "axios";
 import {
   appendBusinessHoursToFormData,
   serializeBusinessHoursForApi,
@@ -217,19 +218,67 @@ function appendUpdateVendorBusinessFormData(
   }
 }
 
+type VendorBusinessUpdateEnvelope = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    errors?: Record<string, string[] | string>;
+  };
+};
+
+export function getVendorBusinessUpdateError(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const body = error.response?.data as VendorBusinessUpdateEnvelope | undefined;
+    const errors = body?.data?.errors;
+    if (errors && typeof errors === "object") {
+      for (const value of Object.values(errors)) {
+        if (Array.isArray(value) && value[0]) return value[0];
+        if (typeof value === "string" && value.trim()) return value;
+      }
+    }
+    if (body?.message) return body.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function assertVendorBusinessUpdateSuccess(body: VendorBusinessUpdateEnvelope | undefined, fallback: string): void {
+  if (body?.success === false) {
+    const errors = body.data?.errors;
+    if (errors && typeof errors === "object") {
+      for (const value of Object.values(errors)) {
+        if (Array.isArray(value) && value[0]) {
+          throw new Error(value[0]);
+        }
+        if (typeof value === "string" && value.trim()) {
+          throw new Error(value);
+        }
+      }
+    }
+
+    throw new Error(body.message || fallback);
+  }
+}
+
 export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload): Promise<unknown> {
   const hasFileUploads = Boolean(payload.logo) || (payload.cover_photos?.length ?? 0) > 0;
 
   // Production PHP/nginx often fail to parse multipart when method-spoofed to PUT.
   // JSON PUT works reliably for profile edits without new images.
   if (!hasFileUploads) {
-    const res = await request.put("/vendor/business/update", buildUpdateVendorBusinessJsonBody(payload));
+    const res = await request.put<VendorBusinessUpdateEnvelope>("/vendor/business/update", buildUpdateVendorBusinessJsonBody(payload));
+    assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
     return res.data;
   }
 
   const formData = new FormData();
   appendUpdateVendorBusinessFormData(formData, payload);
   // Use native POST route (no _method=PUT) so PHP parses multipart fields and files.
-  const res = await request.post("/vendor/business/update", formData);
+  const res = await request.post<VendorBusinessUpdateEnvelope>("/vendor/business/update", formData);
+  assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
   return res.data;
 }

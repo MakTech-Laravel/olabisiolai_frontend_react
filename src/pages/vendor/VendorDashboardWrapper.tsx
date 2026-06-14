@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 
 import { getAccessToken } from "@/auth/token";
 import {
+  defaultOnboardingStatus,
   fetchVendorOnboardingStatus,
   onboardingRedirectPath,
 } from "@/features/subscription/vendorOnboardingApi";
@@ -38,11 +39,11 @@ export default function VendorDashboardWrapper() {
     }
 
     if (isError || !data) {
-      navigate("/vendor/plan-form", { replace: true });
+      navigate(onboardingRedirectPath(defaultOnboardingStatus()), { replace: true });
       return;
     }
 
-    navigate(data.redirect_to || onboardingRedirectPath(data), { replace: true });
+    navigate(onboardingRedirectPath(data), { replace: true });
   }, [data, error, hasToken, isError, isFetched, isLoading, navigate]);
 
   if (!hasToken || isLoading || !isFetched) {

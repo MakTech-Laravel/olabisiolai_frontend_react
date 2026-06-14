@@ -4,7 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
 import { getAccessToken } from '@/auth/token';
-import { fetchVendorOnboardingStatus } from '@/features/subscription/vendorOnboardingApi';
+import {
+  fetchVendorOnboardingStatus,
+  onboardingRedirectPath,
+} from '@/features/subscription/vendorOnboardingApi';
 import { isVendorPremiumPreviewPath } from '@/hooks/useVendorSubscriptionAccess';
 
 /**
@@ -57,7 +60,7 @@ export function VendorAccessGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (data && !data.has_business) {
-    return <Navigate to="/vendor/plan-form" replace />;
+    return <Navigate to={onboardingRedirectPath(data)} replace />;
   }
 
   return <>{children}</>;

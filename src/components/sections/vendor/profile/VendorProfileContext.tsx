@@ -28,6 +28,8 @@ import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useVendorBusinessProfile } from "@/features/business/useVendorBusinessProfile";
+import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
+import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from "@/constants/planLimits";
 
 type VendorProfileContextValue = {
   profile: VendorBusinessProfile | undefined;
@@ -48,6 +50,7 @@ type VendorProfileContextValue = {
   removeNewCover: (index: number) => void;
   setLogoFile: (file: File | null) => void;
   setServices: (services: string[]) => void;
+  maxCoverPhotos: number;
 };
 
 const VendorProfileContext = createContext<VendorProfileContextValue | null>(null);
@@ -66,11 +69,13 @@ function ProfileShell({ children }: { children: ReactNode }) {
   );
 }
 
-const MAX_COVER_PHOTOS = 5;
+const MAX_COVER_PHOTOS = FREE_PHOTO_LIMIT;
 
 export function VendorProfileProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const query = useVendorBusinessProfile();
+  const { isPremiumActive, photoLimit } = useVendorSubscriptionAccess();
+  const maxCoverPhotos = photoLimit ?? (isPremiumActive ? PREMIUM_PHOTO_LIMIT : MAX_COVER_PHOTOS);
   const { data: formOptions } = useVendorBusinessFormOptions();
   const { data: publicCategories = [] } = useCategoryCatalog();
   const categoryCatalog =
@@ -165,7 +170,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
   const addCoverFiles = useCallback((files: File[]) => {
     setDraft((prev) => {
       if (!prev) return prev;
-      const room = MAX_COVER_PHOTOS - totalCoverCount(prev);
+      const room = maxCoverPhotos - totalCoverCount(prev);
       if (room <= 0) return prev;
       const accepted = files.slice(0, room);
       const previews = accepted.map((f) => URL.createObjectURL(f));
@@ -175,7 +180,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         newCoverPreviews: [...prev.newCoverPreviews, ...previews],
       };
     });
-  }, []);
+  }, [maxCoverPhotos]);
 
   const removeExistingCover = useCallback((index: number) => {
     setDraft((prev) => {
@@ -332,7 +337,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
             Create your business listing to manage your profile, gallery, and contact details here.
           </p>
           <Button asChild className="mt-6 bg-sky-600 hover:bg-sky-600/90">
-            <Link to="/vendor/plan-form">Create business profile</Link>
+            <Link to="/user/profile">Open profile hub</Link>
           </Button>
         </div>
       </ProfileShell>
@@ -368,6 +373,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
     setLogoFile,
     setServices,
     saveProfile,
+    maxCoverPhotos,
   };
 
   return <VendorProfileContext.Provider value={value}>{children}</VendorProfileContext.Provider>;

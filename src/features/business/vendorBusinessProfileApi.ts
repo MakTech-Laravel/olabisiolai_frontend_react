@@ -8,6 +8,7 @@ import {
   type BusinessHoursDisplayRow,
 } from "@/features/business/businessHours";
 import { parseSocialAccounts, type SocialAccount } from "@/features/business/socialAccounts";
+import { normalizeSubcategories } from "@/features/categories/categoryParsers";
 import { resolveMediaUrl, resolveMediaUrls } from "@/lib/mediaUrl";
 
 type RawRecord = Record<string, unknown>;
@@ -17,6 +18,7 @@ export type VendorBusinessProfile = {
   businessName: string;
   categoryId: number;
   categoryName: string;
+  categorySubcategories: string[];
   subcategory: string;
   locationId: number;
   state: string;
@@ -114,6 +116,7 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     businessName: pickString(item, ["business_name", "name"], ""),
     categoryId,
     categoryName,
+    categorySubcategories: normalizeSubcategories(categoryObj?.subcategories ?? item.category_subcategories),
     subcategory: pickString(item, ["subcategory"], ""),
     locationId,
     state,

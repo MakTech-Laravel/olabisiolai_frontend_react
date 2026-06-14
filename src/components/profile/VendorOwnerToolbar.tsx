@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import { BarChart3, Bell, Pencil, ShieldCheck } from 'lucide-react'
+import { BarChart3, BadgeCheck, Bell, Crown, Lock, Pencil, Rocket, Settings, ShieldCheck } from 'lucide-react'
 
+import { PremiumAccessButton } from '@/components/partials/vendor/PremiumAccessButton'
 import { Button } from '@/components/ui/button'
+import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { cn } from '@/lib/utils'
 
 type VendorOwnerToolbarProps = {
@@ -16,6 +18,15 @@ const ownerLinks = [
 ] as const
 
 export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbarProps) {
+  const {
+    isPremiumActive,
+    isVerified,
+    canBoost,
+    photoLimit,
+    analyticsLocked,
+    goToPremiumPayment,
+  } = useVendorSubscriptionAccess()
+
   return (
     <div
       className={cn(
@@ -36,6 +47,71 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
         </span>
       </div>
 
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-xl border border-border-light bg-card px-4 py-3 text-sm">
+          <p className="font-semibold text-ink">
+            {isPremiumActive ? 'Premium plan' : 'Free plan'}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Up to {photoLimit} gallery photos
+            {analyticsLocked ? ' · Analytics locked' : ' · Analytics unlocked'}
+          </p>
+          {!isPremiumActive ? (
+            <Button type="button" size="sm" className="mt-2" onClick={goToPremiumPayment}>
+              <Crown className="mr-1.5 size-4" aria-hidden />
+              Upgrade to Premium
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-border-light bg-card px-4 py-3 text-sm">
+          <p className="inline-flex items-center gap-1.5 font-semibold text-ink">
+            {isVerified ? (
+              <>
+                <BadgeCheck className="size-4 text-brand" aria-hidden />
+                Verified business
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="size-4 text-muted-foreground" aria-hidden />
+                Not verified yet
+              </>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Verification is separate from Premium and unlocks boost.
+          </p>
+          {!isVerified ? (
+            <Button asChild size="sm" variant="outline" className="mt-2">
+              <Link to="/vendor/verification">Verify my business</Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {canBoost ? (
+          <Button asChild size="sm" className="rounded-lg">
+            <Link to="/vendor/boost">
+              <Rocket className="mr-1.5 size-4" aria-hidden />
+              Boost listing
+            </Link>
+          </Button>
+        ) : isPremiumActive && !isVerified ? (
+          <Button asChild size="sm" variant="outline" className="rounded-lg">
+            <Link to="/vendor/verification">
+              <Lock className="mr-1.5 size-4" aria-hidden />
+              Verify to unlock Boost
+            </Link>
+          </Button>
+        ) : (
+          <PremiumAccessButton size="sm" className="rounded-lg">
+            <Crown className="mr-1.5 size-4" aria-hidden />
+            Upgrade for Boost
+          </PremiumAccessButton>
+        )}
+      </div>
+
       <div className="mt-4 flex flex-wrap gap-2">
         {ownerLinks.map(({ label, to, icon: Icon }) => (
           <Button key={to} asChild variant="outline" size="sm" className="rounded-lg bg-card">
@@ -45,8 +121,11 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
             </Link>
           </Button>
         ))}
-        <Button asChild variant="default" size="sm" className="rounded-lg">
-          <Link to="/vendor/profile">Full profile editor</Link>
+        <Button asChild variant="outline" size="sm" className="rounded-lg bg-card">
+          <Link to="/user/settings">
+            <Settings className="mr-1.5 size-4" aria-hidden />
+            Settings
+          </Link>
         </Button>
       </div>
 

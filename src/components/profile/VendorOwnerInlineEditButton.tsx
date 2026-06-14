@@ -9,7 +9,8 @@ import {
   fetchVendorBusinessProfile,
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
-import { updateVendorBusiness } from '@/features/business/vendorBusinessApi'
+import { updateVendorBusiness, getVendorBusinessUpdateError } from '@/features/business/vendorBusinessApi'
+import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
@@ -21,28 +22,6 @@ type VendorOwnerInlineEditButtonProps = {
   currentValue: string
   className?: string
   onSaved?: (value: string) => void
-}
-
-function buildUpdatePayload(profile: VendorBusinessProfile, field: OwnerEditableField, value: string) {
-  return {
-    category_id: String(profile.categoryId),
-    subcategory: profile.subcategory,
-    location_id: String(profile.locationId),
-    business_name: field === 'business_name' ? value : profile.businessName,
-    location: profile.locationFullName,
-    state: profile.state,
-    city: profile.city,
-    lga: profile.lga,
-    business_description: field === 'business_description' ? value : profile.description,
-    phone: profile.phone,
-    whatsapp: profile.whatsapp,
-    website: profile.website,
-    full_address: profile.streetAddress,
-    services: profile.services,
-    social_accounts: profile.socialAccounts,
-    keep_cover_paths: profile.coverPhotoPaths,
-    business_hours: profile.businessHours,
-  }
 }
 
 export function VendorOwnerInlineEditButton({
@@ -90,14 +69,18 @@ export function VendorOwnerInlineEditButton({
 
     setLoading(true)
     try {
-      await updateVendorBusiness(buildUpdatePayload(profile, field, trimmed))
+      const patch =
+        field === 'business_name'
+          ? { business_name: trimmed }
+          : { business_description: trimmed }
+      await updateVendorBusiness(buildUpdatePayload(profile, patch))
       showSuccess(`${label} updated.`)
       onSaved?.(trimmed)
       setOpen(false)
       await queryClient.invalidateQueries({ queryKey: ['business'] })
       await queryClient.invalidateQueries({ queryKey: ['vendor', 'business'] })
-    } catch {
-      showError(`Could not update ${label.toLowerCase()}. Please try again.`)
+    } catch (error) {
+      showError(getVendorBusinessUpdateError(error, `Could not update ${label.toLowerCase()}. Please try again.`))
     } finally {
       setLoading(false)
     }

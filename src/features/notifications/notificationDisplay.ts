@@ -65,8 +65,8 @@ const VENDOR_ROUTES: Record<string, string> = {
 
 const USER_ROUTES: Record<string, string> = {
   new_message: '/user/messages',
-  verification_approved: '/user/settings',
-  verification_flagged: '/user/settings',
+  verification_approved: '/user/settings/account',
+  verification_flagged: '/user/settings/account',
   payment_completed: '/user/dashboard',
   system_announcement: '/user/activity',
 }

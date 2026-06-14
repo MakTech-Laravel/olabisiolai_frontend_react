@@ -182,7 +182,7 @@ function ToggleRow({
   )
 }
 
-export default function SettingsPage() {
+export default function AccountSettings() {
   const { user, refreshSession } = useAuth()
   const queryClient = useQueryClient()
 
@@ -409,6 +409,12 @@ export default function SettingsPage() {
     <>
       <UserShell active="settings">
         <section className="min-h-0 flex-1 bg-chat-surface p-3 sm:p-6 lg:p-8">
+          <Link
+            to="/user/settings"
+            className="mb-4 inline-flex items-center text-sm font-medium text-chat-accent hover:underline"
+          >
+            ← Back to Settings & Activity
+          </Link>
           {banner ? (
             <div
               className={cn(

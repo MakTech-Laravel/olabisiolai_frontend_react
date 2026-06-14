@@ -9,7 +9,8 @@ const UnifiedProfile = lazy(() => import("@/pages/user/UnifiedProfile"));
 const Favorites = lazy(() => import("@/pages/user/Favorites"));
 const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
-const Settings = lazy(() => import("@/pages/user/Settings"));
+const SettingsHub = lazy(() => import("@/pages/user/SettingsHub"));
+const AccountSettings = lazy(() => import("@/pages/user/AccountSettings"));
 const Account = lazy(() => import("@/pages/frontend/Account"));
 
 /** Authenticated `user` role area. */
@@ -25,7 +26,8 @@ export const userRoutes: RouteObject = {
     { path: "/user/favorites", element: suspensePage(Favorites) },
     { path: "/user/messages", element: suspensePage(Messages) },
     { path: "/user/activity", element: suspensePage(UserActivity) },
-    { path: "/user/settings", element: suspensePage(Settings) },
+    { path: "/user/settings", element: suspensePage(SettingsHub) },
+    { path: "/user/settings/account", element: suspensePage(AccountSettings) },
     { path: "/account", element: suspensePage(Account) },
   ],
 };

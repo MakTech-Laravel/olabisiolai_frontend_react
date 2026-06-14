@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { getAccessToken } from "@/auth/token";
-import { fetchVendorOnboardingStatus } from "@/features/subscription/vendorOnboardingApi";
+import { fetchVendorOnboardingStatus, onboardingRedirectPath } from "@/features/subscription/vendorOnboardingApi";
 import { fetchSubscriptionStatus } from "@/features/subscription/vendorSubscriptionApi";
 
 export const VENDOR_PREMIUM_PAYMENT_PATH = "/vendor/premium-payment";
@@ -41,6 +41,10 @@ export function useVendorSubscriptionAccess() {
   const canPayPremium = subscription?.can_pay_premium === true;
   const requiresPayment = subscription?.requires_payment === true;
   const hasBusiness = onboardingQuery.data?.has_business === true;
+  const photoLimit = subscription?.photo_limit ?? (isPremiumActive ? 20 : 5);
+  const isVerified = subscription?.is_verified === true;
+  const canBoost = subscription?.can_boost === true;
+  const analyticsLocked = subscription?.analytics_locked ?? !isPremiumActive;
 
   const goToPremiumPayment = useCallback(() => {
     if (!hasToken) {
@@ -50,7 +54,9 @@ export function useVendorSubscriptionAccess() {
 
     if (!hasBusiness) {
       localStorage.setItem("vendorPlan", "premium");
-      navigate("/vendor/plan-form");
+      void fetchVendorOnboardingStatus().then((status) => {
+        navigate(onboardingRedirectPath(status));
+      });
       return;
     }
 
@@ -74,5 +80,9 @@ export function useVendorSubscriptionAccess() {
     goToPremiumPayment,
     goToBoost,
     showPremiumUpgradeCta: !isPremiumActive && (canPayPremium || requiresPayment || !hasToken),
+    photoLimit,
+    isVerified,
+    canBoost,
+    analyticsLocked,
   };
 }

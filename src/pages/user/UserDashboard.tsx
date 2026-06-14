@@ -64,8 +64,8 @@ const statCards: StatCard[] = [
     to: '/user/messages',
   },
   {
-    title: 'Settings',
-    subtitle: 'MANAGE YOUR PROFILE',
+    title: 'Settings & Activity',
+    subtitle: 'SAVED, REVIEWS, ACCOUNT & MORE',
     icon: Settings,
     to: '/user/settings',
   },

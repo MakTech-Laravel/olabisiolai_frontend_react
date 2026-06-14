@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 
+import { switchToVendorMode } from "@/api/userMode";
 import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { businessProfilePath } from "@/lib/businessProfile";
 import { ensureCanStartVendorSignup } from "@/features/vendor/vendorSignupFromCustomerGuard";
 import {
   saveVendorPlan,
@@ -19,7 +21,7 @@ type PlanPricingCardsProps = {
 
 export function PlanPricingCards({ signupMode = false }: PlanPricingCardsProps) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, setUser, refreshSession } = useAuth();
   const { goToPremiumPayment } = useVendorSubscriptionAccess();
 
   const startSignupWithPlan = (plan: VendorPlanChoice) => {
@@ -35,7 +37,17 @@ export function PlanPricingCards({ signupMode = false }: PlanPricingCardsProps) 
 
     if (!(await ensureCanStartVendorSignup(user, logout))) return;
     saveVendorPlan("free");
-    navigate("/vendor/plan-form");
+
+    const result = await switchToVendorMode();
+    setUser(result.user);
+    await refreshSession();
+
+    if (result.business_id) {
+      navigate(businessProfilePath(result.business_id));
+      return;
+    }
+
+    navigate("/user/profile");
   };
 
   const handlePremiumPlan = async () => {

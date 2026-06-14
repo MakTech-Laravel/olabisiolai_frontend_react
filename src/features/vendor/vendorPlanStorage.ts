@@ -10,9 +10,9 @@ export function getSavedVendorPlan(): VendorPlanChoice | null {
   return parseVendorPlan(localStorage.getItem(STORAGE_KEY))
 }
 
-/** Where a newly verified vendor should go after OTP (business profile first). */
+/** Where a newly verified vendor should go after OTP (unified profile hub). */
 export function vendorPostVerificationPath(_plan?: VendorPlanChoice | null): string {
-  return '/vendor/plan-form'
+  return '/user/profile'
 }
 
 export function saveVendorPlan(plan: VendorPlanChoice) {
