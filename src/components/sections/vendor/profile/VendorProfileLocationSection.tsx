@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, MapPin } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { LocationCascadeSelects } from "@/components/locations/LocationCascadeSelects";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import {
   locationEntriesForStateCity,
@@ -27,42 +26,6 @@ function Label({ children }: { children: ReactNode }) {
   );
 }
 
-function SelectField({
-  label,
-  value,
-  disabled,
-  onChange,
-  children,
-}: {
-  label: ReactNode;
-  value: string;
-  disabled?: boolean;
-  onChange?: React.ChangeEventHandler<HTMLSelectElement>;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <Label>{label}</Label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          className={cn(
-            "h-11 w-full appearance-none rounded-md border border-border-light bg-background px-3 pr-12 text-sm text-foreground shadow-sm",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/25",
-            disabled && "cursor-not-allowed opacity-80",
-          )}
-        >
-          {children}
-        </select>
-        <MapPin className="pointer-events-none absolute right-9 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <ChevronRight className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 rotate-90 text-muted-foreground" />
-      </div>
-    </div>
-  );
-}
-
 export function VendorProfileLocationSection() {
   const { profile, isEditing, draft, setDraftField, fieldErrors } = useVendorProfileContext();
   const { data: formOptions, isPending } = useVendorBusinessFormOptions();
@@ -77,18 +40,32 @@ export function VendorProfileLocationSection() {
     [parsedLocations, locationId],
   );
 
-  const profileState = selectedLocation?.state || profile?.state || "";
-  const profileCity = selectedLocation?.city || profile?.city || "";
+  const [draftState, setDraftState] = useState("");
+  const [draftCity, setDraftCity] = useState("");
+
+  useEffect(() => {
+    if (!isEditing) return;
+    setDraftState(selectedLocation?.state || profile?.state || "");
+    setDraftCity(selectedLocation?.city || profile?.city || "");
+  }, [isEditing, selectedLocation?.id, profile?.state, profile?.city]);
+
+  const profileState = isEditing ? draftState : selectedLocation?.state || profile?.state || "";
+  const profileCity = isEditing ? draftCity : selectedLocation?.city || profile?.city || "";
   const profileLga = selectedLocation?.lga || profile?.lga || "";
 
   const allStates = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations]);
   const citiesForState = useMemo(
-    () => uniqueLocationCities(parsedLocations, profileState),
-    [parsedLocations, profileState],
+    () => uniqueLocationCities(parsedLocations, isEditing ? draftState : profileState),
+    [parsedLocations, isEditing, draftState, profileState],
   );
   const lgaOptions = useMemo(
-    () => locationEntriesForStateCity(parsedLocations, profileState, profileCity),
-    [parsedLocations, profileState, profileCity],
+    () =>
+      locationEntriesForStateCity(
+        parsedLocations,
+        isEditing ? draftState : profileState,
+        isEditing ? draftCity : profileCity,
+      ),
+    [parsedLocations, isEditing, draftState, draftCity, profileState, profileCity],
   );
 
   const { data: boostCatalog } = useQuery({
@@ -136,12 +113,15 @@ export function VendorProfileLocationSection() {
     if (!draft) return;
     const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
     const nextEntry = locationEntriesForStateCity(parsedLocations, nextState, nextCity)[0];
+    setDraftState(nextState);
+    setDraftCity(nextCity);
     setDraftField("locationId", nextEntry?.id ?? "");
   };
 
   const handleCityChange = (nextCity: string) => {
     if (!draft) return;
-    const nextEntry = locationEntriesForStateCity(parsedLocations, profileState, nextCity)[0];
+    const nextEntry = locationEntriesForStateCity(parsedLocations, draftState, nextCity)[0];
+    setDraftCity(nextCity);
     setDraftField("locationId", nextEntry?.id ?? "");
   };
 
@@ -167,65 +147,20 @@ export function VendorProfileLocationSection() {
       </div>
 
       {isEditing && draft ? (
-        <>
-          <SelectField
-            label="State"
-            value={profileState}
-            disabled={isPending || allStates.length === 0}
-            onChange={(e) => handleStateChange(e.target.value)}
-          >
-            <option value="">{isPending ? "Loading states…" : "Select state"}</option>
-            {savedLocationOption && !allStates.includes(savedLocationOption.state) ? (
-              <option value={savedLocationOption.state}>{savedLocationOption.state}</option>
-            ) : null}
-            {allStates.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <SelectField
-              label="City"
-              value={profileCity}
-              disabled={!profileState || citiesForState.length === 0}
-              onChange={(e) => handleCityChange(e.target.value)}
-            >
-              <option value="">Select city</option>
-              {savedLocationOption &&
-              savedLocationOption.state === profileState &&
-              !citiesForState.includes(savedLocationOption.city) ? (
-                <option value={savedLocationOption.city}>{savedLocationOption.city}</option>
-              ) : null}
-              {citiesForState.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              label="LGA (Local Government Area)"
-              value={locationId}
-              disabled={!profileCity || lgaOptions.length === 0}
-              onChange={(e) => setDraftField("locationId", e.target.value)}
-            >
-              <option value="">Select LGA</option>
-              {savedLocationOption &&
-              savedLocationOption.state === profileState &&
-              savedLocationOption.city === profileCity &&
-              !lgaOptions.some((entry) => entry.id === savedLocationOption.id) ? (
-                <option value={savedLocationOption.id}>{savedLocationOption.lga}</option>
-              ) : null}
-              {lgaOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.lga}
-                </option>
-              ))}
-            </SelectField>
-          </div>
-        </>
+        <LocationCascadeSelects
+          state={draftState}
+          city={draftCity}
+          locationId={locationId}
+          states={allStates}
+          cities={citiesForState}
+          lgaOptions={lgaOptions}
+          onStateChange={handleStateChange}
+          onCityChange={handleCityChange}
+          onLocationChange={(nextId) => setDraftField("locationId", nextId)}
+          disabled={isPending}
+          stateLoading={isPending}
+          savedLocationOption={savedLocationOption}
+        />
       ) : (
         <>
           <div className="grid gap-5 sm:grid-cols-2">

@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Flag, Heart, Share2 } from "lucide-react";
+import {
+  ExternalLink,
+  Flag,
+  Heart,
+  MoreHorizontal,
+  Share2,
+} from "lucide-react";
 
 import { ReportAbuseModal } from "@/components/Modal/ReportAbuseModal";
-
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   getFavoriteErrorMessage,
   removeFavorite,
@@ -26,6 +39,9 @@ type BusinessListingSecondaryActionsProps = {
   website: string | null | undefined;
   initialFavorite: boolean;
   listingPath: string;
+  isOwnBusiness?: boolean;
+  allowSave?: boolean;
+  allowReport?: boolean;
 };
 
 export function BusinessListingSecondaryActions({
@@ -34,6 +50,9 @@ export function BusinessListingSecondaryActions({
   website,
   initialFavorite,
   listingPath,
+  isOwnBusiness = false,
+  allowSave = true,
+  allowReport = true,
 }: BusinessListingSecondaryActionsProps) {
   const queryClient = useQueryClient();
   const { isSessionLoading, isUserLoading } = useAuth();
@@ -94,12 +113,12 @@ export function BusinessListingSecondaryActions({
       if (isFavorited) {
         await removeFavorite(businessId);
         setIsFavorited(false);
-        showSuccess("Removed from saved listings");
+        showSuccess("Removed from saved vendors");
       } else {
         const result = await toggleFavorite(businessId);
         setIsFavorited(result.favorited);
         showSuccess(
-          result.favorited ? "Saved to your favorites" : "Removed from saved listings",
+          result.favorited ? "Saved to your vendors" : "Removed from saved vendors",
         );
       }
       await queryClient.invalidateQueries({ queryKey: ["user-favorites"] });
@@ -159,7 +178,7 @@ export function BusinessListingSecondaryActions({
 
     try {
       await copy(shareUrl);
-      showSuccess("Listing link copied to clipboard");
+      showSuccess("Vendor link copied to clipboard");
     } catch {
       showError("Could not copy link. Please try again.");
     }
@@ -167,62 +186,63 @@ export function BusinessListingSecondaryActions({
 
   return (
     <>
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-xs font-medium uppercase tracking-tight text-stat-muted">
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={favoriteLoading || !isAuthReady}
-          aria-pressed={isFavorited}
-          aria-label={isFavorited ? "Remove from saved listings" : "Save listing"}
-          className={cn(
-            "inline-flex items-center gap-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-            isFavorited ? "text-brand-red" : "hover:text-ink",
-          )}
-        >
-          <Heart
-            className={cn("size-4", isFavorited && "fill-brand-red text-brand-red")}
-            aria-hidden
-          />
-          {isFavorited ? "Saved" : "Save"}
-        </button>
+      <div className="mt-6 space-y-3 border-t border-border-light pt-5">
+        {!isOwnBusiness && allowSave ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={favoriteLoading || !isAuthReady}
+            aria-pressed={isFavorited}
+            onClick={() => void handleSave()}
+            className={cn(
+              "h-12 w-full rounded-xl border-border-light text-base font-medium",
+              isFavorited && "border-brand-red/30 bg-brand-red/5 text-brand-red hover:bg-brand-red/10",
+            )}
+          >
+            <Heart
+              className={cn(
+                "mr-2 size-5 shrink-0",
+                isFavorited && "fill-brand-red text-brand-red",
+              )}
+              aria-hidden
+            />
+            {isFavorited ? "Saved" : "Save vendor"}
+          </Button>
+        ) : null}
 
-        <button
-          type="button"
-          onClick={handleWebsite}
-          disabled={!websiteUrl}
-          aria-label={websiteUrl ? "Open business website" : "Website not available"}
-          title={websiteUrl ? "Open website in a new tab" : "No website listed"}
-          className={cn(
-            "inline-flex items-center gap-1 transition-colors",
-            websiteUrl
-              ? "hover:text-ink"
-              : "cursor-not-allowed opacity-40",
-          )}
-        >
-          <ExternalLink className="size-4" aria-hidden />
-          Website
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void handleShare()}
-          aria-label="Share listing"
-          className="inline-flex items-center gap-1 hover:text-ink"
-        >
-          <Share2 className="size-4" aria-hidden />
-          Share listing
-        </button>
-
-        <button
-          type="button"
-          onClick={handleReport}
-          disabled={!isAuthReady}
-          aria-label="Report or flag this listing"
-          className="inline-flex items-center gap-1 hover:text-brand-red"
-        >
-          <Flag className="size-4" aria-hidden />
-          Report
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full rounded-xl border-border-light text-base font-medium text-ink"
+            >
+              <MoreHorizontal className="mr-2 size-5 shrink-0" aria-hidden />
+              More
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => void handleShare()}>
+              <Share2 className="size-4" aria-hidden />
+              Share vendor
+            </DropdownMenuItem>
+            {!isOwnBusiness && allowReport ? (
+              <DropdownMenuItem onClick={handleReport}>
+                <Flag className="size-4" aria-hidden />
+                Report vendor
+              </DropdownMenuItem>
+            ) : null}
+            {websiteUrl ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleWebsite}>
+                  <ExternalLink className="size-4" aria-hidden />
+                  Visit website
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ReportAbuseModal

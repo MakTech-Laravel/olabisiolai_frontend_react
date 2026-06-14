@@ -502,8 +502,8 @@ export default function VendorBoostReviewPayPage() {
         }
 
         const { payment } = await initVendorBoostPayment({
-          tierKey: boostSelection.tierKey,
           durationDays: boostSelection.durationDays,
+          budgetAmount: boostSelection.amount,
           locationId: boostSelection.locationId,
           renewType: boostSelection.renewType,
           sourceCampaignId: boostSelection.sourceCampaignId,

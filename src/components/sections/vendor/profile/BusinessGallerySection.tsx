@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 import { totalCoverCount } from "@/features/business/vendorProfileDraft";
+import { FREE_PHOTO_LIMIT } from "@/constants/planLimits";
 
-const MAX_COVER = 5;
+const DEFAULT_MAX_COVER = FREE_PHOTO_LIMIT;
 
 type BusinessGallerySectionProps = {
   variant: "free" | "premium";
@@ -85,6 +86,7 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
     removeExistingCover,
     removeNewCover,
     fieldErrors,
+    maxCoverPhotos,
   } = useVendorProfileContext();
   if (!profile) return null;
 
@@ -94,7 +96,8 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
     : profile.coverPhotoUrls;
 
   const total = isEditing && draft ? totalCoverCount(draft) : displayUrls.length;
-  const canAddMore = isEditing && total < MAX_COVER;
+  const coverLimit = maxCoverPhotos ?? DEFAULT_MAX_COVER;
+  const canAddMore = isEditing && total < coverLimit;
   const hasPhotos = displayUrls.length > 0;
 
   const handlePick = (files: FileList | null) => {
@@ -118,6 +121,11 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
       )}
 
       <CardContent className="p-6">
+        {isEditing ? (
+          <p className="mb-3 text-xs font-medium text-muted-foreground">
+            {total}/{coverLimit} photos on your {isPremium ? "Premium" : "Free"} plan
+          </p>
+        ) : null}
         {!hasPhotos && !isEditing ? (
           <p className="text-sm text-muted-foreground">No cover photos uploaded yet.</p>
         ) : (

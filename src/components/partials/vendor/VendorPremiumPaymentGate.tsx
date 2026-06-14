@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
-import { fetchVendorOnboardingStatus } from '@/features/subscription/vendorOnboardingApi';
+import { fetchVendorOnboardingStatus, onboardingRedirectPath } from '@/features/subscription/vendorOnboardingApi';
 
 type Props = {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ export function VendorPremiumPaymentGate({ children }: Props) {
     }
 
     if (!data.has_business) {
-      navigate('/vendor/plan-form', { replace: true });
+      navigate(onboardingRedirectPath(data), { replace: true });
       return;
     }
 

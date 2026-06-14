@@ -74,7 +74,7 @@ function HeaderToolbar({
   const { isAuthenticated, logout, user } = useAuth();
   const avatarSrc = resolveUserAvatar(user);
   const isVendor = hasAnyRole(user, "vendor");
-  const profilePath = isVendor ? "/vendor/profile" : "/user/settings";
+  const profilePath = "/user/profile";
 
   const regionTrigger = cn(
     "h-11 rounded-full border border-[#9CA3AF] bg-[#E5E7EB] px-5 text-base font-medium text-[#191B23] shadow-none",
@@ -307,7 +307,7 @@ export function FrontendHeader() {
   const primaryRole = getUserRoles(user)[0];
   const dashboardPath = primaryRole ? getRoleDashboard(primaryRole) ?? "/user/dashboard" : "/user/dashboard";
   const isVendor = hasAnyRole(user, "vendor");
-  const profilePath = isVendor ? "/vendor/profile" : "/user/settings";
+  const profilePath = "/user/profile";
   const isLightHeader =
     pathname === "/" ||
     pathname === "/trade" ||

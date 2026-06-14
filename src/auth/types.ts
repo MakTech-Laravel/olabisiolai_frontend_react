@@ -7,6 +7,7 @@ export type AuthUser = {
   image_url?: string | null
   role?: string
   roles?: string[]
+  settings?: Record<string, unknown>
   email_verified_at?: string | null
   phone_verified_at?: string | null
   email_verified?: boolean
