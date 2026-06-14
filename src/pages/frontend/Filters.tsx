@@ -46,6 +46,8 @@ const fallbackBusiness = (
   verifiedSince: null,
   socialAccounts: [],
   isFavorite: false,
+  followersCount: 0,
+  isFollowing: false,
   boostStatus: 'none',
   isPremium: false,
   vendorUserId: null,
@@ -590,6 +592,7 @@ export default function Filters() {
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
                   favorited={business.isFavorite}
+                  followersCount={business.followersCount}
                   phone={business.phone}
                   whatsapp={business.whatsapp}
                   vendorUserUuid={business.vendorUserUuid}

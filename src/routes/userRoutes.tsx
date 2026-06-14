@@ -5,6 +5,7 @@ import { RoleGate } from "@/routes/RoleGate";
 import { suspensePage } from "@/routes/routeUtils";
 
 const UserDashboard = lazy(() => import("@/pages/user/UserDashboard"));
+const UnifiedProfile = lazy(() => import("@/pages/user/UnifiedProfile"));
 const Favorites = lazy(() => import("@/pages/user/Favorites"));
 const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
@@ -20,6 +21,7 @@ export const userRoutes: RouteObject = {
   ),
   children: [
     { path: "/user/dashboard", element: suspensePage(UserDashboard) },
+    { path: "/user/profile", element: suspensePage(UnifiedProfile) },
     { path: "/user/favorites", element: suspensePage(Favorites) },
     { path: "/user/messages", element: suspensePage(Messages) },
     { path: "/user/activity", element: suspensePage(UserActivity) },

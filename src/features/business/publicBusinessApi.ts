@@ -40,6 +40,9 @@ export type PublicBusiness = {
   verifiedSince: string | null;
   /** From API e.g. `is_favorite` on GET /businesses/home when authenticated. */
   isFavorite: boolean;
+  followersCount: number;
+  /** Whether the authenticated viewer follows this vendor. */
+  isFollowing: boolean;
   boostStatus: 'active' | 'none';
   isPremium: boolean;
   /** Vendor account id — for "message yourself" guard on own listing. */
@@ -208,6 +211,11 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     r.isFavorite === true ||
     r.favorited === true;
 
+  const followersCount = num(r.followers_count ?? r.followersCount, 0);
+  const isFollowing =
+    r.is_following === true ||
+    r.isFollowing === true;
+
   const boostRaw = str(r.boost_status ?? r.boostStatus, 'none').toLowerCase();
   const boostStatus: PublicBusiness['boostStatus'] =
     boostRaw === 'active' ? 'active' : 'none';
@@ -252,6 +260,8 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     memberSince,
     verifiedSince,
     isFavorite,
+    followersCount,
+    isFollowing,
     boostStatus,
     isPremium,
     vendorUserId,

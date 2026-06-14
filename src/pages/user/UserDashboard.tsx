@@ -1,9 +1,11 @@
-import { Heart, Loader2, MessageSquareText, Settings } from 'lucide-react'
+import { Heart, Loader2, MessageSquareText, Settings, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
+import { fetchFollowStats } from '@/api/follows'
 import { fetchNotifications } from '@/api/notifications'
 import { useAuth } from '@/auth/useAuth'
+import { SwitchProfileModeButton } from '@/components/profile/SwitchProfileModeButton'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 import { QUERY_KEYS } from '@/constants/queryKeys'
 import {
@@ -86,7 +88,16 @@ export default function UserDashboard() {
     staleTime: 15_000,
   })
 
+  const followStatsQuery = useQuery({
+    queryKey: ['follow-stats', user?.id],
+    queryFn: () => fetchFollowStats(),
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+  })
+
   const activityItems = (activityQuery.data?.items ?? []).map(toUserNotificationDisplay)
+  const followersCount = followStatsQuery.data?.followers_count ?? 0
+  const followingCount = followStatsQuery.data?.following_count ?? 0
 
   return (
     <div className="min-h-screen bg-auth-bg text-ink">
@@ -99,6 +110,39 @@ export default function UserDashboard() {
               Welcome back, {displayName}.
             </h1>
             <p className="mt-2 text-base text-chat-meta sm:text-lg">Glad you&apos;re here</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {followStatsQuery.isLoading ? (
+                <>
+                  <span className="h-9 w-28 animate-pulse rounded-full bg-surface-soft" />
+                  <span className="h-9 w-28 animate-pulse rounded-full bg-surface-soft" />
+                </>
+              ) : (
+                <>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border-light bg-surface-soft px-4 py-2 text-sm text-ink">
+                    <UserPlus className="size-4 text-brand" aria-hidden />
+                    <span>
+                      <span className="font-semibold">{followersCount.toLocaleString()}</span>{' '}
+                      {followersCount === 1 ? 'Follower' : 'Followers'}
+                    </span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border-light bg-surface-soft px-4 py-2 text-sm text-ink">
+                    <span>
+                      <span className="font-semibold">{followingCount.toLocaleString()}</span>{' '}
+                      Following
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <SwitchProfileModeButton />
+              <Link
+                to="/user/profile"
+                className="inline-flex h-10 items-center rounded-xl border border-border-light bg-card px-4 text-sm font-semibold text-ink hover:bg-surface-soft"
+              >
+                My profile
+              </Link>
+            </div>
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
