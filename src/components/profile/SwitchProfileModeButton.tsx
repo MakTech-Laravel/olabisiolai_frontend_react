@@ -50,7 +50,7 @@ export function SwitchProfileModeButton({
       setUser(result.user)
       showSuccess(
         result.created_business
-          ? 'Vendor mode enabled. Your free business profile is ready — complete it with the pencil icons.'
+          ? 'Vendor mode enabled. Your free business profile is ready — complete it to start listing your business on Gidira.'
           : 'Vendor mode enabled.',
       )
       await refreshSession()
