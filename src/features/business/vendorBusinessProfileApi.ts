@@ -40,6 +40,7 @@ export type VendorBusinessProfile = {
   isFlagged: boolean;
   businessStatus: string;
   boostStatus: "active" | "none";
+  isPremiumActive: boolean;
   businessHours: BusinessHourEntry[];
   businessHoursDisplay: BusinessHoursDisplayRow[];
 };
@@ -138,6 +139,13 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     isFlagged: item.is_flagged === true || item.is_flagged === 1 || item.is_flagged === "1",
     businessStatus: pickString(item, ["business_status"], "active").toLowerCase(),
     boostStatus: boostRaw === "active" ? "active" : "none",
+    isPremiumActive:
+      item.is_premium_active === true ||
+      item.is_premium_active === 1 ||
+      item.is_premium_active === "1" ||
+      item.is_premium === true ||
+      item.is_premium === 1 ||
+      item.is_premium === "1",
     businessHours: parseBusinessHours(item.business_hours ?? item.businessHours),
     businessHoursDisplay: parseBusinessHoursDisplay(
       item.business_hours_display ?? item.businessHoursDisplay,

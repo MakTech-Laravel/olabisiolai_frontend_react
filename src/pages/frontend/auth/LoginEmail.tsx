@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useLocation, useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Eye } from "lucide-react";
 
 import { useAuth } from "@/auth/useAuth";
@@ -21,11 +20,8 @@ import {
 import { type AuthRole } from "@/features/auth/types";
 import { type LoginReturnTarget } from "@/features/auth/loginReturn";
 import { navigateAfterLogin } from "@/features/auth/navigateAfterLogin";
-import { fulfillPendingFavoriteSave } from "@/features/auth/pendingFavoriteSave";
-
 export default function LoginEmail() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
@@ -116,8 +112,6 @@ export default function LoginEmail() {
 
       const roles = getUserRoles(extractUserFromAuthPayload(loginResult.user));
       const isVendor = roles.includes("vendor") || role === "vendor";
-
-      await fulfillPendingFavoriteSave(queryClient);
 
       if (isVendor) {
         navigate(await resolvePostLoginPath(loginResult.user, role), {

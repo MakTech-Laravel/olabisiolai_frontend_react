@@ -4,10 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BookOpen,
   ChevronRight,
-  FileText,
-  Heart,
-  HelpCircle,
-  Info,
   LogOut,
   MessageSquareQuote,
   Share2,
@@ -21,7 +17,7 @@ import { shareGidiraApp, shareInviteVendor, shareProfileUrl, appOrigin } from '@
 import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
-import { SwitchProfileModeButton } from '@/components/profile/SwitchProfileModeButton'
+import { CreateBusinessPageButton } from '@/components/profile/CreateBusinessPageButton'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { cn } from '@/lib/utils'
 
@@ -132,13 +128,12 @@ export default function SettingsHub() {
         <header className="mb-6">
           <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">Settings & Activity</h1>
           <p className="mt-1 text-sm text-body-secondary">
-            Saved listings, reviews, account controls, support, and legal information.
+            Account controls, vendor reviews, and sharing.
           </p>
         </header>
 
         <div className="space-y-4">
-          <HubSection title="Saved & Reviews">
-            <HubRow icon={<Heart className="size-4" />} label="Saved Vendors" to="/user/favorites" />
+          <HubSection title="Reviews & vendor tools">
             <HubRow icon={<Star className="size-4" />} label="My Reviews" to="/user/reviews" />
             <HubRow
               icon={<Star className="size-4" />}
@@ -164,7 +159,7 @@ export default function SettingsHub() {
               to="/user/settings/account"
             />
             <div className="px-4 py-3">
-              <SwitchProfileModeButton fullWidth />
+              <CreateBusinessPageButton fullWidth />
             </div>
             <HubRow
               icon={<LogOut className="size-4" />}
@@ -176,11 +171,7 @@ export default function SettingsHub() {
             />
           </HubSection>
 
-          <HubSection title="Support & Info">
-            <HubRow icon={<Info className="size-4" />} label="About Us" to="/about" />
-            <HubRow icon={<HelpCircle className="size-4" />} label="Contact Us" to="/contact" />
-            <HubRow icon={<HelpCircle className="size-4" />} label="Help & Support" to="/faq" />
-            <HubRow icon={<HelpCircle className="size-4" />} label="FAQs" to="/faq" />
+          <HubSection title="Reports & Sharing">
             <HubRow
               icon={<ShieldAlert className="size-4" />}
               label="Report a Vendor"
@@ -227,15 +218,6 @@ export default function SettingsHub() {
               description="Guides for growing your business on Gidira"
               to="/business-tips"
             />
-          </HubSection>
-
-          <HubSection title="Legal & Policies">
-            <HubRow icon={<FileText className="size-4" />} label="Privacy Policy" to="/privacy-policy" />
-            <HubRow icon={<FileText className="size-4" />} label="Terms & Conditions" to="/terms" />
-            <HubRow icon={<FileText className="size-4" />} label="Community Guidelines" to="/community-guidelines" />
-            <HubRow icon={<FileText className="size-4" />} label="Vendor Agreement" to="/vendor-agreement" />
-            <HubRow icon={<FileText className="size-4" />} label="Refund Policy" to="/refund-policy" />
-            <HubRow icon={<FileText className="size-4" />} label="Cookie Policy" to="/cookies-policy" />
           </HubSection>
         </div>
       </main>

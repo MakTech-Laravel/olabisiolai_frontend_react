@@ -1,29 +1,55 @@
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Crown, Loader2, MapPin, Settings, UserPlus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { createUserBusiness, fetchUserBusinesses, setActiveBusinessId as updateActiveBusinessId } from '@/api/userBusinesses'
 import { fetchFollowStats } from '@/api/follows'
 import { fetchUserSettings } from '@/api/userSettings'
+import { fetchUserReviews } from '@/api/userReviews'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
-import { SwitchProfileModeButton } from '@/components/profile/SwitchProfileModeButton'
-import { HeaderAvatar } from '@/components/ui/HeaderAvatar'
-import { Button } from '@/components/ui/button'
+import { UserSidebar } from '@/components/partials/user/UserSidebar'
+import { ProfileAccountSwitcherSheet } from '@/components/profile/hub/ProfileAccountSwitcherSheet'
+import { ProfileBusinessSection } from '@/components/profile/hub/ProfileBusinessSection'
 import {
-  fetchVendorBusinessProfile,
-  VendorBusinessNotFoundError,
-} from '@/features/business/vendorBusinessProfileApi'
-import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
-import { fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
-import { businessProfilePath } from '@/lib/businessProfile'
+  ProfileHubHeader,
+  ProfileIdentitySection,
+} from '@/components/profile/hub/ProfileIdentitySection'
+import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
+import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
+import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
+import { useProfilePhotoUpload } from '@/hooks/useProfilePhotoUpload'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
+import { showError, showSuccess } from '@/lib/sweetAlert'
 
 const DEFAULT_AVATAR = '/images/avatar/default-header-avatar.png'
 
+function profileHandle(user: { email?: string | null; name?: string | null }, location?: string | null) {
+  const base =
+    user.email?.split('@')[0]?.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') ||
+    user.name?.trim().toLowerCase().replace(/\s+/g, '') ||
+    'you'
+  const handle = `@${base}`
+  return location ? `${handle} · ${location}` : handle
+}
+
 export default function UnifiedProfile() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Guest'
-  const activeMode = resolveActiveProfileMode(user)
+
+  const [manageBusiness, setManageBusiness] = useState<ProfileHubBusiness | null>(null)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
+  const [activeBusinessId, setActiveBusinessId] = useState<number | null>(null)
+  const [isAddingBusiness, setIsAddingBusiness] = useState(false)
+
+  const {
+    inputRef: profilePhotoInputRef,
+    onFileChange: onProfilePhotoChange,
+    openFilePicker: openProfilePhotoPicker,
+    isUploading: isProfilePhotoUploading,
+    avatarCacheKey,
+    error: profilePhotoError,
+  } = useProfilePhotoUpload()
 
   const settingsQuery = useQuery({
     queryKey: ['user-settings'],
@@ -39,122 +65,163 @@ export default function UnifiedProfile() {
     staleTime: 30_000,
   })
 
-  const vendorBusinessQuery = useQuery({
-    queryKey: ['vendor', 'business', 'profile-hub'],
-    queryFn: fetchVendorBusinessProfile,
-    enabled: Boolean(user?.id) && activeMode === 'vendor',
-    retry: false,
-  })
-
-  const subscriptionQuery = useQuery({
-    queryKey: ['vendor', 'subscription', 'status', 'profile-hub'],
-    queryFn: fetchSubscriptionStatus,
-    enabled: Boolean(user?.id) && activeMode === 'vendor',
+  const reviewsQuery = useQuery({
+    queryKey: ['user-reviews-count', user?.id],
+    queryFn: () => fetchUserReviews(1),
+    enabled: Boolean(user?.id),
     staleTime: 60_000,
   })
 
+  const businessesQuery = useQuery({
+    queryKey: ['user', 'businesses'],
+    queryFn: fetchUserBusinesses,
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+  })
+
+  useEffect(() => {
+    const stored = settingsQuery.data?.settings?.active_business_id
+    if (typeof stored === 'number' && stored > 0) {
+      setActiveBusinessId(stored)
+    }
+  }, [settingsQuery.data?.settings?.active_business_id])
+
+  const hubBusinesses = useMemo<ProfileHubBusiness[]>(() => {
+    return (businessesQuery.data ?? []).map((business) => ({
+      ...business,
+      isPremiumActive: business.isPremiumActive,
+      followersCount: business.followersCount,
+    }))
+  }, [businessesQuery.data])
+
   const profile = settingsQuery.data?.profile
-  const bio =
-    typeof settingsQuery.data?.settings?.bio === 'string'
-      ? settingsQuery.data.settings.bio.trim()
-      : ''
-  const isPremiumActive = subscriptionQuery.data?.subscription?.is_premium_active === true
-  const avatarUrl = resolveMediaUrl(
+  const locationLabel = profile?.location?.trim() || null
+  const handleLabel = profileHandle({ email: user?.email, name: user?.name }, locationLabel)
+
+  const baseAvatarUrl = resolveMediaUrl(
     profile?.image_path ?? user?.image_path ?? profile?.image_url ?? user?.image_url,
     DEFAULT_AVATAR,
   )
-  const followersCount = followStatsQuery.data?.followers_count ?? 0
+  const avatarPath = profile?.image_path ?? user?.image_path ?? null
+  const avatarUrl =
+    avatarCacheKey && avatarPath
+      ? `${baseAvatarUrl}${baseAvatarUrl.includes('?') ? '&' : '?'}v=${avatarCacheKey}`
+      : baseAvatarUrl
+
   const followingCount = followStatsQuery.data?.following_count ?? 0
-  const locationLabel = profile?.location?.trim() || null
-  const vendorBusiness =
-    vendorBusinessQuery.data ??
-    (vendorBusinessQuery.error instanceof VendorBusinessNotFoundError ? null : undefined)
+  const reviewsCount = reviewsQuery.data?.pagination?.total ?? reviewsQuery.data?.count ?? 0
+
+  function handleManage(business: ProfileHubBusiness) {
+    void persistActiveBusiness(business.id)
+    setManageBusiness(business)
+  }
+
+  async function persistActiveBusiness(businessId: number | null) {
+    setActiveBusinessId(businessId)
+    try {
+      await updateActiveBusinessId(businessId)
+      void queryClient.invalidateQueries({ queryKey: ['user-settings'] })
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Could not update active business.')
+    }
+  }
+
+  async function handleAddBusiness() {
+    if (isAddingBusiness) return
+
+    setIsAddingBusiness(true)
+    try {
+      const created = await createUserBusiness()
+      await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
+      await persistActiveBusiness(created.id)
+      setManageBusiness(created)
+      showSuccess('Your new business page is ready.')
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Could not create another business page.')
+    } finally {
+      setIsAddingBusiness(false)
+    }
+  }
+
+  function openSwitcher() {
+    setSwitcherOpen(true)
+  }
 
   return (
     <div className="min-h-screen bg-auth-bg text-ink">
-      <FrontendHeader />
+      <div className="lg:hidden">
+        <ProfileHubHeader onOpenSwitcher={openSwitcher} />
+      </div>
+      <div className="hidden lg:block">
+        <FrontendHeader />
+      </div>
 
-      <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <section className="rounded-2xl bg-card p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col items-center text-center">
-            <HeaderAvatar src={avatarUrl} alt={displayName} className="size-24 rounded-full border-4 border-surface-soft" />
-            <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight">{displayName}</h1>
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-              <p className="text-sm text-chat-meta">
-                {activeMode === 'vendor' ? 'Vendor mode' : 'Customer mode'}
-              </p>
-              {activeMode === 'vendor' && isPremiumActive ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
-                  <Crown className="size-3.5" aria-hidden />
-                  Premium
-                </span>
-              ) : null}
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col lg:flex-row lg:gap-6 lg:px-8 lg:pb-10">
+        <div className="hidden shrink-0 lg:block lg:w-64">
+          <UserSidebar active="overview" mobileOpen={false} />
+        </div>
+
+        <main className="mx-auto w-full min-w-0 max-w-[430px] flex-1 pb-8 lg:max-w-none">
+          <div className="lg:grid lg:grid-cols-[minmax(300px,360px)_1fr] lg:items-start lg:gap-8 lg:pt-6">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <ProfileIdentitySection
+                displayName={displayName}
+                handleLabel={handleLabel}
+                avatarUrl={avatarUrl}
+                followingCount={followingCount}
+                reviewsCount={reviewsCount}
+                isPhotoUploading={isProfilePhotoUploading}
+                photoError={profilePhotoError}
+                onOpenPhotoPicker={openProfilePhotoPicker}
+                onPhotoChange={onProfilePhotoChange}
+                photoInputRef={profilePhotoInputRef}
+                onOpenSwitcher={openSwitcher}
+              />
             </div>
-            {bio ? (
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-body-secondary">{bio}</p>
-            ) : null}
-            {locationLabel ? (
-              <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-body-secondary">
-                <MapPin className="size-4 shrink-0 text-brand" aria-hidden />
-                {locationLabel}
-              </p>
-            ) : null}
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              {followStatsQuery.isLoading ? (
-                <Loader2 className="size-5 animate-spin text-brand" aria-label="Loading stats" />
-              ) : (
-                <>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border-light bg-surface-soft px-4 py-2 text-sm">
-                    <UserPlus className="size-4 text-brand" aria-hidden />
-                    <span>
-                      <span className="font-semibold">{followersCount.toLocaleString()}</span> Followers
-                    </span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border-light bg-surface-soft px-4 py-2 text-sm">
-                    <span>
-                      <span className="font-semibold">{followingCount.toLocaleString()}</span> Following
-                    </span>
-                  </div>
-                </>
-              )}
+            <div className="lg:min-w-0">
+              <div className="mb-1 hidden lg:block">
+                <h1 className="font-heading text-2xl font-bold tracking-tight text-ink">Overview</h1>
+                <p className="mt-1 text-sm text-body-secondary">
+                  Your profile, activity, and business pages
+                </p>
+              </div>
+
+              <ProfilePersonalTools reviewsCount={reviewsCount} />
+
+              <ProfileBusinessSection
+                businesses={hubBusinesses}
+                isLoading={businessesQuery.isLoading}
+                isAddingBusiness={isAddingBusiness}
+                onManage={handleManage}
+                onAddBusiness={() => void handleAddBusiness()}
+              />
             </div>
           </div>
+        </main>
+      </div>
 
-          {activeMode === 'vendor' ? (
-            <p className="mt-6 text-center text-sm leading-relaxed text-body-secondary">
-              Your business profile is edited inline on your public listing. Switch modes here, then open your
-              business page and use the pencil icons to update photos, services, hours, and contact details.
-            </p>
-          ) : (
-            <p className="mt-6 text-center text-sm leading-relaxed text-body-secondary">
-              Browse businesses, save favourites, and follow vendors. Switch to vendor mode when you are ready to
-              list your business on Gidira.
-            </p>
-          )}
+      <ProfileManageSheet
+        business={manageBusiness}
+        open={manageBusiness !== null}
+        onClose={() => setManageBusiness(null)}
+      />
 
-          <div className="mt-8 space-y-3">
-            <SwitchProfileModeButton fullWidth />
-
-            {activeMode === 'vendor' && vendorBusiness ? (
-              <Button asChild variant="outline" className="h-12 w-full rounded-xl text-base font-medium">
-                <Link to={businessProfilePath(vendorBusiness.id)}>View & edit business profile</Link>
-              </Button>
-            ) : null}
-
-            <Button asChild variant="outline" className="h-12 w-full rounded-xl text-base font-medium">
-              <Link to="/user/settings">
-                <Settings className="mr-2 size-5" aria-hidden />
-                Settings & Activity
-              </Link>
-            </Button>
-          </div>
-
-          {activeMode === 'vendor' && vendorBusinessQuery.isLoading ? (
-            <p className="mt-4 text-center text-sm text-chat-meta">Loading business profile…</p>
-          ) : null}
-        </section>
-      </main>
+      <ProfileAccountSwitcherSheet
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        displayName={displayName}
+        avatarUrl={avatarUrl}
+        businesses={hubBusinesses}
+        activeBusinessId={activeBusinessId}
+        onSelectPersonal={() => void persistActiveBusiness(null)}
+        onSelectBusiness={(business) => {
+          void persistActiveBusiness(business.id)
+          setManageBusiness(business)
+        }}
+        onAddBusiness={() => void handleAddBusiness()}
+        isAddingBusiness={isAddingBusiness}
+      />
     </div>
   )
 }

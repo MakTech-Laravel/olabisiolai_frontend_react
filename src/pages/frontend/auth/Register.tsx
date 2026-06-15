@@ -37,10 +37,11 @@ export default function Register() {
 
   React.useEffect(() => {
     const selectedRole = resolveAuthRole(searchParams.get("role"));
-    setRole(selectedRole);
-    saveAuthRole(selectedRole);
+    const normalizedRole = selectedRole === "vendor" ? "vendor" : "user";
+    setRole(normalizedRole);
+    saveAuthRole(normalizedRole);
 
-    if (selectedRole !== "vendor") {
+    if (normalizedRole !== "vendor") {
       setVendorPlan(null);
       return;
     }
@@ -55,11 +56,8 @@ export default function Register() {
     const savedPlan = getSavedVendorPlan();
     if (savedPlan) {
       setVendorPlan(savedPlan);
-      return;
     }
-
-    navigate(vendorSignupPlanPath(), { replace: true });
-  }, [searchParams, navigate]);
+  }, [searchParams]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

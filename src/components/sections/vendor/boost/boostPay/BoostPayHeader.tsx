@@ -5,9 +5,11 @@ import { isBoostPaymentCheckout } from "@/features/boost/boostCheckoutSession";
 
 type BoostPayHeaderProps = {
   variant?: "boost" | "subscription";
+  /** Subscription checkout: return to owner business listing instead of vendor dashboard. */
+  backTo?: string;
 };
 
-export function BoostPayHeader({ variant = "boost" }: BoostPayHeaderProps) {
+export function BoostPayHeader({ variant = "boost", backTo }: BoostPayHeaderProps) {
   const navigate = useNavigate();
   const isSubscription = variant === "subscription";
 
@@ -17,7 +19,11 @@ export function BoostPayHeader({ variant = "boost" }: BoostPayHeaderProps) {
         type="button"
         onClick={() =>
           navigate(
-            isSubscription ? "/vendor/dashboard" : isBoostPaymentCheckout() ? "/vendor/boost" : "/vendor/boost/configure",
+            isSubscription
+              ? (backTo ?? "/user/profile")
+              : isBoostPaymentCheckout()
+                ? "/vendor/boost"
+                : "/vendor/boost/configure",
           )
         }
         className="inline-flex items-center gap-1 text-sm font-inter text-muted-foreground hover:text-foreground"

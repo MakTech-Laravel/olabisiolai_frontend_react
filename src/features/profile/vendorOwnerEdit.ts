@@ -14,6 +14,13 @@ export type OwnerProfilePatch = Partial<{
   keep_cover_paths: string[]
   cover_photos: File[]
   logo: File | null
+  category_id: number
+  subcategory: string
+  location_id: number
+  location: string
+  state: string
+  city: string
+  lga: string
 }>
 
 function resolveServicesForUpdate(
@@ -54,14 +61,14 @@ export function buildUpdatePayload(
   const subcategory = resolveSubcategoryForUpdate(profile, services)
 
   const payload: UpdateVendorBusinessPayload = {
-    category_id: String(profile.categoryId),
-    subcategory,
-    location_id: String(profile.locationId),
+    category_id: String(patch.category_id ?? profile.categoryId),
+    subcategory: patch.subcategory ?? subcategory,
+    location_id: String(patch.location_id ?? profile.locationId),
     business_name: patch.business_name ?? profile.businessName,
-    location: profile.locationFullName,
-    state: profile.state,
-    city: profile.city,
-    lga: profile.lga,
+    location: patch.location ?? profile.locationFullName,
+    state: patch.state ?? profile.state,
+    city: patch.city ?? profile.city,
+    lga: patch.lga ?? profile.lga,
     business_description: patch.business_description ?? profile.description,
     phone: patch.phone ?? profile.phone,
     whatsapp: (patch.whatsapp ?? profile.whatsapp)?.trim() || undefined,

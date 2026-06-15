@@ -14,6 +14,37 @@ export type FollowStats = {
   following_count: number
 }
 
+export type FollowingBusiness = {
+  following_user_id: number
+  followed_at: string
+  vendor: {
+    id: number
+    uuid: string
+    name: string
+    image_url: string | null
+  } | null
+  business: {
+    id: number
+    business_name: string
+    logo_url: string | null
+    category_name: string | null
+    location: string | null
+  } | null
+}
+
+export type FollowingListPayload = {
+  following: FollowingBusiness[]
+  count: number
+  pagination: {
+    current_page: number
+    per_page: number
+    last_page: number
+    total: number
+  }
+}
+
+export const USER_FOLLOWING_DEFAULT_PER_PAGE = 12
+
 type LaravelEnvelope<T> = {
   success?: boolean
   message?: string
@@ -45,6 +76,17 @@ export async function fetchFollowStats(userId?: number): Promise<FollowStats> {
   })
 
   return assertFollowSuccess(response.data, 'Could not load follow stats.')
+}
+
+export async function fetchFollowing(params?: {
+  page?: number
+  per_page?: number
+}): Promise<FollowingListPayload> {
+  const response = await request.get<LaravelEnvelope<FollowingListPayload>>('/user/follows/following', {
+    params,
+  })
+
+  return assertFollowSuccess(response.data, 'Could not load following list.')
 }
 
 export function getFollowErrorMessage(error: unknown, fallback: string): string {

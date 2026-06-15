@@ -31,12 +31,12 @@ export function VendorPremiumPaymentGate({ children }: Props) {
     }
 
     if (data.subscription?.is_premium_active) {
-      navigate('/vendor/dashboard', { replace: true });
+      navigate(onboardingRedirectPath(data), { replace: true });
       return;
     }
 
     if (!data.subscription?.can_pay_premium && !data.subscription?.requires_payment) {
-      navigate('/vendor/dashboard', { replace: true });
+      navigate(onboardingRedirectPath(data), { replace: true });
     }
   }, [data, isLoading, navigate]);
 

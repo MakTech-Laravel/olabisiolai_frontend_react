@@ -21,7 +21,7 @@ export function VendorPremiumPaymentGuard({ children }: { children: React.ReactN
 
   const { data, isLoading } = useQuery({
     queryKey: ["vendor", "subscription", "status"],
-    queryFn: fetchSubscriptionStatus,
+    queryFn: () => fetchSubscriptionStatus(),
     retry: 1,
   });
 

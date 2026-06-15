@@ -58,7 +58,7 @@ export async function handleVendorOnboardingCta(
   }
 
   if (isAuthenticated) {
-    navigate("/vendor/choose-your-plan");
+    navigate("/user/profile");
     return;
   }
 

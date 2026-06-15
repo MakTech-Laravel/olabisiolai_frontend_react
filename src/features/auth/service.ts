@@ -86,11 +86,21 @@ function logOtpFromResponse(data: unknown, context: string) {
 
 function ensureRoleMatchesExpected(user: unknown, expectedRole: AuthRole) {
   const roles = getUserRoles(extractUserFromAuthPayload(user))
-  if (!roles.includes(expectedRole)) {
-    throw new Error(
-      `This account is not registered as ${expectedRole}. Please choose the correct account type.`,
-    )
+  if (roles.includes(expectedRole)) {
+    return
   }
+
+  const marketplaceRoles: AuthRole[] = ['user', 'vendor']
+  if (
+    marketplaceRoles.includes(expectedRole)
+    && roles.some((role) => marketplaceRoles.includes(role as AuthRole))
+  ) {
+    return
+  }
+
+  throw new Error(
+    `This account is not registered as ${expectedRole}. Please choose the correct account type.`,
+  )
 }
 
 async function hydrateSessionFromLoginBody(
@@ -708,18 +718,18 @@ export async function verifyRegistrationOtp(
   return resolvedUser
 }
 
-export function resolveDashboardPath(user: unknown, selectedRole: AuthRole) {
+export function resolveDashboardPath(user: unknown, _selectedRole: AuthRole) {
   const roles = getUserRoles(extractUserFromAuthPayload(user))
   if (roles.includes('admin')) return '/admin'
-  if (roles.includes('vendor')) return '/vendor/dashboard'
-  if (roles.includes('user')) return '/user/dashboard'
+  if (roles.includes('vendor')) return '/user/profile'
+  if (roles.includes('user')) return '/user/profile'
 
   const dashboardFromPolicy = roles
     .map((role) => rolePolicy[role]?.dashboard)
     .find((value): value is string => Boolean(value))
 
   if (dashboardFromPolicy) return dashboardFromPolicy
-  return selectedRole === 'vendor' ? '/vendor/dashboard' : '/user/dashboard'
+  return '/user/profile'
 }
 
 export async function resolvePostLoginPath(

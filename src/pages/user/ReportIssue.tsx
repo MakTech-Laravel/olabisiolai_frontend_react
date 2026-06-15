@@ -68,7 +68,7 @@ export default function ReportIssue() {
     <div className="min-h-screen bg-auth-bg text-ink">
       <FrontendHeader />
 
-      <main className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="container mx-auto px-4 py-6 sm:px-6 sm:py-8">
         <Link to="/user/settings" className="mb-4 inline-flex text-sm font-medium text-chat-accent hover:underline">
           ← Back to Settings & Activity
         </Link>

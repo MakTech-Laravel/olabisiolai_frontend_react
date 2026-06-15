@@ -1,12 +1,12 @@
 import { lazy } from "react";
-import { Outlet, type RouteObject } from "react-router-dom";
+import { Navigate, Outlet, type RouteObject } from "react-router-dom";
 
 import { RoleGate } from "@/routes/RoleGate";
 import { suspensePage } from "@/routes/routeUtils";
 
 const UserDashboard = lazy(() => import("@/pages/user/UserDashboard"));
 const UnifiedProfile = lazy(() => import("@/pages/user/UnifiedProfile"));
-const Favorites = lazy(() => import("@/pages/user/Favorites"));
+const Following = lazy(() => import("@/pages/user/Following"));
 const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
 const SettingsHub = lazy(() => import("@/pages/user/SettingsHub"));
@@ -25,7 +25,8 @@ export const userRoutes: RouteObject = {
   children: [
     { path: "/user/dashboard", element: suspensePage(UserDashboard) },
     { path: "/user/profile", element: suspensePage(UnifiedProfile) },
-    { path: "/user/favorites", element: suspensePage(Favorites) },
+    { path: "/user/following", element: suspensePage(Following) },
+    { path: "/user/favorites", element: <Navigate to="/user/following" replace /> },
     { path: "/user/messages", element: suspensePage(Messages) },
     { path: "/user/activity", element: suspensePage(UserActivity) },
     { path: "/user/settings", element: suspensePage(SettingsHub) },

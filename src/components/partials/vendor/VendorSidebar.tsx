@@ -24,7 +24,7 @@ import { useVendorBusinessProfile } from "@/features/business/useVendorBusinessP
 const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
 
 const items = [
-  { to: "/vendor/dashboard", label: "Dashboard", icon: LayoutGrid, end: true, premiumOnly: false },
+  { to: "/user/profile", label: "My profile", icon: LayoutGrid, end: true, premiumOnly: false },
   { to: "/vendor/profile", label: "Profile", icon: User, premiumOnly: false },
   { to: "/vendor/leads", label: "Leads", icon: MessageSquare, premiumOnly: false },
   { to: "/vendor/notifications", label: "Notifications", icon: Bell, premiumOnly: false },

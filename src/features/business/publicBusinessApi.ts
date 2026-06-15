@@ -38,6 +38,8 @@ export type PublicBusiness = {
   memberSince: string | null;
   /** e.g. "May 2026" — from API `verified_since` when badge is shown. */
   verifiedSince: string | null;
+  /** e.g. "Usually responds within 15 minutes" — from messaging analytics when available. */
+  responseTimeLabel: string | null;
   /** From API e.g. `is_favorite` on GET /businesses/home when authenticated. */
   isFavorite: boolean;
   followersCount: number;
@@ -232,6 +234,8 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const memberSince = memberSinceRaw || null;
   const verifiedSinceRaw = str(r.verified_since ?? r.verifiedSince, "").trim();
   const verifiedSince = verifiedSinceRaw || null;
+  const responseTimeRaw = str(r.response_time_label ?? r.responseTimeLabel, "").trim();
+  const responseTimeLabel = responseTimeRaw || null;
 
   return {
     id,
@@ -259,6 +263,7 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     verified,
     memberSince,
     verifiedSince,
+    responseTimeLabel,
     isFavorite,
     followersCount,
     isFollowing,

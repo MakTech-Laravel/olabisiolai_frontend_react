@@ -30,7 +30,7 @@ export function useVendorSubscriptionAccess() {
 
   const subscriptionQuery = useQuery({
     queryKey: ["vendor", "subscription", "status"],
-    queryFn: fetchSubscriptionStatus,
+    queryFn: () => fetchSubscriptionStatus(),
     enabled: hasToken && onboardingQuery.isSuccess,
     staleTime: 60_000,
   });
@@ -41,7 +41,7 @@ export function useVendorSubscriptionAccess() {
   const canPayPremium = subscription?.can_pay_premium === true;
   const requiresPayment = subscription?.requires_payment === true;
   const hasBusiness = onboardingQuery.data?.has_business === true;
-  const photoLimit = subscription?.photo_limit ?? (isPremiumActive ? 20 : 5);
+  const photoLimit = subscription?.photo_limit ?? (isPremiumActive ? 25 : 5);
   const isVerified = subscription?.is_verified === true;
   const canBoost = subscription?.can_boost === true;
   const analyticsLocked = subscription?.analytics_locked ?? !isPremiumActive;
