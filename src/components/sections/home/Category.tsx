@@ -2,11 +2,13 @@ import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CategoryCard } from "@/components/CategoryCard";
+import { selectHomeCategories } from "@/features/categories/homeFeaturedCategories";
 import { lucideIconForCategoryName } from "@/features/categories/iconForCategoryName";
 import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 
 export function Category() {
   const { data: categories = [], isPending, isError, refetch } = useCategoryCatalog();
+  const homeCategories = selectHomeCategories(categories);
 
   return (
     <div className="mb-20">
@@ -30,11 +32,11 @@ export function Category() {
                 Try again
               </button>
             </div>
-          ) : categories.length === 0 ? (
+          ) : homeCategories.length === 0 ? (
             <p className="text-center text-sm text-text-secondary py-12">No categories yet.</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-7">
-              {categories.map((category) => (
+              {homeCategories.map((category) => (
                 <CategoryCard
                   key={category.id}
                   name={category.name}
