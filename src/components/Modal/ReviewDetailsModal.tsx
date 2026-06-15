@@ -41,7 +41,7 @@ export function ReviewDetailsModal({ open, onClose, review }: ReviewDetailsModal
       role="presentation"
     >
       <div
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-card shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)]"
+        className="relative w-full max-w-7xl overflow-hidden rounded-2xl bg-card shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

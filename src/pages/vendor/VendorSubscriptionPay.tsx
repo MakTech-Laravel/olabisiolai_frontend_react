@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 import PaystackPop from "@paystack/inline-js";
 import { Loader2 } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showError, showSuccess } from "@/lib/sweetAlert";
 
@@ -42,6 +42,8 @@ import {
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
 import { fetchVendorSettings } from "@/api/vendorSettings";
+import { fetchVendorBusinessProfile } from "@/features/business/vendorBusinessProfileApi";
+import { businessProfilePath } from "@/lib/businessProfile";
 import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
 import { createVendorPaymentMethod, fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
@@ -157,6 +159,8 @@ function writeCheckoutToSession(checkout: SubscriptionCheckoutInit | null) {
 
 export default function VendorSubscriptionPayPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const scopedBusinessId = Number(searchParams.get("business_id")) || undefined;
   const queryClient = useQueryClient();
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>("paystack");
   const [isPaying, setIsPaying] = useState(false);
@@ -186,8 +190,8 @@ export default function VendorSubscriptionPayPage() {
   });
 
   const { data: subscriptionStatus } = useQuery({
-    queryKey: ["vendor", "subscription", "status"],
-    queryFn: fetchSubscriptionStatus,
+    queryKey: ["vendor", "subscription", "status", scopedBusinessId],
+    queryFn: () => fetchSubscriptionStatus({ businessId: scopedBusinessId }),
     enabled: canFetchPackages,
     retry: 1,
   });
@@ -198,6 +202,17 @@ export default function VendorSubscriptionPayPage() {
     enabled: canFetchPackages,
     staleTime: 30_000,
   });
+
+  const { data: ownerBusiness } = useQuery({
+    queryKey: ["vendor", "business", "profile"],
+    queryFn: fetchVendorBusinessProfile,
+    enabled: canFetchPackages,
+    retry: false,
+  });
+
+  const ownerBusinessPath = ownerBusiness?.id
+    ? businessProfilePath(ownerBusiness.id)
+    : "/user/profile";
 
   const emailVerificationProfile = vendorSettings?.profile ?? user;
   const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
@@ -319,7 +334,7 @@ export default function VendorSubscriptionPayPage() {
             localStorage.setItem("vendorBusinessCreated", "true");
             primeVendorSubscriptionCaches(queryClient, result.subscription);
 
-            navigate("/vendor/dashboard", { replace: true });
+            navigate(ownerBusinessPath, { replace: true });
             showSuccess(result.message || "Premium subscription activated successfully.");
 
             void queryClient.invalidateQueries({ queryKey: ["vendor"] });
@@ -349,6 +364,7 @@ export default function VendorSubscriptionPayPage() {
       flutterCurrency,
       flutterTxRef,
       navigate,
+      ownerBusinessPath,
       persistCheckout,
       queryClient,
     ],
@@ -490,7 +506,7 @@ export default function VendorSubscriptionPayPage() {
           localStorage.setItem("vendorBusinessCreated", "true");
           primeVendorSubscriptionCaches(queryClient, result.subscription);
 
-          navigate("/vendor/dashboard", { replace: true });
+          navigate(ownerBusinessPath, { replace: true });
           showSuccess(result.message || "Premium subscription activated successfully.");
 
           void trySaveProfileFromResponse(response);
@@ -600,7 +616,7 @@ export default function VendorSubscriptionPayPage() {
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="space-y-4">
-        <BoostPayHeader variant="subscription" />
+        <BoostPayHeader variant="subscription" backTo={ownerBusinessPath} />
 
         <PurchaseEmailVerificationBlock profile={emailVerificationProfile} />
 

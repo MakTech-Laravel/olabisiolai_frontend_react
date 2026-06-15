@@ -13,7 +13,7 @@ export function primeVendorSubscriptionCaches(
   queryClient.setQueryData(["vendor", "onboarding", "status"], (prev: VendorOnboardingStatus | undefined) => ({
     has_business: true,
     can_access_onboarding: prev?.can_access_onboarding ?? false,
-    redirect_to: "/vendor/dashboard",
+    redirect_to: "/user/profile",
     subscription,
   }));
 }

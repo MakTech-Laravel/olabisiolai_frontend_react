@@ -1,7 +1,14 @@
 import { Search, Star } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { CategoryDto } from "@/features/categories/types";
+import type { LocationFilterOption } from "@/features/locations/types";
+import {
+  findLocationById,
+  lgaOptionsForStateCity,
+  uniqueCitiesFromCatalog,
+  uniqueStatesFromCatalog,
+} from "@/features/locations/locationCascadeOptions";
 import { cn } from "@/lib/utils";
 
 export type FiltersSectionProps = {
@@ -13,7 +20,7 @@ export type FiltersSectionProps = {
   subcategoryOptions: string[];
   selectedSubcategory: string | null;
   onSelectSubcategory: (subcategory: string | null) => void;
-  locationOptions: Array<{ id: number; label: string }>;
+  locationOptions: LocationFilterOption[];
   selectedLocationId: number | null;
   onSelectLocation: (id: number | null) => void;
   searchTerm: string;
@@ -51,35 +58,54 @@ export default function FiltersSection({
   const catName = `${radioGroupId}-category`;
   const locName = `${radioGroupId}-location`;
   const ratingName = `${radioGroupId}-rating`;
+  const [categorySearch, setCategorySearch] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
 
-  const filteredLocationOptions = useMemo(() => {
-    const query = locationSearch.trim().toLowerCase();
-    if (query === "") {
-      return locationOptions;
+  const selectedLocation = useMemo(
+    () => findLocationById(locationOptions, selectedLocationId),
+    [locationOptions, selectedLocationId],
+  );
+
+  useEffect(() => {
+    if (selectedLocation) {
+      setSelectedState(selectedLocation.stateName);
+      setSelectedCity(selectedLocation.cityName);
+      return;
     }
-
-    return locationOptions.filter((location) =>
-      location.label.toLowerCase().includes(query),
-    );
-  }, [locationOptions, locationSearch]);
-
-  const visibleLocationOptions = useMemo(() => {
     if (selectedLocationId === null) {
-      return filteredLocationOptions;
+      setSelectedState("");
+      setSelectedCity("");
     }
+  }, [selectedLocation, selectedLocationId]);
 
-    const selected = locationOptions.find((location) => location.id === selectedLocationId);
-    if (selected === undefined) {
-      return filteredLocationOptions;
-    }
+  const stateOptions = useMemo(
+    () => uniqueStatesFromCatalog(locationOptions),
+    [locationOptions],
+  );
 
-    if (filteredLocationOptions.some((location) => location.id === selectedLocationId)) {
-      return filteredLocationOptions;
-    }
+  const cityOptions = useMemo(
+    () => uniqueCitiesFromCatalog(locationOptions, selectedState),
+    [locationOptions, selectedState],
+  );
 
-    return [selected, ...filteredLocationOptions];
-  }, [filteredLocationOptions, locationOptions, selectedLocationId]);
+  const lgaOptions = useMemo(() => {
+    const entries = lgaOptionsForStateCity(locationOptions, selectedState, selectedCity);
+    const query = locationSearch.trim().toLowerCase();
+    if (!query) return entries;
+    return entries.filter(
+      (entry) =>
+        entry.lgaName.toLowerCase().includes(query) ||
+        entry.label.toLowerCase().includes(query),
+    );
+  }, [locationOptions, selectedState, selectedCity, locationSearch]);
+
+  const filteredCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return categories;
+    return categories.filter((category) => category.name.toLowerCase().includes(query));
+  }, [categories, categorySearch]);
 
   return (
     <div
@@ -157,7 +183,22 @@ export default function FiltersSection({
         ) : categories.length === 0 ? (
           <p className="text-sm text-text-secondary">No categories available.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={categorySearch}
+                onChange={(event) => setCategorySearch(event.target.value)}
+                placeholder="Search categories..."
+                aria-label="Search categories"
+                className="w-full min-w-0 rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
+              />
+            </div>
+            <div className="max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">
             <label className="flex items-center cursor-pointer">
               <input
                 type="radio"
@@ -168,7 +209,10 @@ export default function FiltersSection({
               />
               <span className="text-text-secondary">All</span>
             </label>
-            {categories.map((category) => (
+            {filteredCategories.length === 0 ? (
+              <p className="py-2 text-sm text-text-secondary">No categories match your search.</p>
+            ) : (
+              filteredCategories.map((category) => (
               <label key={category.id} className="flex items-center cursor-pointer">
                 <input
                   type="radio"
@@ -179,7 +223,9 @@ export default function FiltersSection({
                 />
                 <span className="text-text-secondary">{category.name}</span>
               </label>
-            ))}
+            ))
+            )}
+            </div>
           </div>
         )}
         {selectedCategoryId !== null && subcategoryOptions.length > 0 ? (
@@ -216,49 +262,105 @@ export default function FiltersSection({
           Location
         </h3>
 
-        <div className="relative mb-3">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={locationSearch}
-            onChange={(event) => setLocationSearch(event.target.value)}
-            placeholder="Search location..."
-            aria-label="Search locations"
-            className="w-full min-w-0 rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
-          />
-        </div>
+        <div className="space-y-3">
+          <div>
+            <label htmlFor={`${radioGroupId}-filter-state`} className="mb-1.5 block text-sm font-medium text-text-primary">
+              State
+            </label>
+            <select
+              id={`${radioGroupId}-filter-state`}
+              value={selectedState}
+              onChange={(event) => {
+                const nextState = event.target.value;
+                setSelectedState(nextState);
+                setSelectedCity("");
+                onSelectLocation(null);
+              }}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+            >
+              <option value="">All states</option>
+              {stateOptions.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <label className="mb-2 flex cursor-pointer items-center">
-          <input
-            type="radio"
-            name={locName}
-            className="mr-2 accent-primary"
-            checked={selectedLocationId === null}
-            onChange={() => onSelectLocation(null)}
-          />
-          <span className="text-text-secondary">All locations</span>
-        </label>
+          {selectedState ? (
+            <div>
+              <label htmlFor={`${radioGroupId}-filter-city`} className="mb-1.5 block text-sm font-medium text-text-primary">
+                City
+              </label>
+              <select
+                id={`${radioGroupId}-filter-city`}
+                value={selectedCity}
+                onChange={(event) => {
+                  setSelectedCity(event.target.value);
+                  onSelectLocation(null);
+                }}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
+              >
+                <option value="">All cities</option>
+                {cityOptions.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
-        <div className="max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">
-          {visibleLocationOptions.length === 0 ? (
-            <p className="py-2 text-sm text-text-secondary">No locations match your search.</p>
-          ) : (
-            visibleLocationOptions.map((location) => (
-              <label key={location.id} className="flex cursor-pointer items-center">
+          {selectedState && selectedCity ? (
+            <>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <input
+                  type="search"
+                  value={locationSearch}
+                  onChange={(event) => setLocationSearch(event.target.value)}
+                  placeholder="Search LGA..."
+                  aria-label="Search LGA"
+                  className="w-full min-w-0 rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-text-primary outline-none focus:border-primary"
+                />
+              </div>
+
+              <label className="flex cursor-pointer items-center">
                 <input
                   type="radio"
                   name={locName}
                   className="mr-2 accent-primary"
-                  checked={selectedLocationId === location.id}
-                  onChange={() => onSelectLocation(location.id)}
+                  checked={selectedLocationId === null}
+                  onChange={() => onSelectLocation(null)}
                 />
-                <span className="text-sm text-text-secondary">{location.label}</span>
+                <span className="text-text-secondary">All areas in {selectedCity}</span>
               </label>
-            ))
-          )}
+
+              <div className="max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">
+                {lgaOptions.length === 0 ? (
+                  <p className="py-2 text-sm text-text-secondary">No areas match your search.</p>
+                ) : (
+                  lgaOptions.map((location) => (
+                    <label key={location.id} className="flex cursor-pointer items-center">
+                      <input
+                        type="radio"
+                        name={locName}
+                        className="mr-2 accent-primary"
+                        checked={selectedLocationId === location.id}
+                        onChange={() => onSelectLocation(location.id)}
+                      />
+                      <span className="text-sm text-text-secondary">
+                        {location.lgaName || location.label}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 

@@ -1,17 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pencil, Plus, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { BusinessHoursEditor } from '@/components/business/BusinessHoursEditor'
+import { LocationCascadeSelects } from '@/components/locations/LocationCascadeSelects'
 import { VendorOwnerModalShell } from '@/components/profile/VendorOwnerModalShell'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { BusinessHourEntry } from '@/features/business/businessHours'
+import { useVendorBusinessFormOptions } from '@/features/categories/useVendorBusinessFormOptions'
 import { updateVendorBusiness, getVendorBusinessUpdateError } from '@/features/business/vendorBusinessApi'
 import {
   fetchVendorBusinessProfile,
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
+import {
+  locationEntriesForStateCity,
+  parseVendorLocationOptions,
+  uniqueLocationCities,
+  uniqueLocationStates,
+} from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { showError, showSuccess } from '@/lib/sweetAlert'
@@ -88,6 +96,188 @@ function useOwnerProfileEditor(onProfileUpdated?: () => void) {
   return { open, setOpen, loading, profile, openEditor, saveProfile }
 }
 
+export function VendorOwnerLocationEditButton({
+  label = 'Location',
+  className,
+  onProfileUpdated,
+}: OwnerEditButtonProps) {
+  const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
+  const parsedLocations = useMemo(
+    () => parseVendorLocationOptions(formOptions?.locations),
+    [formOptions?.locations],
+  )
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const [state, setState] = useState('')
+  const [city, setCity] = useState('')
+  const [locationId, setLocationId] = useState('')
+
+  useEffect(() => {
+    if (!profile || !open) return
+    const selected = parsedLocations.find((entry) => entry.id === String(profile.locationId)) ?? null
+    setState(selected?.state || profile.state || '')
+    setCity(selected?.city || profile.city || '')
+    setLocationId(selected?.id || String(profile.locationId || ''))
+  }, [open, parsedLocations, profile])
+
+  const states = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations])
+  const cities = useMemo(
+    () => uniqueLocationCities(parsedLocations, state),
+    [parsedLocations, state],
+  )
+  const lgaOptions = useMemo(
+    () => locationEntriesForStateCity(parsedLocations, state, city),
+    [parsedLocations, state, city],
+  )
+  const selectedEntry = parsedLocations.find((entry) => entry.id === locationId) ?? null
+
+  return (
+    <>
+      <OwnerEditTrigger label={label} className={className} onClick={() => void openEditor()} />
+      <VendorOwnerModalShell
+        title="Edit location"
+        open={open}
+        loading={loading || formOptionsLoading}
+        onClose={() => setOpen(false)}
+        onSave={() => {
+          if (!locationId) {
+            showError('Please select your state, city, and LGA.')
+            return
+          }
+          void saveProfile(
+            {
+              location_id: Number(locationId),
+              location: selectedEntry?.label ?? profile?.locationFullName ?? '',
+              state: selectedEntry?.state ?? state,
+              city: selectedEntry?.city ?? city,
+              lga: selectedEntry?.lga ?? profile?.lga ?? '',
+            },
+            'Location updated.',
+          )
+        }}
+        saveDisabled={!locationId}
+      >
+        <LocationCascadeSelects
+          state={state}
+          city={city}
+          locationId={locationId}
+          states={states}
+          cities={cities}
+          lgaOptions={lgaOptions.map((entry) => ({ id: entry.id, lga: entry.lga }))}
+          onStateChange={(nextState) => {
+            setState(nextState)
+            setCity('')
+            setLocationId('')
+          }}
+          onCityChange={(nextCity) => {
+            setCity(nextCity)
+            setLocationId('')
+          }}
+          onLocationChange={setLocationId}
+          disabled={loading || formOptionsLoading}
+          stateLoading={formOptionsLoading}
+        />
+      </VendorOwnerModalShell>
+    </>
+  )
+}
+
+export function VendorOwnerCategoryEditButton({
+  label = 'Category',
+  className,
+  onProfileUpdated,
+}: OwnerEditButtonProps) {
+  const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
+  const categories = formOptions?.categories ?? []
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const [categoryId, setCategoryId] = useState('')
+  const [subcategory, setSubcategory] = useState('')
+
+  const selectedCategory = categories.find((category) => String(category.id) === categoryId) ?? null
+  const subcategoryOptions = selectedCategory?.subcategories ?? []
+
+  useEffect(() => {
+    if (!profile || !open) return
+    setCategoryId(String(profile.categoryId || ''))
+    setSubcategory(profile.subcategory?.trim() || '')
+  }, [open, profile])
+
+  useEffect(() => {
+    if (!open || subcategoryOptions.length === 0) return
+    if (subcategory && subcategoryOptions.includes(subcategory)) return
+    setSubcategory(subcategoryOptions[0] ?? '')
+  }, [categoryId, open, subcategory, subcategoryOptions])
+
+  return (
+    <>
+      <OwnerEditTrigger label={label} className={className} onClick={() => void openEditor()} />
+      <VendorOwnerModalShell
+        title="Edit category"
+        open={open}
+        loading={loading || formOptionsLoading}
+        onClose={() => setOpen(false)}
+        onSave={() => {
+          if (!categoryId) {
+            showError('Please select a category.')
+            return
+          }
+          if (subcategoryOptions.length > 0 && !subcategory.trim()) {
+            showError('Please select a subcategory.')
+            return
+          }
+          void saveProfile(
+            {
+              category_id: Number(categoryId),
+              subcategory: subcategory.trim() || undefined,
+            },
+            'Category updated.',
+          )
+        }}
+        saveDisabled={!categoryId}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-ink">Category</label>
+            <select
+              value={categoryId}
+              disabled={loading || formOptionsLoading}
+              onChange={(event) => {
+                setCategoryId(event.target.value)
+                setSubcategory('')
+              }}
+              className="h-11 w-full rounded-md border border-border-light bg-background px-3 text-sm"
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={String(category.id)}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {subcategoryOptions.length > 0 ? (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-ink">Subcategory</label>
+              <select
+                value={subcategory}
+                disabled={loading || formOptionsLoading}
+                onChange={(event) => setSubcategory(event.target.value)}
+                className="h-11 w-full rounded-md border border-border-light bg-background px-3 text-sm"
+              >
+                <option value="">Select subcategory</option>
+                {subcategoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      </VendorOwnerModalShell>
+    </>
+  )
+}
+
 export function VendorOwnerContactEditButton({
   label = 'Contact details',
   className,
@@ -142,7 +332,7 @@ export function VendorOwnerContactEditButton({
 }
 
 export function VendorOwnerServicesEditButton({
-  label = 'Services',
+  label = 'Products/Services',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
@@ -159,7 +349,7 @@ export function VendorOwnerServicesEditButton({
     <>
       <OwnerEditTrigger label={label} className={className} onClick={() => void openEditor()} />
       <VendorOwnerModalShell
-        title="Edit services"
+        title="Edit products/services"
         open={open}
         loading={loading}
         onClose={() => setOpen(false)}
@@ -168,19 +358,19 @@ export function VendorOwnerServicesEditButton({
             .split('\n')
             .map((line) => line.trim())
             .filter(Boolean)
-          void saveProfile({ services }, 'Services updated.')
+          void saveProfile({ services }, 'Products/Services updated.')
         }}
       >
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink">Services offered</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink">Products/Services offered</label>
           <Textarea
             value={servicesText}
             rows={6}
-            placeholder="One service per line"
+            placeholder="One product or service per line"
             onChange={(event) => setServicesText(event.target.value)}
             disabled={loading}
           />
-          <p className="mt-2 text-xs text-muted-foreground">Enter one service per line.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Enter one product or service per line.</p>
         </div>
       </VendorOwnerModalShell>
     </>

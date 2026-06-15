@@ -24,7 +24,7 @@ export function clearSavedVendorPlan() {
 }
 
 export function vendorSignupPlanPath() {
-  return '/vendor/choose-your-plan?signup=1'
+  return '/register'
 }
 
 export function vendorRegisterPath(plan: VendorPlanChoice) {

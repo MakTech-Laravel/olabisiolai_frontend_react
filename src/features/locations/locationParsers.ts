@@ -12,7 +12,25 @@ export function parseLocationFilterOption(raw: unknown): LocationFilterOption | 
   if (!Number.isFinite(id) || id <= 0) return null
   const label = typeof o.label === 'string' ? o.label.trim() : ''
   if (!label) return null
-  return { id, label }
+  const stateName =
+    typeof o.state_name === 'string'
+      ? o.state_name.trim()
+      : typeof o.stateName === 'string'
+        ? o.stateName.trim()
+        : ''
+  const cityName =
+    typeof o.city_name === 'string'
+      ? o.city_name.trim()
+      : typeof o.cityName === 'string'
+        ? o.cityName.trim()
+        : ''
+  const lgaName =
+    typeof o.lga_name === 'string'
+      ? o.lga_name.trim()
+      : typeof o.lgaName === 'string'
+        ? o.lgaName.trim()
+        : ''
+  return { id, label, stateName, cityName, lgaName }
 }
 
 export function parseLocationFilterList(raw: unknown): LocationFilterOption[] {

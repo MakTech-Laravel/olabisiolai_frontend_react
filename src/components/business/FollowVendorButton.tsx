@@ -16,9 +16,11 @@ type FollowVendorButtonProps = {
   listingPath: string
   className?: string
   variant?: 'default' | 'outline'
+  size?: 'default' | 'compact'
   showLabel?: boolean
   fullWidth?: boolean
   onFollowChange?: (following: boolean, followersCount?: number) => void
+  onClick?: (event: React.MouseEvent) => void
 }
 
 export function FollowVendorButton({
@@ -28,9 +30,11 @@ export function FollowVendorButton({
   listingPath,
   className,
   variant = 'outline',
+  size = 'default',
   showLabel = true,
   fullWidth = false,
   onFollowChange,
+  onClick,
 }: FollowVendorButtonProps) {
   const queryClient = useQueryClient()
   const { isSessionLoading, isUserLoading, isAuthenticated } = useAuth()
@@ -46,7 +50,9 @@ export function FollowVendorButton({
     return null
   }
 
-  async function handleToggle() {
+  async function handleToggle(event: React.MouseEvent) {
+    event.stopPropagation()
+    onClick?.(event)
     if (!isAuthReady || loading || disabled) return
 
     if (!isAuthenticated) {
@@ -63,6 +69,8 @@ export function FollowVendorButton({
       await queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
       await queryClient.invalidateQueries({ queryKey: ['business'] })
       await queryClient.invalidateQueries({ queryKey: ['businesses'] })
+      await queryClient.invalidateQueries({ queryKey: ['filters'] })
+      await queryClient.invalidateQueries({ queryKey: ['user-following'] })
     } catch (error) {
       showError(getFollowErrorMessage(error, 'Could not update follow status. Please try again.'))
     } finally {
@@ -73,15 +81,18 @@ export function FollowVendorButton({
   const label = isFollowing ? 'Following' : 'Follow'
   const resolvedVariant = isFollowing && fullWidth ? 'default' : variant
 
+  const isCompact = size === 'compact'
+
   return (
     <Button
       type="button"
       variant={resolvedVariant}
       disabled={disabled || loading || !isAuthReady || isSessionLoading || isUserLoading}
-      onClick={() => void handleToggle()}
+      onClick={(event) => void handleToggle(event)}
       aria-pressed={isFollowing}
       className={cn(
         'gap-2',
+        isCompact && 'h-8 rounded-full px-3 text-xs font-semibold',
         fullWidth && 'h-14 w-full rounded-xl text-base font-medium',
         !fullWidth && isFollowing && variant === 'outline' && 'border-brand bg-brand/5 text-brand',
         fullWidth &&
@@ -93,11 +104,13 @@ export function FollowVendorButton({
         className,
       )}
     >
-      {isFollowing ? (
-        <UserCheck className="size-5 shrink-0" aria-hidden />
-      ) : (
-        <UserPlus className="size-5 shrink-0" aria-hidden />
-      )}
+      {!isCompact ? (
+        isFollowing ? (
+          <UserCheck className="size-5 shrink-0" aria-hidden />
+        ) : (
+          <UserPlus className="size-5 shrink-0" aria-hidden />
+        )
+      ) : null}
       {showLabel ? (loading ? 'Please wait…' : label) : null}
     </Button>
   )

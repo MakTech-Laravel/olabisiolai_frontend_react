@@ -71,11 +71,17 @@ export async function fetchSubscriptionPackages(): Promise<{
   return res.data.data;
 }
 
-export async function fetchSubscriptionStatus(): Promise<{
+export async function fetchSubscriptionStatus(options?: {
+  businessId?: number;
+}): Promise<{
   subscription: VendorSubscriptionState;
 }> {
+  const businessId = options?.businessId;
   const res = await request.get<ApiEnvelope<{ subscription: VendorSubscriptionState }>>(
     '/vendor/subscription/status',
+    {
+      params: businessId ? { business_id: businessId } : undefined,
+    },
   );
   return res.data.data;
 }
@@ -83,6 +89,7 @@ export async function fetchSubscriptionStatus(): Promise<{
 export async function initSubscriptionPayment(
   args?: {
     gateway?: PaymentGateway;
+    businessId?: number;
     boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
   },
 ): Promise<SubscriptionCheckoutInit> {
@@ -90,6 +97,7 @@ export async function initSubscriptionPayment(
   const gateway = args?.gateway;
   const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>('/vendor/subscription/payment/init', {
     gateway,
+    ...(args?.businessId ? { business_id: args.businessId } : null),
     ...(boost
       ? {
         boost_tier_key: boost.tierKey,

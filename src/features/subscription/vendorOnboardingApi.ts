@@ -61,7 +61,7 @@ export function onboardingRedirectPath(status: VendorOnboardingStatus): string {
     return '/user/profile';
   }
 
-  return '/vendor/dashboard';
+  return '/user/profile';
 }
 
 /** After vendor login — skip legacy plan-form; go to business profile, payment, or hub. */

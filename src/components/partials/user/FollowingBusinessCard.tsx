@@ -1,63 +1,55 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Heart, MapPin, Star } from 'lucide-react'
+import { CheckCircle2, MapPin, UserMinus } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
-import { removeFavorite } from '@/api/favorites'
+import { toggleFollow } from '@/api/follows'
 import { DirectMessageButton } from '@/components/business/DirectMessageButton'
-import { ShowPhoneNumberReveal } from '@/components/ShowPhoneNumberReveal'
 import { businessProfilePath } from '@/lib/businessProfile'
-import { resolveBusinessContactPhone } from '@/lib/whatsappUrl'
+import { resolveMediaUrl } from '@/lib/mediaUrl'
+import { showError } from '@/lib/sweetAlert'
 
-export type FavoriteBusinessCardProps = {
+export type FollowingBusinessCardProps = {
+  followingUserId: number
   businessInfoId: number
   title: string
   category: string
   location: string
-  rating: number
-  reviews: number
-  /** API may omit; paragraph hidden when empty */
-  description?: string
   image: string
-  verified: boolean
-  phone?: string | null
-  whatsapp?: string | null
+  verified?: boolean
   vendorUserUuid?: string | null
 }
 
-export function FavoriteBusinessCard({
+export function FollowingBusinessCard({
+  followingUserId,
   businessInfoId,
   title,
   category,
   location,
-  rating,
-  reviews,
-  description,
   image,
-  verified,
-  phone,
-  whatsapp,
+  verified = false,
   vendorUserUuid,
-}: FavoriteBusinessCardProps) {
-  const contactPhone = resolveBusinessContactPhone(whatsapp, phone)
+}: FollowingBusinessCardProps) {
   const queryClient = useQueryClient()
   const { pathname } = useLocation()
-  const [removing, setRemoving] = useState(false)
+  const [unfollowing, setUnfollowing] = useState(false)
   const profileTo = businessProfilePath(businessInfoId)
-  const desc = description?.trim()
 
-  const handleRemoveFavorite = async (event: React.MouseEvent) => {
+  const handleUnfollow = async (event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
-    if (removing) return
-    setRemoving(true)
+    if (unfollowing) return
+    setUnfollowing(true)
     try {
-      await removeFavorite(businessInfoId)
-      await queryClient.invalidateQueries({ queryKey: ['user-favorites'] })
-    } catch (err) {
-      console.error('Failed to remove favorite:', err)
+      await toggleFollow(followingUserId)
+      await queryClient.invalidateQueries({ queryKey: ['user-following'] })
+      await queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
+      await queryClient.invalidateQueries({ queryKey: ['businesses'] })
+      await queryClient.invalidateQueries({ queryKey: ['filters'] })
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Could not unfollow. Please try again.')
     } finally {
-      setRemoving(false)
+      setUnfollowing(false)
     }
   }
 
@@ -69,12 +61,13 @@ export function FavoriteBusinessCard({
         </Link>
         <button
           type="button"
-          onClick={handleRemoveFavorite}
-          disabled={removing}
-          className="absolute left-3 top-3 z-10 rounded-full bg-white/90 p-1.5 shadow-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label="Remove from favorites"
+          onClick={handleUnfollow}
+          disabled={unfollowing}
+          className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-brand shadow-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Unfollow"
         >
-          <Heart className="size-5 fill-brand-red text-brand-red" aria-hidden />
+          <UserMinus className="size-4" aria-hidden />
+          {unfollowing ? 'Removing…' : 'Following'}
         </button>
         {verified ? (
           <div className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-footer-bar px-3 py-1 text-[11px] font-semibold text-ice">
@@ -97,23 +90,8 @@ export function FavoriteBusinessCard({
             {location}
           </p>
         </div>
-        <p className="inline-flex items-center gap-1 text-sm">
-          <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
-          <span className="font-medium text-ink-heading">{rating}</span>
-          <span className="text-chat-meta">({reviews})</span>
-        </p>
-        {desc ? (
-          <p className="line-clamp-2 text-sm leading-5 text-body-secondary">{desc}</p>
-        ) : null}
 
         <div className="space-y-2 pt-1">
-          <ShowPhoneNumberReveal
-            useShadcnButton
-            isolateFromParentClicks={false}
-            phoneNumber={contactPhone}
-            className="h-11 w-full rounded-xl bg-brand-red text-base font-medium text-ice hover:bg-brand-red/90"
-            iconClassName="size-4 shrink-0"
-          />
           <DirectMessageButton
             businessInfoId={businessInfoId}
             vendorUserUuid={vendorUserUuid}
@@ -126,4 +104,9 @@ export function FavoriteBusinessCard({
       </div>
     </article>
   )
+}
+
+export function followingBusinessImage(logoUrl: string | null | undefined): string {
+  const resolved = resolveMediaUrl(logoUrl ?? '', '')
+  return resolved || '/images/landing/placeholder-business.png'
 }

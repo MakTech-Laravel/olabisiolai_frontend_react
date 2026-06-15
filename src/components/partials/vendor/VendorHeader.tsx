@@ -62,9 +62,9 @@ function HeaderToolbar() {
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/vendor/dashboard")}>
+              <DropdownMenuItem onClick={() => navigate("/user/profile")}>
                 <LayoutGrid className="mr-2 h-4 w-4" />
-                <span>Dashboard</span>
+                <span>My profile</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -161,7 +161,7 @@ function MobileMenu({
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem asChild className="rounded-lg">
-            <Link to="/user-type" className="flex items-center gap-2 py-2">
+            <Link to="/login/phone" className="flex items-center gap-2 py-2">
               <LogIn className="size-4" aria-hidden />
               Login / Sign Up
             </Link>

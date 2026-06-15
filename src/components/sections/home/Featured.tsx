@@ -78,9 +78,12 @@ export default function Featured() {
                   logoUrl={business.logoUrl}
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
-                  favorited={business.isFavorite}
+                  boostStatus={business.boostStatus}
+                  isFollowing={business.isFollowing}
+                  followersCount={business.followersCount}
                   phone={business.phone}
                   whatsapp={business.whatsapp}
+                  vendorUserId={business.vendorUserId}
                   vendorUserUuid={business.vendorUserUuid}
                   socialAccounts={business.socialAccounts}
                 />

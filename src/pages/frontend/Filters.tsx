@@ -44,6 +44,7 @@ const fallbackBusiness = (
   verified: true,
   memberSince: null,
   verifiedSince: null,
+  responseTimeLabel: null,
   socialAccounts: [],
   isFavorite: false,
   followersCount: 0,
@@ -279,20 +280,24 @@ export default function Filters() {
 
   /** Full list from `GET /locations` so options do not collapse when `location_id` filters API results. */
   const locationOptions = useMemo(() => {
-    const map = new Map<number, string>();
+    const map = new Map<number, (typeof catalogLocations)[number]>();
     for (const opt of catalogLocations) {
-      map.set(opt.id, opt.label);
+      map.set(opt.id, opt);
     }
     for (const business of businesses) {
       if (!business.locationId) continue;
+      if (map.has(business.locationId)) continue;
       const label = (business.locationName || business.location).trim();
-      if (!map.has(business.locationId) && label) {
-        map.set(business.locationId, label);
-      }
+      if (!label) continue;
+      map.set(business.locationId, {
+        id: business.locationId,
+        label,
+        stateName: "",
+        cityName: "",
+        lgaName: "",
+      });
     }
-    return Array.from(map.entries())
-      .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [catalogLocations, businesses]);
 
   const mapPins = useMemo<MapBusinessPin[]>(() => {
@@ -591,10 +596,12 @@ export default function Filters() {
                   logoUrl={business.logoUrl}
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
-                  favorited={business.isFavorite}
+                  boostStatus={business.boostStatus}
+                  isFollowing={business.isFollowing}
                   followersCount={business.followersCount}
                   phone={business.phone}
                   whatsapp={business.whatsapp}
+                  vendorUserId={business.vendorUserId}
                   vendorUserUuid={business.vendorUserUuid}
                   socialAccounts={business.socialAccounts}
                 />

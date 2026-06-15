@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
@@ -13,7 +12,6 @@ import { resolvePostLoginPath, verifyLoginTwoFactor } from '@/features/auth/serv
 import { type AuthRole } from '@/features/auth/types'
 import { type LoginReturnTarget } from '@/features/auth/loginReturn'
 import { navigateAfterLogin } from '@/features/auth/navigateAfterLogin'
-import { fulfillPendingFavoriteSave } from '@/features/auth/pendingFavoriteSave'
 import {
   applyOtpInputAtIndex,
   applyOtpPasteAtIndex,
@@ -30,7 +28,6 @@ type LocationState = {
 
 export default function LoginTwoFactor() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const location = useLocation()
   const state = (location.state ?? {}) as LocationState
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth()
@@ -89,7 +86,6 @@ export default function LoginTwoFactor() {
       const roles = getUserRoles(extractUserFromAuthPayload(loggedInUser))
       const isVendor = roles.includes('vendor') || role === 'vendor'
 
-      await fulfillPendingFavoriteSave(queryClient)
 
       if (isVendor) {
         navigate(await resolvePostLoginPath(loggedInUser, role), { replace: true })

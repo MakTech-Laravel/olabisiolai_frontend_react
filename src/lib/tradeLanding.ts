@@ -43,7 +43,7 @@ export function tradePlanActionPath(
     return vendorSignupPlanPath();
   }
 
-  return "/vendor/choose-your-plan";
+  return "/user/profile";
 }
 
 /**

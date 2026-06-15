@@ -6,7 +6,6 @@ import { RoleGate } from "@/routes/RoleGate";
 import { suspensePage, vendorSuspensePage } from "@/routes/routeUtils";
 
 const VendorDashboardWrapper = lazy(() => import("@/pages/vendor/VendorDashboardWrapper"));
-const VendorDashboard = lazy(() => import("@/pages/vendor/VendorDashboard"));
 const VendorProfile = lazy(() => import("@/pages/vendor/RedirectToOwnerBusinessProfile"));
 const VendorLeads = lazy(() => import("@/pages/vendor/VendorLeads"));
 const VendorVerification = lazy(() => import("@/pages/vendor/VendorVerification"));
@@ -41,7 +40,7 @@ export const vendorRoutes: RouteObject = {
     </RoleGate>
   ),
   children: [
-    { path: "/vendor/dashboard", element: vendorSuspensePage(VendorDashboard) },
+    { path: "/vendor/dashboard", element: vendorSuspensePage(VendorProfile) },
     { path: "/vendor/profile", element: vendorSuspensePage(VendorProfile) },
     { path: "/vendor/leads", element: vendorSuspensePage(VendorLeads) },
     { path: "/vendor/notifications", element: vendorSuspensePage(VendorNotifications) },

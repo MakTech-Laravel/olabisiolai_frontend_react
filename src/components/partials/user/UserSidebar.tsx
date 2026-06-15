@@ -1,9 +1,9 @@
-import { LayoutGrid, Heart, MessageSquare, Settings } from "lucide-react";
+import { LayoutGrid, MessageSquare, Settings, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
-export type UserSidebarActiveKey = "overview" | "favorites" | "messages" | "settings";
+export type UserSidebarActiveKey = "overview" | "following" | "messages" | "settings";
 
 type SidebarItem = {
   label: string;
@@ -13,8 +13,8 @@ type SidebarItem = {
 };
 
 const sidebarItems: SidebarItem[] = [
-  { key: "overview", label: "Overview", to: "/user/dashboard", icon: LayoutGrid },
-  { key: "favorites", label: "Favorites", to: "/user/favorites", icon: Heart },
+  { key: "overview", label: "Overview", to: "/user/profile", icon: LayoutGrid },
+  { key: "following", label: "Following", to: "/user/following", icon: UserPlus },
   { key: "messages", label: "Messages", to: "/user/messages", icon: MessageSquare },
   { key: "settings", label: "Settings & Activity", to: "/user/settings", icon: Settings },
 ];

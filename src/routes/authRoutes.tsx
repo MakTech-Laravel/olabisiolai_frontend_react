@@ -1,11 +1,10 @@
 import { lazy } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 
 import { AuthLayout } from "@/layouts/auth/AuthLayout";
 import { GuestGate } from "@/routes/GuestGate";
 import { suspensePage } from "@/routes/routeUtils";
 
-const UserType = lazy(() => import("@/pages/frontend/auth/UserType"));
 const LoginGoogle = lazy(() => import("@/pages/frontend/auth/LoginGoogle"));
 const LoginPhone = lazy(() => import("@/pages/frontend/auth/LoginPhone"));
 const LoginEmail = lazy(() => import("@/pages/frontend/auth/LoginEmail"));
@@ -22,11 +21,11 @@ export const authRoutes: RouteObject = {
   children: [
     {
       path: "/user-type",
-      element: <GuestGate>{suspensePage(UserType)}</GuestGate>,
+      element: <Navigate to="/login/phone" replace />,
     },
     {
       path: "/login",
-      element: <GuestGate>{suspensePage(UserType)}</GuestGate>,
+      element: <Navigate to="/login/phone" replace />,
     },
     {
       path: "/login/google",

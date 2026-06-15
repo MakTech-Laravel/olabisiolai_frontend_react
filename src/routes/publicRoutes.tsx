@@ -4,7 +4,6 @@ import type { RouteObject } from "react-router-dom";
 
 import { FrontendLayout } from "@/layouts/frontend/FrontendLayout";
 import { suspensePage } from "@/routes/routeUtils";
-import { VendorOnboardingGate } from "@/components/partials/vendor/VendorOnboardingGate";
 import { VendorPremiumPaymentGate } from "@/components/partials/vendor/VendorPremiumPaymentGate";
 import VendorSubscriptionPay from "@/pages/vendor/VendorSubscriptionPay";
 
@@ -36,7 +35,7 @@ const Trade = lazy(() => import("@/pages/frontend/Trade"));
 const Service = lazy(() => import("@/pages/frontend/Service"));
 const DirectMessage = lazy(() => import("@/pages/frontend/DirectMessage"));
 const GiveReview = lazy(() => import("@/pages/frontend/GiveReview"));
-const ChooseYourVendorPlan = lazy(() => import("@/pages/vendor/ChooseYourVendorPlan"));
+const RedirectChooseYourPlan = lazy(() => import("@/pages/vendor/RedirectChooseYourPlan"));
 const RefundPolicy = lazy(() => import("@/pages/frontend/RefundPolicy"));
 const CommunityGuidelines = lazy(() => import("@/pages/frontend/CommunityGuidelines"));
 const VendorAgreement = lazy(() => import("@/pages/frontend/VendorAgreement"));
@@ -93,11 +92,7 @@ export const publicRoutes: RouteObject = {
     },
     {
       path: "/vendor/choose-your-plan",
-      element: (
-        <VendorOnboardingGate onboardingOnly>
-          {suspensePage(ChooseYourVendorPlan)}
-        </VendorOnboardingGate>
-      ),
+      element: suspensePage(RedirectChooseYourPlan),
     },
     {
       path: "/vendor/plan-form",

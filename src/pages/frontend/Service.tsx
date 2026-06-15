@@ -26,9 +26,11 @@ import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { BusinessListingSecondaryActions } from "@/components/business/BusinessListingSecondaryActions";
 import { VendorOwnerInlineEditButton } from "@/components/profile/VendorOwnerInlineEditButton";
 import {
+  VendorOwnerCategoryEditButton,
   VendorOwnerContactEditButton,
   VendorOwnerGalleryEditButton,
   VendorOwnerHoursEditButton,
+  VendorOwnerLocationEditButton,
   VendorOwnerLogoEditButton,
   VendorOwnerServicesEditButton,
 } from "@/components/profile/VendorOwnerFieldEditors";
@@ -44,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
+import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from "@/constants/planLimits";
 import {
   buildBusinessWhatsAppUrl,
   resolveBusinessContactPhone,
@@ -150,6 +153,7 @@ function toPublicBusinessPlaceholder(data: StateBusinessData): PublicBusiness {
     verified: data.verified,
     memberSince: data.memberSince ?? null,
     verifiedSince: data.verifiedSince ?? null,
+    responseTimeLabel: null,
     isFavorite: data.isFavorite ?? false,
     followersCount: data.followersCount ?? 0,
     isFollowing: data.isFollowing ?? false,
@@ -256,6 +260,9 @@ export default function Service() {
     business?.memberSince ?? stateData?.memberSince ?? null;
   const verifiedSince =
     business?.verifiedSince ?? stateData?.verifiedSince ?? null;
+  const responseTimeLabel =
+    business?.responseTimeLabel ?? null;
+  const photoLimit = isPremium ? PREMIUM_PHOTO_LIMIT : FREE_PHOTO_LIMIT;
   const contactPhone = resolveBusinessContactPhone(
     business?.whatsapp ?? stateData?.whatsapp,
     business?.phone ?? stateData?.phone,
@@ -371,15 +378,43 @@ export default function Service() {
                 className="w-full rounded-2xl shadow-md aspect-16/10 sm:aspect-2/1 lg:aspect-[2.65/1]"
               />
               <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5" aria-hidden />
+              {isPremium ? (
+                <span className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)]">
+                  <Crown className="size-3 fill-white" aria-hidden />
+                  Premium
+                </span>
+              ) : null}
+              {coverPhotos.length > 1 ? (
+                <button
+                  type="button"
+                  className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5"
+                  onClick={() => setPhotosOpen(true)}
+                  aria-label={`View all ${coverPhotos.length} photos`}
+                >
+                  {coverPhotos.slice(1, 3).map((src, index) => (
+                    <span
+                      key={`${src}-thumb-${index}`}
+                      className="size-[46px] overflow-hidden rounded-[11px] border-2 border-white shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                    >
+                      <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+                    </span>
+                  ))}
+                  {coverPhotos.length > 3 ? (
+                    <span className="flex size-[46px] items-center justify-center rounded-[11px] border-2 border-white bg-[rgba(15,22,32,0.6)] text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] backdrop-blur-[2px]">
+                      +{coverPhotos.length - 3}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
               {coverPhotos.length > 0 ? (
                 <div className="absolute bottom-4 right-4 z-20 sm:bottom-6 sm:right-6">
                   <Button
                     type="button"
                     variant="outline"
-                    className="pointer-events-auto rounded-xl border-brand bg-ice px-6 py-4 text-base font-medium text-brand shadow-sm hover:bg-ice"
+                    className="pointer-events-auto rounded-full border-0 bg-white px-4 py-2.5 text-sm font-semibold text-brand shadow-md hover:bg-white"
                     onClick={() => setPhotosOpen(true)}
                   >
-                    See all Photos{coverPhotos.length > 1 ? ` (${coverPhotos.length})` : ""}
+                    See all photos{coverPhotos.length > 1 ? ` (${coverPhotos.length})` : ""}
                   </Button>
                 </div>
               ) : null}
@@ -409,6 +444,24 @@ export default function Service() {
                       <h1 className="min-w-0 flex-1 font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
                         {displayName || name}
                       </h1>
+                      {!isOwnerMode && capabilities.follow && vendorUserId ? (
+                        <FollowVendorButton
+                          followingUserId={vendorUserId}
+                          initialFollowing={isFollowingVendor}
+                          listingPath={pathname}
+                          size="compact"
+                          variant="outline"
+                          onFollowChange={(following, count) => {
+                            if (typeof count === "number") {
+                              setFollowersCount(count);
+                            } else {
+                              setFollowersCount((current) =>
+                                following ? current + 1 : Math.max(0, current - 1),
+                              );
+                            }
+                          }}
+                        />
+                      ) : null}
                       {isOwnerMode ? (
                         <>
                           <VendorProfileBoostButton compact />
@@ -429,13 +482,15 @@ export default function Service() {
                         {followersCount === 1 ? "follower" : "followers"}
                       </p>
                     ) : null}
-                    {categoryLabel || subcategoryLabel ? (
-                      <p className="text-base font-semibold leading-relaxed md:text-lg">
+                    {categoryLabel || subcategoryLabel || isOwnerMode ? (
+                      <p className="flex flex-wrap items-center gap-2 text-base font-semibold leading-relaxed md:text-lg">
                         {categoryLabel ? (
                           <>
                             <span className="text-ink">Category: </span>
                             <span className="text-brand">{categoryLabel}</span>
                           </>
+                        ) : isOwnerMode ? (
+                          <span className="text-ink">Category not set</span>
                         ) : null}
                         {categoryLabel && subcategoryLabel ? (
                           <span className="text-ink">, </span>
@@ -445,6 +500,9 @@ export default function Service() {
                             <span className="text-ink">Subcategory: </span>
                             <span className="text-brand">{subcategoryLabel}</span>
                           </>
+                        ) : null}
+                        {isOwnerMode ? (
+                          <VendorOwnerCategoryEditButton onProfileUpdated={refreshBusinessProfile} />
                         ) : null}
                       </p>
                     ) : null}
@@ -477,24 +535,25 @@ export default function Service() {
                     )}
                   </div>
                   <div className="space-y-4 text-base text-ink">
-                    {locationText ? (
+                    {locationText || isOwnerMode ? (
                       <p className="flex items-start gap-1">
                         <MapPin className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
-                        <a
-                          href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-brand underline-offset-2 hover:underline"
-                          aria-label={`Open ${locationText} in Google Maps`}
-                        >
-                          {locationText}
-                        </a>
-                      </p>
-                    ) : null}
-                    {memberSince ? (
-                      <p className="flex items-start gap-1">
-                        <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
-                        Gidira member since {memberSince}
+                        {locationText ? (
+                          <a
+                            href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand underline-offset-2 hover:underline"
+                            aria-label={`Open ${locationText} in Google Maps`}
+                          >
+                            {locationText}
+                          </a>
+                        ) : (
+                          <span className="text-body-secondary">Location not set</span>
+                        )}
+                        {isOwnerMode ? (
+                          <VendorOwnerLocationEditButton onProfileUpdated={refreshBusinessProfile} />
+                        ) : null}
                       </p>
                     ) : null}
                     {verified && verifiedSince ? (
@@ -507,7 +566,7 @@ export default function Service() {
                       <BusinessSocialLinks
                         accounts={socialAccounts}
                         className="pt-1"
-                        title="Connect on social"
+                        title="Find us online"
                       />
                     ) : null}
                   </div>
@@ -544,7 +603,7 @@ export default function Service() {
                       {servicesList.length > 0 ? (
                         <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
                           <CheckCircle2 className="size-6 text-brand" aria-hidden />
-                          <h3 className="text-base font-semibold text-ink">Services offered</h3>
+                          <h3 className="text-base font-semibold text-ink">Products/Services offered</h3>
                           <p className="text-sm leading-5 text-body-secondary">
                             {servicesList.length}{" "}
                             {servicesList.length === 1 ? "service" : "services"} listed on this profile.
@@ -643,16 +702,19 @@ export default function Service() {
                     <BusinessSocialLinks
                       accounts={socialAccounts}
                       className="border-t border-border-light pt-5"
+                      title="Find us online"
                     />
                   ) : null}
-                  <div className="mt-6 space-y-4 border-t border-border-light pt-5">
-                    <p className="flex items-center gap-3 text-sm font-medium text-ink">
-                      <Clock className="size-4 shrink-0 text-stat-muted" aria-hidden />
-                      Usually responds within 15 mins
-                    </p>
-                    <p className="flex items-center gap-3 text-sm font-medium text-ink">
-                      <Shield className="size-5 shrink-0 text-stat-muted" aria-hidden />
-                      Secure transaction protection
+                  <div className="mt-6 rounded-2xl border border-border-light bg-white px-4 shadow-sm">
+                    {memberSince ? (
+                      <p className="flex items-center gap-3 border-b border-border-light py-3.5 text-sm font-medium text-ink">
+                        <CheckCircle2 className="size-5 shrink-0 text-brand" aria-hidden />
+                        Gidira member since {memberSince}
+                      </p>
+                    ) : null}
+                    <p className="flex items-center gap-3 py-3.5 text-sm font-medium text-ink">
+                      <Clock className="size-5 shrink-0 text-brand" aria-hidden />
+                      {responseTimeLabel ?? "Usually responds within 15 minutes"}
                     </p>
                   </div>
                   {businessId !== null ? (
@@ -660,12 +722,8 @@ export default function Service() {
                       businessId={businessId}
                       businessName={name}
                       website={business?.website ?? stateData?.website ?? null}
-                      initialFavorite={
-                        business?.isFavorite ?? stateData?.isFavorite ?? false
-                      }
                       listingPath={pathname}
                       isOwnBusiness={isOwnerMode}
-                      allowSave={capabilities.save}
                       allowReport={capabilities.report}
                     />
                   ) : null}
@@ -703,7 +761,7 @@ export default function Service() {
 
             <section className="border-t border-border-gray pt-6">
               <div className="flex items-center gap-3">
-                <h2 className="font-heading text-xl font-semibold text-ink-heading">Services</h2>
+                <h2 className="font-heading text-xl font-semibold text-ink-heading">Products/Services</h2>
                 {isOwnerMode ? (
                   <VendorOwnerServicesEditButton onProfileUpdated={refreshBusinessProfile} />
                 ) : null}
@@ -719,7 +777,7 @@ export default function Service() {
                 </ul>
               ) : (
                 <p className="mt-4 text-base text-body-secondary">
-                  This business has not listed specific services yet.
+                  This business has not listed specific products or services yet.
                 </p>
               )}
             </section>
@@ -728,12 +786,19 @@ export default function Service() {
 
         {(coverPhotos.length > 0 || isOwnerMode) ? (
           <section className="mt-12 space-y-4 rounded-2xl border border-stat-muted bg-card-ice p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-                Photos
-              </h2>
-              {isOwnerMode ? (
-                <VendorOwnerGalleryEditButton onProfileUpdated={refreshBusinessProfile} />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+                  Photos
+                </h2>
+                {isOwnerMode ? (
+                  <VendorOwnerGalleryEditButton onProfileUpdated={refreshBusinessProfile} />
+                ) : null}
+              </div>
+              {coverPhotos.length > 0 ? (
+                <span className="text-sm font-semibold text-stat-muted">
+                  {coverPhotos.length} of {photoLimit}
+                </span>
               ) : null}
             </div>
             {coverPhotos.length > 0 ? (
@@ -779,6 +844,17 @@ export default function Service() {
                 No photos yet. Use the pencil icon to add gallery images.
               </p>
             )}
+            {isOwnerMode && !isPremium && coverPhotos.length >= FREE_PHOTO_LIMIT ? (
+              <div className="flex items-center gap-3 rounded-[14px] border border-dashed border-[#cfe2fb] bg-white px-4 py-3.5 text-sm text-body-secondary">
+                <Crown className="size-5 shrink-0 text-[#9A6B1F]" aria-hidden />
+                <span>
+                  <span className="font-semibold text-ink">
+                    {coverPhotos.length} of {FREE_PHOTO_LIMIT} photos used.
+                  </span>{" "}
+                  Premium businesses can add up to {PREMIUM_PHOTO_LIMIT}.
+                </span>
+              </div>
+            ) : null}
           </section>
         ) : null}
 

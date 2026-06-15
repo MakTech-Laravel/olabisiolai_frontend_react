@@ -25,7 +25,7 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
   customer: {
     follow: true,
     message: true,
-    save: true,
+    save: false,
     review: true,
     report: true,
     ownerTools: false,
@@ -33,7 +33,7 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
   vendorToVendor: {
     follow: true,
     message: true,
-    save: true,
+    save: false,
     review: false,
     report: true,
     ownerTools: false,

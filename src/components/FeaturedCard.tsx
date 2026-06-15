@@ -1,25 +1,19 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Heart,
   Star,
   MapPin,
   CheckCircle,
+  Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
+import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import { businessProfilePath } from "@/lib/businessProfile";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
-import {
-  getFavoriteErrorMessage,
-  removeFavorite,
-  toggleFavorite,
-} from "@/api/favorites";
 import type { SocialAccount } from "@/features/business/socialAccounts";
-import { showError, showSuccess } from "@/lib/sweetAlert";
+import { cn } from "@/lib/utils";
 
 interface FeaturedCardProps {
   id: number;
@@ -36,9 +30,12 @@ interface FeaturedCardProps {
   logoUrl?: string;
   coverPhotoUrls?: string[];
   verified: boolean;
-  favorited?: boolean;
+  boostStatus?: "active" | "none";
+  isFollowing?: boolean;
+  followersCount?: number;
   phone?: string | null;
   whatsapp?: string | null;
+  vendorUserId?: number | null;
   vendorUserUuid?: string | null;
   socialAccounts?: SocialAccount[];
 }
@@ -58,25 +55,23 @@ export function FeaturedCard({
   logoUrl,
   coverPhotoUrls,
   verified,
-  favorited = false,
+  boostStatus = "none",
+  isFollowing = false,
+  followersCount = 0,
   phone,
   whatsapp,
+  vendorUserId,
   vendorUserUuid,
   socialAccounts,
 }: FeaturedCardProps) {
   const contactPhone = resolveBusinessContactPhone(whatsapp, phone);
-  const queryClient = useQueryClient();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [isFavorited, setIsFavorited] = useState(favorited);
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
-
-  useEffect(() => {
-    setIsFavorited(favorited);
-  }, [favorited]);
+  const listingPath = businessProfilePath(id);
+  const isBoosted = boostStatus === "active";
 
   const goToService = () => {
-    navigate(businessProfilePath(id), {
+    navigate(listingPath, {
       state: {
         from: pathname,
         business: {
@@ -94,7 +89,6 @@ export function FeaturedCard({
           logoUrl: logoUrl ?? image,
           coverPhotoUrls: coverPhotoUrls ?? (image ? [image] : []),
           verified,
-          isFavorite: isFavorited,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
@@ -102,37 +96,6 @@ export function FeaturedCard({
         },
       },
     });
-  };
-
-  const handleFavorite = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (favoriteLoading) return;
-
-    setFavoriteLoading(true);
-    try {
-      if (isFavorited) {
-        await removeFavorite(id);
-        setIsFavorited(false);
-      } else {
-        const result = await toggleFavorite(id);
-        setIsFavorited(result.favorited);
-        showSuccess(
-          result.favorited ? "Saved to your favorites" : "Removed from saved listings",
-        );
-      }
-      await queryClient.invalidateQueries({ queryKey: ["user-favorites"] });
-      await queryClient.invalidateQueries({ queryKey: ["businesses", "home"] });
-      await queryClient.invalidateQueries({ queryKey: ["business", id] });
-    } catch (error) {
-      showError(
-        getFavoriteErrorMessage(
-          error,
-          "Could not update saved listing. Please try again.",
-        ),
-      );
-    } finally {
-      setFavoriteLoading(false);
-    }
   };
 
   return (
@@ -146,7 +109,10 @@ export function FeaturedCard({
           goToService();
         }
       }}
-      className="bg-card rounded-lg shadow-md overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 h-130 flex flex-col"
+      className={cn(
+        "bg-card rounded-lg shadow-md overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 h-130 flex flex-col",
+        isBoosted && "ring-2 ring-amber-400/60",
+      )}
     >
       <div className="relative">
         <img
@@ -155,32 +121,43 @@ export function FeaturedCard({
           className="w-full h-48 object-cover"
         />
 
-        {verified && (
-          <div className="absolute top-4 left-4 bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-            <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
-          </div>
-        )}
-        <button
-          onClick={handleFavorite}
-          disabled={favoriteLoading}
-          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart
-            className={`w-5 h-5 transition-colors duration-200 ${isFavorited
-              ? "fill-brand-red text-brand-red"
-              : "text-gray-600 hover:text-brand-red"
-              }`}
-          />
-        </button>
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+          {verified ? (
+            <div className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center">
+              <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
+            </div>
+          ) : null}
+          {isBoosted ? (
+            <div className="bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center">
+              <Zap className="w-3 h-3 mr-1" /> BOOSTED
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="p-6 flex flex-col flex-1">
-        <h3 className="text-lg font-inter font-semibold text-text-primary mb-1">
-          <BusinessProfileLink businessId={id} businessName={name} />
-        </h3>
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <h3 className="text-lg font-inter font-semibold text-text-primary">
+            <BusinessProfileLink businessId={id} businessName={name} />
+          </h3>
+          {vendorUserId ? (
+            <FollowVendorButton
+              followingUserId={vendorUserId}
+              initialFollowing={isFollowing}
+              listingPath={listingPath}
+              size="compact"
+              variant="outline"
+            />
+          ) : null}
+        </div>
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
         </p>
+        {followersCount > 0 ? (
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            {followersCount.toLocaleString()}{" "}
+            {followersCount === 1 ? "follower" : "followers"}
+          </p>
+        ) : null}
         <div className="flex items-center mb-2">
           <MapPin className="w-4 h-4 mr-1 text-text-secondary" />
           <span className="text-sm text-text-secondary font-inter font-medium wrap-break-word">

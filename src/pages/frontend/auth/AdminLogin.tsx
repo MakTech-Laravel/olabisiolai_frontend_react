@@ -107,7 +107,7 @@ export default function AdminLogin() {
           </form>
           <div className="text-center text-sm">
             Not an admin?{" "}
-            <Link to="/user-type" className="text-primary hover:underline">
+            <Link to="/login/phone" className="text-primary hover:underline">
               Go to user login
             </Link>
           </div>

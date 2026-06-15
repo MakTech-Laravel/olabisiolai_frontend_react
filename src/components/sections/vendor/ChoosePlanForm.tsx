@@ -320,7 +320,7 @@ export default function ChoosePlanForm() {
         return;
       }
 
-      navigate("/vendor/dashboard", { replace: true });
+      navigate("/user/profile", { replace: true });
     },
     onError: (error: unknown) => {
       clearBoostCheckoutSelection();
@@ -946,7 +946,7 @@ export default function ChoosePlanForm() {
               type="button"
               variant="outline"
               className="border-border bg-card font-inter sm:min-w-[120px]"
-              onClick={() => navigate("/vendor/dashboard")}
+              onClick={() => navigate("/user/profile")}
               disabled={createBusinessMutation.isPending}
             >
               Cancel

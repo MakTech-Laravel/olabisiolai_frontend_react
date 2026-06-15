@@ -27,9 +27,10 @@ function assertModeSuccess(body: LaravelEnvelope<ProfileModeSwitchData> | undefi
 export async function switchToVendorMode(): Promise<ProfileModeSwitchData> {
   const response = await request.post<LaravelEnvelope<ProfileModeSwitchData>>('/user/mode/vendor')
 
-  return assertModeSuccess(response.data, 'Could not switch to vendor mode. Please try again.')
+  return assertModeSuccess(response.data, 'Could not create your business page. Please try again.')
 }
 
+/** @deprecated Customer mode switching is no longer supported. */
 export async function switchToCustomerMode(): Promise<ProfileModeSwitchData> {
   const response = await request.post<LaravelEnvelope<ProfileModeSwitchData>>('/user/mode/customer')
 
