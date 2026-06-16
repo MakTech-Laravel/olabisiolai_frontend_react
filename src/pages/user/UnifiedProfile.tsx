@@ -16,7 +16,6 @@ import {
 } from '@/components/profile/hub/ProfileIdentitySection'
 import { ProfileHubFooter } from '@/components/profile/hub/ProfileHubFooter'
 import { ProfileHubReferralCard } from '@/components/profile/hub/ProfileHubReferralCard'
-import { ProfileHubWalletCard } from '@/components/profile/hub/ProfileHubWalletCard'
 import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
 import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
@@ -193,10 +192,9 @@ export default function UnifiedProfile() {
 
               <ProfilePersonalTools reviewsCount={reviewsCount} />
 
-              {/* <div className="space-y-3 px-[18px] lg:px-0">
-                <ProfileHubWalletCard />
+              <div className="space-y-3 px-[18px] lg:px-0">
                 <ProfileHubReferralCard />
-              </div> */}
+              </div>
 
               <ProfileBusinessSection
                 businesses={hubBusinesses}

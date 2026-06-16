@@ -74,7 +74,10 @@ export default function DocumentUpload() {
 
       <Header />
       <File uploadedFiles={uploadedFiles} onFilesChange={setUploadedFiles} />
-      <VerifyIdentity uploadedFiles={uploadedFiles} />
+      <VerifyIdentity
+        uploadedFiles={uploadedFiles}
+        paymentId={status?.consumable_payment_id ?? null}
+      />
     </div>
   );
 }

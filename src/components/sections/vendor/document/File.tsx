@@ -1,5 +1,6 @@
 import { UploadCloudIcon, X, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import { showError } from "@/lib/sweetAlert";
 
 type FileProps = {
   uploadedFiles: Record<string, File[]>;
@@ -13,10 +14,58 @@ export default function File({ uploadedFiles, onFilesChange }: FileProps) {
     "Address Proof": [],
   });
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({
+    "Business Registration": null,
+    "Identity Proof": null,
+    "Address Proof": null,
+  });
+
+  const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5120 KB (matches backend validation)
+  const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+
+  function formatBytes(bytes: number): string {
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)}MB`;
+  }
+
+  function validatePickedFiles(title: string, picked: File[]): { accepted: File[]; rejectedMessage: string | null } {
+    const rejected: string[] = [];
+    const accepted: File[] = [];
+
+    for (const file of picked) {
+      const mimeOk = ALLOWED_MIME_TYPES.has(file.type);
+      const sizeOk = file.size <= MAX_FILE_BYTES;
+
+      if (!mimeOk) {
+        rejected.push(`${file.name} (unsupported type)`);
+        continue;
+      }
+
+      if (!sizeOk) {
+        rejected.push(`${file.name} (${formatBytes(file.size)} > 5.0MB)`);
+        continue;
+      }
+
+      accepted.push(file);
+    }
+
+    if (rejected.length === 0) return { accepted, rejectedMessage: null };
+    const msg = `Some files were skipped for "${title}": ${rejected.join(", ")}. Max 5MB. PDF/JPG/PNG only.`;
+    return { accepted, rejectedMessage: msg };
+  }
+
   const handleFileUpload = (title: string, files: FileList | null) => {
     if (!files) return;
 
-    const newFiles = Array.from(files);
+    const picked = Array.from(files);
+    const { accepted: newFiles, rejectedMessage } = validatePickedFiles(title, picked);
+
+    setFieldErrors((prev) => ({ ...prev, [title]: rejectedMessage }));
+    if (rejectedMessage) {
+      showError(rejectedMessage);
+    }
+    if (newFiles.length === 0) return;
+
     const newUrls = newFiles.map((file) =>
       file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
     );
@@ -88,7 +137,11 @@ export default function File({ uploadedFiles, onFilesChange }: FileProps) {
               <UploadCloudIcon className="h-7 w-7 text-blue-500" />
               <span className="text-sm font-medium text-blue-500">Click to upload images</span>
               <span className="text-center text-xs leading-snug text-gray-400">{hint}</span>
+              <span className="text-center text-[11px] text-gray-400">Max 5MB · PDF / JPG / PNG</span>
             </div>
+            {fieldErrors[title] ? (
+              <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors[title]}</p>
+            ) : null}
 
             {(uploadedFiles[title] ?? []).length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2">

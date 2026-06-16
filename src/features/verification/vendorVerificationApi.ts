@@ -64,6 +64,18 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+function readScopedBusinessId(): number | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const raw = new URLSearchParams(window.location.search).get('business_id');
+  const id = raw ? Number(raw) : NaN;
+  return Number.isFinite(id) && id > 0 ? id : undefined;
+}
+
+function scopedBusinessParams(): { business_id?: number } {
+  const businessId = readScopedBusinessId();
+  return businessId ? { business_id: businessId } : {};
+}
+
 export async function fetchVerificationPackages(): Promise<{
   currency: string;
   packages: VerificationPackage[];
@@ -91,7 +103,7 @@ export async function initVerificationPayment(
 ): Promise<VerificationPayment> {
   const res = await request.post<ApiEnvelope<{ payment: VerificationPayment }>>(
     '/vendor/verification/payment/init',
-    { package_id: packageId, gateway },
+    { package_id: packageId, gateway, ...scopedBusinessParams() },
   );
   const data = assertApiSuccess(res.data);
   return data.payment;
@@ -118,6 +130,7 @@ export async function confirmVerificationPayment(
     payment_id: paymentId,
     gateway_transaction_id: gatewayTransactionId,
     gateway,
+    ...scopedBusinessParams(),
   });
   const data = assertApiSuccess(res.data);
   return {
@@ -140,6 +153,10 @@ export async function applyForVerification(
 ): Promise<{ verification_status: string }> {
   const formData = new FormData();
   formData.append('payment_id', String(paymentId));
+  const businessId = readScopedBusinessId();
+  if (businessId) {
+    formData.append('business_id', String(businessId));
+  }
 
   documents.forEach((doc, index) => {
     formData.append(`documents[${index}][document_type]`, doc.document_type);
@@ -154,12 +171,15 @@ export async function applyForVerification(
     '/vendor/verification/apply',
     formData,
   );
-  return res.data.data;
+  const data = assertApiSuccess(res.data);
+  return data;
 }
 
 export async function fetchVerificationStatus(): Promise<VerificationStatusPayload> {
-  const res = await request.get<ApiEnvelope<VerificationStatusPayload>>('/vendor/verification/status');
-  return res.data.data;
+  const res = await request.get<ApiEnvelope<VerificationStatusPayload>>('/vendor/verification/status', {
+    params: scopedBusinessParams(),
+  });
+  return assertApiSuccess(res.data);
 }
 
 const PAYMENT_ID_KEY = 'verificationPaymentId';

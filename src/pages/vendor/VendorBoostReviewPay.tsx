@@ -522,7 +522,6 @@ export default function VendorBoostReviewPayPage() {
 
       const payment = await initVerificationPayment(packageId, selectedGateway);
       setCheckoutPayment(payment);
-      sessionStorage.setItem("verificationPaymentId", String(payment.id));
       if (selectedGateway === "flutterwave") {
         setShouldOpenFlutterwave(true);
       } else {

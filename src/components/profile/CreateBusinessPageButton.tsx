@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Loader2, Store } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { fetchUserBusinesses, createUserBusiness } from '@/api/userBusinesses'
 import { getProfileModeErrorMessage, switchToVendorMode } from '@/api/userMode'
 import { useAuth } from '@/auth/useAuth'
-import { businessProfilePath } from '@/lib/businessProfile'
 import { Button } from '@/components/ui/button'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -33,7 +32,6 @@ export function CreateBusinessPageButton({
 
   if (!user) return null
 
-  const vendorBusiness = businessesQuery.data?.[0]
   const businessCount = businessesQuery.data?.length ?? 0
   const hasBusiness = businessCount > 0
   async function handleCreate() {
@@ -64,23 +62,8 @@ export function CreateBusinessPageButton({
     }
   }
 
-  if (hasBusiness && vendorBusiness) {
-    return (
-      <Button
-        asChild
-        variant="default"
-        className={cn(
-          'gap-2',
-          fullWidth && 'h-12 w-full rounded-xl text-base font-medium',
-          className,
-        )}
-      >
-        <Link to={businessProfilePath(vendorBusiness.id)}>
-          <Store className="size-5 shrink-0" aria-hidden />
-          View business page
-        </Link>
-      </Button>
-    )
+  if (hasBusiness) {
+    return null
   }
 
   if (businessesQuery.isLoading) {

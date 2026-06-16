@@ -2,27 +2,36 @@ import { useState } from "react";
 import { CreditCard, Lock, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { showError, showSuccess } from "@/lib/sweetAlert";
+import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 
 import { applyForVerification } from "@/features/verification/vendorVerificationApi";
-import { DOC_TITLE_TO_TYPE } from "@/features/verification/verificationDocuments";
-
-const PAYMENT_ID_KEY = "verificationPaymentId";
+import {
+  DOC_TITLE_TO_TYPE,
+  REQUIRED_VERIFICATION_DOCUMENTS,
+} from "@/features/verification/verificationDocuments";
 
 export default function VerifyIdentity({
   uploadedFiles,
+  paymentId,
 }: {
   uploadedFiles: Record<string, File[]>;
+  paymentId: number | null;
 }) {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    const paymentIdRaw = sessionStorage.getItem(PAYMENT_ID_KEY);
-    const paymentId = paymentIdRaw ? Number(paymentIdRaw) : NaN;
-
-    if (!paymentId || Number.isNaN(paymentId)) {
+    if (!paymentId) {
       showError("Complete payment before submitting documents.");
       navigate("/vendor/verification");
+      return;
+    }
+
+    const missingRequired = REQUIRED_VERIFICATION_DOCUMENTS.filter(
+      (doc) => (uploadedFiles[doc.title] ?? []).length === 0,
+    );
+    if (missingRequired.length > 0) {
+      showError(`Upload all required documents: ${missingRequired.map((doc) => doc.title).join(", ")}.`);
       return;
     }
 
@@ -42,13 +51,13 @@ export default function VerifyIdentity({
     try {
       setSubmitting(true);
       await applyForVerification(paymentId, documents);
-      sessionStorage.removeItem(PAYMENT_ID_KEY);
+      sessionStorage.removeItem("verificationPaymentId");
       sessionStorage.removeItem("verificationPlanId");
       sessionStorage.removeItem("paymentSource");
       showSuccess("Verification request submitted.");
       navigate("/vendor/after-verification");
-    } catch {
-      showError("Could not submit verification request.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not submit verification request."));
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +96,7 @@ export default function VerifyIdentity({
       <div className="my-10 flex justify-center">
         <button
           type="button"
-          disabled={submitting}
+          disabled={submitting || !paymentId}
           onClick={() => void handleSubmit()}
           className="w-full rounded-lg bg-red-500 px-6 py-3 font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
         >

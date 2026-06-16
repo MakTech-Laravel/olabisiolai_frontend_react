@@ -6,19 +6,16 @@ import {
   ChevronRight,
   LogOut,
   MessageSquareQuote,
-  Share2,
   ShieldAlert,
   Star,
   UserCog,
 } from 'lucide-react'
 
-import { fetchVendorBusinessProfile, VendorBusinessNotFoundError } from '@/features/business/vendorBusinessProfileApi'
-import { shareGidiraApp, shareInviteVendor, shareProfileUrl, appOrigin } from '@/features/share/appShare'
+import { fetchUserBusinesses, createUserBusiness } from '@/api/userBusinesses'
 import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 import { CreateBusinessPageButton } from '@/components/profile/CreateBusinessPageButton'
-import { businessProfilePath } from '@/lib/businessProfile'
 import { cn } from '@/lib/utils'
 
 type HubRowProps = {
@@ -93,25 +90,14 @@ export default function SettingsHub() {
   const activeMode = resolveActiveProfileMode(user)
   const isVendorMode = activeMode === 'vendor'
 
-  const vendorBusinessQuery = useQuery({
-    queryKey: ['vendor', 'business', 'settings-hub'],
-    queryFn: fetchVendorBusinessProfile,
-    enabled: Boolean(user?.id) && isVendorMode,
+  const businessesQuery = useQuery({
+    queryKey: ['user', 'businesses', 'settings-hub'],
+    queryFn: fetchUserBusinesses,
+    enabled: Boolean(user?.id),
     retry: false,
   })
 
-  const vendorBusiness =
-    vendorBusinessQuery.data ??
-    (vendorBusinessQuery.error instanceof VendorBusinessNotFoundError ? null : undefined)
-
-  async function handleShareProfile() {
-    if (isVendorMode && vendorBusiness) {
-      await shareProfileUrl(`${appOrigin()}${businessProfilePath(vendorBusiness.id)}`, 'business')
-      return
-    }
-
-    await shareProfileUrl(`${appOrigin()}/user/profile`)
-  }
+  const hasBusinessPage = (businessesQuery.data?.length ?? 0) > 0
 
   return (
     <div className="container mx-auto min-h-screen text-ink">
@@ -128,7 +114,7 @@ export default function SettingsHub() {
         <header className="mb-6">
           <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">Settings & Activity</h1>
           <p className="mt-1 text-sm text-body-secondary">
-            Account controls, vendor reviews, and sharing.
+            Account controls, vendor reviews, and help.
           </p>
         </header>
 
@@ -158,9 +144,11 @@ export default function SettingsHub() {
               description="Password, notifications, verification"
               to="/user/settings/account"
             />
-            <div className="px-4 py-3">
-              <CreateBusinessPageButton fullWidth />
-            </div>
+            {!hasBusinessPage ? (
+              <div className="px-4 py-3">
+                <CreateBusinessPageButton fullWidth />
+              </div>
+            ) : null}
             <HubRow
               icon={<LogOut className="size-4" />}
               label="Logout"
@@ -171,7 +159,7 @@ export default function SettingsHub() {
             />
           </HubSection>
 
-          <HubSection title="Reports & Sharing">
+          <HubSection title="Reports & help">
             <HubRow
               icon={<ShieldAlert className="size-4" />}
               label="Report a Vendor"
@@ -189,28 +177,6 @@ export default function SettingsHub() {
               label="Report a Problem"
               description="Technical issues or general complaints"
               to="/user/report?type=problem"
-            />
-            <HubRow
-              icon={<Share2 className="size-4" />}
-              label="Share Gidira App"
-              onClick={() => {
-                void shareGidiraApp()
-              }}
-            />
-            <HubRow
-              icon={<Share2 className="size-4" />}
-              label="Invite a Vendor"
-              onClick={() => {
-                void shareInviteVendor()
-              }}
-            />
-            <HubRow
-              icon={<Share2 className="size-4" />}
-              label="Share My Profile"
-              description={isVendorMode ? 'Share your public business listing' : 'Share your Gidira profile link'}
-              onClick={() => {
-                void handleShareProfile()
-              }}
             />
             <HubRow
               icon={<BookOpen className="size-4" />}
