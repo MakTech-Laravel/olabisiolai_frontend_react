@@ -192,9 +192,9 @@ export default function UnifiedProfile() {
 
               <ProfilePersonalTools reviewsCount={reviewsCount} />
 
-              <div className="space-y-3 px-[18px] lg:px-0">
+              {/* <div className="space-y-3 px-[18px] lg:px-0">
                 <ProfileHubReferralCard />
-              </div>
+              </div> */}
 
               <ProfileBusinessSection
                 businesses={hubBusinesses}
