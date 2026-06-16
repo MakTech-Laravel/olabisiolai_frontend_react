@@ -15,7 +15,6 @@ import {
   ProfileIdentitySection,
 } from '@/components/profile/hub/ProfileIdentitySection'
 import { ProfileHubFooter } from '@/components/profile/hub/ProfileHubFooter'
-import { ProfileHubReferralCard } from '@/components/profile/hub/ProfileHubReferralCard'
 import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
 import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'

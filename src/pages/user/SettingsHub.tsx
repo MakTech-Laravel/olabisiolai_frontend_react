@@ -11,7 +11,7 @@ import {
   UserCog,
 } from 'lucide-react'
 
-import { fetchUserBusinesses, createUserBusiness } from '@/api/userBusinesses'
+import { fetchUserBusinesses } from '@/api/userBusinesses'
 import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
