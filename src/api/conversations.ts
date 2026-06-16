@@ -41,13 +41,19 @@ function conversationApiErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
-export async function createConversation(participantUuids: string[]): Promise<Conversation> {
+export async function createConversation(
+  participantUuids: string[],
+  businessInfoId?: number,
+): Promise<Conversation> {
   try {
     const res = await api.post<ApiResponse<Record<string, unknown>>>(
       messagingPath('/conversations'),
       {
         type: 'direct',
         participants: participantUuids.map((u) => u.trim().toUpperCase()),
+        ...(businessInfoId != null && businessInfoId > 0
+          ? { business_info_id: businessInfoId }
+          : {}),
       },
     )
     const body = res.data

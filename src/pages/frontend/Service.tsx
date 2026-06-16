@@ -9,43 +9,15 @@ import {
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import { fetchBusinessReviews } from "@/features/reviews/publicReviewApi";
 import { resolveBusinessIdFromSlug } from "@/lib/encryptId";
-import {
-  ArrowLeft,
-  BadgeCheck,
-  CheckCircle2,
-  Clock,
-  Crown,
-  MapPin,
-  Shield,
-  Sparkles,
-  Star,
-} from "lucide-react";
 
-import { DirectMessageButton } from "@/components/business/DirectMessageButton";
-import { FollowVendorButton } from "@/components/business/FollowVendorButton";
-import { BusinessListingSecondaryActions } from "@/components/business/BusinessListingSecondaryActions";
-import { VendorOwnerInlineEditButton } from "@/components/profile/VendorOwnerInlineEditButton";
-import {
-  VendorOwnerCategoryEditButton,
-  VendorOwnerContactEditButton,
-  VendorOwnerGalleryEditButton,
-  VendorOwnerHoursEditButton,
-  VendorOwnerLocationEditButton,
-  VendorOwnerLogoEditButton,
-  VendorOwnerServicesEditButton,
-} from "@/components/profile/VendorOwnerFieldEditors";
-import { VendorOwnerToolbar } from "@/components/profile/VendorOwnerToolbar";
-import { VendorProfileBoostButton } from "@/components/profile/VendorProfileBoostButton";
-import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
+import { BusinessPublicPageView } from "@/components/business/BusinessPublicPageView";
+import { BusinessOwnerEditView } from "@/components/profile/BusinessOwnerEditView";
+import { VendorOwnerEditShell, type OwnerPageMode } from "@/components/profile/VendorOwnerEditShell";
 import { useProfileViewMode } from "@/features/profile/useProfileViewMode";
-import { BusinessHoursDisplay } from "@/components/business/BusinessHoursDisplay";
 import { ServicePhotosModal } from "@/components/Modal/ServicePhotosModal";
-import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { Button } from "@/components/ui/button";
 import { container } from "@/lib/container";
-import { cn } from "@/lib/utils";
-import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from "@/constants/planLimits";
 import {
   buildBusinessWhatsAppUrl,
@@ -54,56 +26,6 @@ import {
 
 const FALLBACK_COVER = "/images/service/hero.jpg";
 const FALLBACK_LOGO = "/images/service/avatar.jpg";
-
-function AspectCover({ src, className }: { src: string; className?: string }) {
-  return (
-    <div className={cn("relative isolate overflow-hidden bg-border-light", className)}>
-      <img
-        src={src}
-        alt=""
-        className="absolute inset-0 block size-full object-cover"
-        loading="lazy"
-        decoding="async"
-      />
-    </div>
-  );
-}
-
-function StarRow({ rating = 0, className }: { rating?: number; className?: string }) {
-  const clamped = Math.min(5, Math.max(0, rating));
-  return (
-    <div
-      className={cn("flex items-center gap-0.5", className)}
-      aria-label={`${clamped.toFixed(1)} out of 5 stars`}
-    >
-      {[1, 2, 3, 4, 5].map((i) => {
-        const diff = clamped - (i - 1);
-        if (diff >= 1) {
-          return (
-            <Star key={i} className="size-5 shrink-0 fill-brand-red text-brand-red" aria-hidden />
-          );
-        }
-        if (diff > 0) {
-          const pct = Math.round(diff * 100);
-          return (
-            <span key={i} className="relative inline-flex size-5 shrink-0">
-              <Star className="size-5 fill-brand-red/20 text-brand-red/40" aria-hidden />
-              <span
-                className="absolute left-0 top-0 h-full overflow-hidden"
-                style={{ width: `${pct}%` }}
-              >
-                <Star className="size-5 fill-brand-red text-brand-red" aria-hidden />
-              </span>
-            </span>
-          );
-        }
-        return (
-          <Star key={i} className="size-5 shrink-0 fill-brand-red/20 text-brand-red/40" aria-hidden />
-        );
-      })}
-    </div>
-  );
-}
 
 interface StateBusinessData {
   id: number;
@@ -167,6 +89,9 @@ function toPublicBusinessPlaceholder(data: StateBusinessData): PublicBusiness {
     socialAccounts: data.socialAccounts ?? [],
     businessHours: [],
     businessHoursDisplay: [],
+    catalogItems: [],
+    catalogLocked: true,
+    catalogCount: 0,
   };
 }
 
@@ -181,6 +106,7 @@ export default function Service() {
   const [followersCount, setFollowersCount] = useState(0);
   const [displayName, setDisplayName] = useState("");
   const [displayDescription, setDisplayDescription] = useState("");
+  const [ownerPageMode, setOwnerPageMode] = useState<OwnerPageMode>("edit");
   const reviewsRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const { pathname } = location;
@@ -189,14 +115,14 @@ export default function Service() {
   const { requireAuthNavigate, isAuthReady } = useRequireAuthNavigate();
   const queryClient = useQueryClient();
 
+  const businessId = slug ? resolveBusinessIdFromSlug(slug) : null;
+  const stateData = routeState?.business ?? null;
+
   const refreshBusinessProfile = () => {
     if (businessId !== null) {
       void queryClient.invalidateQueries({ queryKey: ["business", businessId] });
     }
   };
-
-  const businessId = slug ? resolveBusinessIdFromSlug(slug) : null;
-  const stateData = routeState?.business ?? null;
 
   const {
     data: business,
@@ -225,6 +151,7 @@ export default function Service() {
 
   const name = business?.name ?? stateData?.name ?? "";
   const categoryLabel = business?.category ?? stateData?.category ?? "";
+  const categoryId = business?.categoryId ?? null;
   const subcategoryLabel = useMemo(() => {
     if (business) {
       return resolvePublicBusinessSubcategory(business);
@@ -234,7 +161,7 @@ export default function Service() {
   }, [business, stateData?.subcategory]);
   const boostActive = business?.boostStatus === "active";
   const isPremium = business?.isPremium ?? false;
-  const description = business?.description ?? stateData?.description ?? "";
+  const description = displayDescription || business?.description || stateData?.description || "";
 
   useEffect(() => {
     if (name) {
@@ -244,24 +171,15 @@ export default function Service() {
       document.title = "Gidira";
     };
   }, [name]);
+
   const rating = business?.rating ?? stateData?.rating ?? 0;
   const reviewCount = business?.reviews ?? stateData?.reviews ?? 0;
-  const ratingLabel =
-    rating > 0
-      ? `${Number.isInteger(rating) ? rating : rating.toFixed(1)} (${reviewCount} Reviews)`
-      : reviewCount > 0
-        ? `${reviewCount} ${reviewCount === 1 ? "Review" : "Reviews"}`
-        : "No reviews yet";
   const locationText = business?.location ?? stateData?.location ?? "";
   const latitude = business?.latitude ?? stateData?.latitude ?? null;
   const longitude = business?.longitude ?? stateData?.longitude ?? null;
   const verified = business?.verified ?? stateData?.verified ?? false;
-  const memberSince =
-    business?.memberSince ?? stateData?.memberSince ?? null;
-  const verifiedSince =
-    business?.verifiedSince ?? stateData?.verifiedSince ?? null;
-  const responseTimeLabel =
-    business?.responseTimeLabel ?? null;
+  const memberSince = business?.memberSince ?? stateData?.memberSince ?? null;
+  const responseTimeLabel = business?.responseTimeLabel ?? null;
   const photoLimit = isPremium ? PREMIUM_PHOTO_LIMIT : FREE_PHOTO_LIMIT;
   const contactPhone = resolveBusinessContactPhone(
     business?.whatsapp ?? stateData?.whatsapp,
@@ -293,12 +211,10 @@ export default function Service() {
     FALLBACK_LOGO;
 
   const heroCover = coverPhotos[0] ?? FALLBACK_COVER;
-  const vendorUserUuid =
-    business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
+  const vendorUserUuid = business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
   const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
   const { mode: profileMode, capabilities } = useProfileViewMode(vendorUserId);
   const isOwnerMode = profileMode === "vendorOwner";
-
   const isFollowingVendor = business?.isFollowing ?? stateData?.isFollowing ?? false;
 
   useEffect(() => {
@@ -306,19 +222,18 @@ export default function Service() {
   }, [name]);
 
   useEffect(() => {
-    setDisplayDescription(description);
-  }, [description]);
+    setDisplayDescription(business?.description ?? stateData?.description ?? "");
+  }, [business?.description, stateData?.description]);
 
   useEffect(() => {
     setFollowersCount(business?.followersCount ?? stateData?.followersCount ?? 0);
   }, [business?.followersCount, stateData?.followersCount]);
 
-  const servicesList =
-    business?.servicesOffered?.length
-      ? business.servicesOffered
-      : stateData?.servicesOffered?.length
-        ? stateData.servicesOffered
-        : [];
+  const catalogItems = business?.catalogItems ?? [];
+  const catalogLocked = business?.catalogLocked ?? !isPremium;
+  const showOwnerEdit = isOwnerMode && ownerPageMode === "edit";
+  const showCustomerActions = !isOwnerMode || ownerPageMode === "preview";
+  const showCatalogSection = isPremium || isOwnerMode;
 
   const profileUnavailable =
     businessId === null || (businessFetched && !businessFetching && !business && !stateData);
@@ -333,7 +248,7 @@ export default function Service() {
   if (profileUnavailable) {
     return (
       <div className="bg-bg-section font-sans text-ink">
-        <div className={cn(container, "py-16 text-center")}>
+        <div className={`${container} py-16 text-center`}>
           <h1 className="font-heading text-2xl font-bold text-ink">Business not found</h1>
           <p className="mt-2 text-body-secondary">
             {businessError
@@ -350,641 +265,139 @@ export default function Service() {
 
   return (
     <div className="bg-bg-section font-sans text-ink">
-      <div className={cn(container, "pb-16 pt-6 md:pt-10")}>
-        <Link
-          to={routeState?.from ?? "/filters"}
-          className="inline-flex items-center gap-2 text-base font-normal text-accent-foreground hover:underline"
+      {isOwnerMode ? (
+        <VendorOwnerEditShell
+          businessName={displayName || name}
+          mode={ownerPageMode}
+          onModeChange={setOwnerPageMode}
         >
-          <ArrowLeft className="size-6 shrink-0" aria-hidden />
-          Back
-        </Link>
-
-        <div className="mt-6 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-          <div className="min-w-0 flex-1 space-y-10">
-            {isOwnerMode && businessId !== null ? (
-              <VendorOwnerToolbar businessId={businessId} />
-            ) : null}
-            <div className="relative">
-              {isOwnerMode ? (
-                <div className="absolute right-4 top-4 z-30">
-                  <VendorOwnerGalleryEditButton
-                    label="Cover photos"
-                    onProfileUpdated={refreshBusinessProfile}
-                  />
-                </div>
-              ) : null}
-              <AspectCover
-                src={heroCover}
-                className="w-full rounded-2xl shadow-md aspect-16/10 sm:aspect-2/1 lg:aspect-[2.65/1]"
-              />
-              <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/5" aria-hidden />
-              {isPremium ? (
-                <span className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)]">
-                  <Crown className="size-3 fill-white" aria-hidden />
-                  Premium
-                </span>
-              ) : null}
-              {coverPhotos.length > 1 ? (
-                <button
-                  type="button"
-                  className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5"
-                  onClick={() => setPhotosOpen(true)}
-                  aria-label={`View all ${coverPhotos.length} photos`}
-                >
-                  {coverPhotos.slice(1, 3).map((src, index) => (
-                    <span
-                      key={`${src}-thumb-${index}`}
-                      className="size-[46px] overflow-hidden rounded-[11px] border-2 border-white shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
-                    >
-                      <img src={src} alt="" className="size-full object-cover" loading="lazy" />
-                    </span>
-                  ))}
-                  {coverPhotos.length > 3 ? (
-                    <span className="flex size-[46px] items-center justify-center rounded-[11px] border-2 border-white bg-[rgba(15,22,32,0.6)] text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] backdrop-blur-[2px]">
-                      +{coverPhotos.length - 3}
-                    </span>
-                  ) : null}
-                </button>
-              ) : null}
-              {coverPhotos.length > 0 ? (
-                <div className="absolute bottom-4 right-4 z-20 sm:bottom-6 sm:right-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="pointer-events-auto rounded-full border-0 bg-white px-4 py-2.5 text-sm font-semibold text-brand shadow-md hover:bg-white"
-                    onClick={() => setPhotosOpen(true)}
-                  >
-                    See all photos{coverPhotos.length > 1 ? ` (${coverPhotos.length})` : ""}
-                  </Button>
-                </div>
-              ) : null}
-              <div className="absolute -bottom-1 left-4 z-20 overflow-visible sm:left-8 md:left-12">
-                <div className="relative overflow-hidden rounded-xl border border-stat-muted bg-card shadow-sm">
-                  {isOwnerMode ? (
-                    <div className="absolute -right-2 -top-2 z-30">
-                      <VendorOwnerLogoEditButton
-                        label="Business logo"
-                        onProfileUpdated={refreshBusinessProfile}
-                      />
-                    </div>
-                  ) : null}
-                  <AspectCover
-                    src={logoUrl}
-                    className="size-20 sm:size-24 md:h-[90px] md:w-[110px] md:max-w-[110px]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-              <div className="flex flex-col gap-10">
-                <div className="space-y-3 pt-10 sm:pt-12">
-                  <div className="space-y-3 rounded-xl bg-surface-soft px-4 py-5 sm:px-6 sm:py-6">
-                    <div className="flex flex-wrap items-start gap-3">
-                      <h1 className="min-w-0 flex-1 font-heading text-4xl font-bold tracking-tight text-ink md:text-5xl lg:text-6xl lg:leading-17">
-                        {displayName || name}
-                      </h1>
-                      {!isOwnerMode && capabilities.follow && vendorUserId ? (
-                        <FollowVendorButton
-                          followingUserId={vendorUserId}
-                          initialFollowing={isFollowingVendor}
-                          listingPath={pathname}
-                          size="compact"
-                          variant="outline"
-                          onFollowChange={(following, count) => {
-                            if (typeof count === "number") {
-                              setFollowersCount(count);
-                            } else {
-                              setFollowersCount((current) =>
-                                following ? current + 1 : Math.max(0, current - 1),
-                              );
-                            }
-                          }}
-                        />
-                      ) : null}
-                      {isOwnerMode ? (
-                        <>
-                          <VendorProfileBoostButton compact />
-                          <VendorOwnerInlineEditButton
-                            field="business_name"
-                            label="Business name"
-                            currentValue={displayName || name}
-                            onSaved={setDisplayName}
-                          />
-                        </>
-                      ) : null}
-                    </div>
-                    {followersCount > 0 || vendorUserId ? (
-                      <p className="text-sm font-medium text-body-secondary">
-                        <span className="font-semibold text-ink">
-                          {followersCount.toLocaleString()}
-                        </span>{" "}
-                        {followersCount === 1 ? "follower" : "followers"}
-                      </p>
-                    ) : null}
-                    {categoryLabel || subcategoryLabel || isOwnerMode ? (
-                      <p className="flex flex-wrap items-center gap-2 text-base font-semibold leading-relaxed md:text-lg">
-                        {categoryLabel ? (
-                          <>
-                            <span className="text-ink">Category: </span>
-                            <span className="text-brand">{categoryLabel}</span>
-                          </>
-                        ) : isOwnerMode ? (
-                          <span className="text-ink">Category not set</span>
-                        ) : null}
-                        {categoryLabel && subcategoryLabel ? (
-                          <span className="text-ink">, </span>
-                        ) : null}
-                        {subcategoryLabel ? (
-                          <>
-                            <span className="text-ink">Subcategory: </span>
-                            <span className="text-brand">{subcategoryLabel}</span>
-                          </>
-                        ) : null}
-                        {isOwnerMode ? (
-                          <VendorOwnerCategoryEditButton onProfileUpdated={refreshBusinessProfile} />
-                        ) : null}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {boostActive ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-950">
-                        <Sparkles className="size-3.5" aria-hidden />
-                        Boosted Listing
-                      </span>
-                    ) : null}
-                    {isPremium ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-brand">
-                        <Crown className="size-3.5" aria-hidden />
-                        Premium
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-ink md:text-base">
-                    <StarRow rating={rating} />
-                    <span>{ratingLabel}</span>
-                    {verified && (
-                      <>
-                        <span className="text-stat-muted" aria-hidden>•</span>
-                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
-                          <BadgeCheck className="size-4 shrink-0" aria-hidden />
-                          Verified
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="space-y-4 text-base text-ink">
-                    {locationText || isOwnerMode ? (
-                      <p className="flex items-start gap-1">
-                        <MapPin className="mt-0.5 size-6 shrink-0 text-brand-red" aria-hidden />
-                        {locationText ? (
-                          <a
-                            href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-brand underline-offset-2 hover:underline"
-                            aria-label={`Open ${locationText} in Google Maps`}
-                          >
-                            {locationText}
-                          </a>
-                        ) : (
-                          <span className="text-body-secondary">Location not set</span>
-                        )}
-                        {isOwnerMode ? (
-                          <VendorOwnerLocationEditButton onProfileUpdated={refreshBusinessProfile} />
-                        ) : null}
-                      </p>
-                    ) : null}
-                    {verified && verifiedSince ? (
-                      <p className="flex items-start gap-1">
-                        <BadgeCheck className="mt-0.5 size-6 shrink-0 text-brand" aria-hidden />
-                        Verified since {verifiedSince}.
-                      </p>
-                    ) : null}
-                    {socialAccounts.length > 0 ? (
-                      <BusinessSocialLinks
-                        accounts={socialAccounts}
-                        className="pt-1"
-                        title="Find us online"
-                      />
-                    ) : null}
-                  </div>
-                </div>
-
-                <section className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-                      Overview
-                    </h2>
-                    {isOwnerMode ? (
-                      <VendorOwnerInlineEditButton
-                        field="business_description"
-                        label="Description"
-                        currentValue={displayDescription || description}
-                        onSaved={setDisplayDescription}
-                      />
-                    ) : null}
-                  </div>
-                  <p className="max-w-3xl text-lg leading-relaxed text-body-secondary">
-                    {displayDescription || description || "No description available."}
-                  </p>
-                  {(verified || servicesList.length > 0) && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {verified ? (
-                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
-                          <BadgeCheck className="size-6 text-brand" aria-hidden />
-                          <h3 className="text-base font-semibold text-ink">Verified on Gidira</h3>
-                          <p className="text-sm leading-5 text-body-secondary">
-                            Identity and business details reviewed by our team.
-                          </p>
-                        </div>
-                      ) : null}
-                      {servicesList.length > 0 ? (
-                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
-                          <CheckCircle2 className="size-6 text-brand" aria-hidden />
-                          <h3 className="text-base font-semibold text-ink">Products/Services offered</h3>
-                          <p className="text-sm leading-5 text-body-secondary">
-                            {servicesList.length}{" "}
-                            {servicesList.length === 1 ? "service" : "services"} listed on this profile.
-                          </p>
-                        </div>
-                      ) : null}
-                      {contactPhone ? (
-                        <div className="flex flex-col gap-3 rounded-2xl bg-surface-soft p-6 shadow-sm">
-                          <Shield className="size-6 text-brand" aria-hidden />
-                          <h3 className="text-base font-semibold text-ink">Direct contact</h3>
-                          <p className="text-sm leading-5 text-body-secondary">
-                            Call or message this business through Gidira.
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-                </section>
-              </div>
-
-              <aside className="w-full shrink-0 space-y-6 lg:max-w-md lg:pt-24">
-                <div className="relative rounded-3xl border border-border-light bg-card p-8 shadow-xl">
-                  {isOwnerMode ? (
-                    <div className="absolute right-4 top-4">
-                      <VendorOwnerContactEditButton onProfileUpdated={refreshBusinessProfile} />
-                    </div>
-                  ) : null}
-                  <div className="flex flex-col gap-6">
-                    <ShowPhoneNumberReveal
-                      useShadcnButton
-                      isolateFromParentClicks={false}
-                      phoneNumber={contactPhone}
-                      className="h-14 w-full rounded-xl bg-brand-red text-base font-medium text-ice hover:bg-brand-red/90"
-                      iconClassName="size-5 shrink-0"
-                    />
-                    {businessId !== null && capabilities.message ? (
-                      <DirectMessageButton
-                        businessInfoId={businessId}
-                        vendorUserUuid={vendorUserUuid}
-                        fromPath={pathname}
-                        disabled={isOwnerMode}
-                        className="h-14 w-full rounded-xl border border-ice bg-brand text-base font-medium text-ice hover:bg-brand/90 hover:text-ice"
-                        iconClassName="size-5 shrink-0"
-                      />
-                    ) : null}
-                    {capabilities.follow && vendorUserId ? (
-                      <FollowVendorButton
-                        followingUserId={vendorUserId}
-                        initialFollowing={isFollowingVendor}
-                        listingPath={pathname}
-                        fullWidth
-                        onFollowChange={(following, count) => {
-                          if (typeof count === "number") {
-                            setFollowersCount(count);
-                          } else {
-                            setFollowersCount((current) =>
-                              following ? current + 1 : Math.max(0, current - 1),
-                            );
-                          }
-                        }}
-                      />
-                    ) : null}
-                    {whatsappUrl ? (
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="h-14 rounded-xl border-brand bg-surface-soft text-base font-medium text-brand hover:bg-surface-soft"
-                      >
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex w-full items-center justify-center gap-2"
-                        >
-                          <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                          </svg>
-                          Chat via WhatsApp
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled
-                        className="h-14 rounded-xl border-brand bg-surface-soft text-base font-medium text-brand opacity-60"
-                      >
-                        <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                        </svg>
-                        WhatsApp unavailable
-                      </Button>
-                    )}
-                  </div>
-                  {socialAccounts.length > 0 ? (
-                    <BusinessSocialLinks
-                      accounts={socialAccounts}
-                      className="border-t border-border-light pt-5"
-                      title="Find us online"
-                    />
-                  ) : null}
-                  <div className="mt-6 rounded-2xl border border-border-light bg-white px-4 shadow-sm">
-                    {memberSince ? (
-                      <p className="flex items-center gap-3 border-b border-border-light py-3.5 text-sm font-medium text-ink">
-                        <CheckCircle2 className="size-5 shrink-0 text-brand" aria-hidden />
-                        Gidira member since {memberSince}
-                      </p>
-                    ) : null}
-                    <p className="flex items-center gap-3 py-3.5 text-sm font-medium text-ink">
-                      <Clock className="size-5 shrink-0 text-brand" aria-hidden />
-                      {responseTimeLabel ?? "Usually responds within 15 minutes"}
-                    </p>
-                  </div>
-                  {businessId !== null ? (
-                    <BusinessListingSecondaryActions
-                      businessId={businessId}
-                      businessName={name}
-                      website={business?.website ?? stateData?.website ?? null}
-                      listingPath={pathname}
-                      isOwnBusiness={isOwnerMode}
-                      allowReport={capabilities.report}
-                    />
-                  ) : null}
-                </div>
-
-                {businessFetching && !businessFetched ? (
-                  <div className="rounded-2xl bg-surface-soft p-6">
-                    <p className="text-sm font-semibold uppercase tracking-widest text-stat-muted">
-                      Business Hours
-                    </p>
-                    <ul className="mt-4 space-y-2">
-                      {[1, 2, 3].map((row) => (
-                        <li key={row} className="flex justify-between gap-4">
-                          <span className="h-4 w-24 animate-pulse rounded bg-border-light" />
-                          <span className="h-4 w-32 animate-pulse rounded bg-border-light" />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : businessFetched && business ? (
-                  <div className="relative">
-                    {isOwnerMode ? (
-                      <div className="mb-2 flex justify-end">
-                        <VendorOwnerHoursEditButton onProfileUpdated={refreshBusinessProfile} />
-                      </div>
-                    ) : null}
-                    <BusinessHoursDisplay
-                      hours={business.businessHours}
-                      displayRows={business.businessHoursDisplay}
-                    />
-                  </div>
-                ) : null}
-              </aside>
-            </div>
-
-            <section className="border-t border-border-gray pt-6">
-              <div className="flex items-center gap-3">
-                <h2 className="font-heading text-xl font-semibold text-ink-heading">Products/Services</h2>
-                {isOwnerMode ? (
-                  <VendorOwnerServicesEditButton onProfileUpdated={refreshBusinessProfile} />
-                ) : null}
-              </div>
-              {servicesList.length > 0 ? (
-                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {servicesList.map((item) => (
-                    <li key={item} className="flex items-center gap-3 text-base text-body-secondary">
-                      <span className="size-1.5 shrink-0 rounded-full bg-footer-bar" aria-hidden />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-4 text-base text-body-secondary">
-                  This business has not listed specific products or services yet.
-                </p>
-              )}
-            </section>
-          </div>
-        </div>
-
-        {(coverPhotos.length > 0 || isOwnerMode) ? (
-          <section className="mt-12 space-y-4 rounded-2xl border border-stat-muted bg-card-ice p-6 md:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-                  Photos
-                </h2>
-                {isOwnerMode ? (
-                  <VendorOwnerGalleryEditButton onProfileUpdated={refreshBusinessProfile} />
-                ) : null}
-              </div>
-              {coverPhotos.length > 0 ? (
-                <span className="text-sm font-semibold text-stat-muted">
-                  {coverPhotos.length} of {photoLimit}
-                </span>
-              ) : null}
-            </div>
-            {coverPhotos.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {coverPhotos.slice(0, 6).map((src, index) => {
-                const isLastWithMore = index === 5 && coverPhotos.length > 6;
-                const cell = (
-                  <AspectCover
-                    src={src}
-                    className="aspect-4/3 w-full rounded-xl md:aspect-5/4 md:min-h-[200px]"
-                  />
-                );
-                if (!isLastWithMore) {
-                  return (
-                    <button
-                      key={`${src}-${index}`}
-                      type="button"
-                      className="w-full cursor-pointer overflow-hidden rounded-xl border-0 p-0 text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand"
-                      onClick={() => setPhotosOpen(true)}
-                    >
-                      {cell}
-                    </button>
-                  );
-                }
-                return (
-                  <button
-                    key={`${src}-${index}`}
-                    type="button"
-                    className="relative w-full cursor-pointer overflow-hidden rounded-xl border-0 p-0 text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand"
-                    onClick={() => setPhotosOpen(true)}
-                  >
-                    {cell}
-                    <div className="pointer-events-none absolute inset-0 rounded-xl bg-black/30" aria-hidden />
-                    <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-heading text-4xl font-semibold text-white drop-shadow-md">
-                      +{coverPhotos.length - 5}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            ) : (
-              <p className="text-base text-body-secondary">
-                No photos yet. Use the pencil icon to add gallery images.
-              </p>
-            )}
-            {isOwnerMode && !isPremium && coverPhotos.length >= FREE_PHOTO_LIMIT ? (
-              <div className="flex items-center gap-3 rounded-[14px] border border-dashed border-[#cfe2fb] bg-white px-4 py-3.5 text-sm text-body-secondary">
-                <Crown className="size-5 shrink-0 text-[#9A6B1F]" aria-hidden />
-                <span>
-                  <span className="font-semibold text-ink">
-                    {coverPhotos.length} of {FREE_PHOTO_LIMIT} photos used.
-                  </span>{" "}
-                  Premium businesses can add up to {PREMIUM_PHOTO_LIMIT}.
-                </span>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section ref={reviewsRef} className="mt-12 space-y-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              Reviews{pagination.total > 0 && (
-                <span className="ml-2 text-2xl text-stat-muted">({pagination.total})</span>
-              )}
-            </h2>
-            {capabilities.review ? (
-              <button
-                type="button"
-                onClick={handleWriteReview}
-                className="border-b-2 border-accent-foreground/20 pb-0.5 text-left text-base font-semibold text-accent-foreground hover:opacity-90"
-              >
-                Write a review
-              </button>
-            ) : null}
-          </div>
-
-          {reviewsList.length === 0 ? (
-            <p className="text-base text-body-secondary">No reviews yet. Be the first to write one!</p>
+          {showOwnerEdit ? (
+            <BusinessOwnerEditView
+              businessId={businessId!}
+              businessName={name}
+              displayName={displayName}
+              displayDescription={displayDescription}
+              categoryLabel={categoryLabel}
+              subcategoryLabel={subcategoryLabel}
+              logoUrl={logoUrl}
+              heroCover={heroCover}
+              coverPhotos={coverPhotos}
+              photoLimit={photoLimit}
+              isPremium={isPremium}
+              verified={verified}
+              boostActive={boostActive}
+              phone={business?.phone ?? stateData?.phone ?? null}
+              whatsapp={business?.whatsapp ?? stateData?.whatsapp ?? null}
+              website={business?.website ?? stateData?.website ?? null}
+              socialAccounts={socialAccounts}
+              business={business}
+              onDisplayNameChange={setDisplayName}
+              onDisplayDescriptionChange={setDisplayDescription}
+              onProfileUpdated={refreshBusinessProfile}
+            />
           ) : (
-            <>
-              <div className="space-y-10">
-                {reviewsList.map((review) => {
-                  const initials = review.reviewer_name
-                    .split(" ")
-                    .map((w: string) => w[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2);
-                  const date = review.created_at
-                    ? new Date(review.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })
-                    : "";
-                  return (
-                    <article key={review.id} className="flex gap-6">
-                      <div className="size-14 shrink-0 rounded-full ring-2 ring-border-light md:size-16 bg-primary/10 flex items-center justify-center">
-                        <span className="text-base font-bold text-primary">{initials}</span>
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-semibold text-ink">{review.reviewer_name}</p>
-                          <p className="text-sm text-stat-muted">{date}</p>
-                        </div>
-                        <StarRow rating={review.rating} className="scale-90 origin-left" />
-                        <p className="text-base leading-relaxed text-body-secondary">{review.review_text}</p>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              {pagination.last_page > 1 && (
-                <div className="flex items-center justify-between gap-4 border-t border-border-light pt-6">
-                  <p className="text-sm text-stat-muted">
-                    Page {pagination.current_page} of {pagination.last_page} &middot; {pagination.total} reviews
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={pagination.current_page === 1}
-                      onClick={() => {
-                        setReviewPage((p) => p - 1);
-                        reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                      className="rounded-lg border border-border-light px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Prev
-                    </button>
-
-                    {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
-                      .filter(
-                        (p) =>
-                          p === 1 ||
-                          p === pagination.last_page ||
-                          Math.abs(p - pagination.current_page) <= 1,
-                      )
-                      .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                        if (idx > 0 && (arr[idx - 1] as number) + 1 < p) acc.push("…");
-                        acc.push(p);
-                        return acc;
-                      }, [])
-                      .map((item, idx) =>
-                        item === "…" ? (
-                          <span key={`ellipsis-${idx}`} className="px-2 text-stat-muted">
-                            …
-                          </span>
-                        ) : (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => {
-                              setReviewPage(item);
-                              reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                            }}
-                            className={cn(
-                              "rounded-lg border px-3 py-1.5 text-sm font-medium",
-                              item === pagination.current_page
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border-light text-ink hover:bg-surface-soft",
-                            )}
-                          >
-                            {item}
-                          </button>
-                        ),
-                      )}
-
-                    <button
-                      type="button"
-                      disabled={pagination.current_page === pagination.last_page}
-                      onClick={() => {
-                        setReviewPage((p) => p + 1);
-                        reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                      className="rounded-lg border border-border-light px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            <BusinessPublicPageView
+              backTo={routeState?.from ?? "/filters"}
+              pathname={pathname}
+              businessId={businessId!}
+              business={business}
+              businessFetching={businessFetching}
+              businessFetched={businessFetched}
+              name={displayName || name}
+              categoryLabel={categoryLabel}
+              categoryId={categoryId}
+              subcategoryLabel={subcategoryLabel}
+              description={description}
+              locationText={locationText}
+              latitude={latitude}
+              longitude={longitude}
+              rating={rating}
+              reviewCount={reviewCount}
+              verified={verified}
+              memberSince={memberSince}
+              responseTimeLabel={responseTimeLabel}
+              followersCount={followersCount}
+              isFollowingVendor={isFollowingVendor}
+              vendorUserId={vendorUserId}
+              vendorUserUuid={vendorUserUuid}
+              boostActive={boostActive}
+              isPremium={isPremium}
+              heroCover={heroCover}
+              coverPhotos={coverPhotos}
+              photoLimit={photoLimit}
+              contactPhone={contactPhone}
+              whatsappUrl={whatsappUrl}
+              socialAccounts={socialAccounts}
+              catalogItems={catalogItems}
+              catalogLocked={catalogLocked}
+              showCatalogSection={showCatalogSection}
+              showCustomerActions={showCustomerActions}
+              capabilities={capabilities}
+              reviewsRef={reviewsRef}
+              reviewsList={reviewsList}
+              pagination={pagination}
+              reviewPage={reviewPage}
+              onReviewPageChange={(page) => {
+                setReviewPage(page);
+                reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              onFollowersChange={(count) => setFollowersCount(count)}
+              onOpenPhotos={() => setPhotosOpen(true)}
+              onWriteReview={handleWriteReview}
+              hideBackLink
+            />
           )}
-        </section>
-      </div>
+        </VendorOwnerEditShell>
+      ) : (
+        <BusinessPublicPageView
+          backTo={routeState?.from ?? "/filters"}
+          pathname={pathname}
+          businessId={businessId!}
+          business={business}
+          businessFetching={businessFetching}
+          businessFetched={businessFetched}
+          name={displayName || name}
+          categoryLabel={categoryLabel}
+          subcategoryLabel={subcategoryLabel}
+          description={description}
+          locationText={locationText}
+          latitude={latitude}
+          longitude={longitude}
+          rating={rating}
+          reviewCount={reviewCount}
+          verified={verified}
+          memberSince={memberSince}
+          responseTimeLabel={responseTimeLabel}
+          followersCount={followersCount}
+          isFollowingVendor={isFollowingVendor}
+          vendorUserId={vendorUserId}
+          vendorUserUuid={vendorUserUuid}
+          boostActive={boostActive}
+          isPremium={isPremium}
+          heroCover={heroCover}
+          coverPhotos={coverPhotos}
+          photoLimit={photoLimit}
+          contactPhone={contactPhone}
+          whatsappUrl={whatsappUrl}
+          socialAccounts={socialAccounts}
+          catalogItems={catalogItems}
+          catalogLocked={catalogLocked}
+          showCatalogSection={showCatalogSection}
+          showCustomerActions={showCustomerActions}
+          capabilities={capabilities}
+          reviewsRef={reviewsRef}
+          reviewsList={reviewsList}
+          pagination={pagination}
+          reviewPage={reviewPage}
+          onReviewPageChange={(page) => {
+            setReviewPage(page);
+            reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          onFollowersChange={(count) => setFollowersCount(count)}
+          onOpenPhotos={() => setPhotosOpen(true)}
+          onWriteReview={handleWriteReview}
+        />
+      )}
 
       <ServicePhotosModal
         open={photosOpen}
@@ -992,7 +405,6 @@ export default function Service() {
         businessName={name}
         photos={coverPhotos}
       />
-
     </div>
   );
 }

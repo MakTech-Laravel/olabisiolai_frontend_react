@@ -55,6 +55,10 @@ export function ProfileBusinessCard({ business, onManage }: ProfileBusinessCardP
             {verified ? <BadgeCheck className="size-4 shrink-0 text-chat-accent" aria-hidden /> : null}
           </div>
           <p className="mt-0.5 truncate text-[12.5px] text-chat-meta">{business.categoryName}</p>
+          <p className="mt-1 text-[12px] text-chat-meta">
+            {(business.followersCount ?? 0).toLocaleString()} followers ·{' '}
+            {(business.reviewsCount ?? 0).toLocaleString()} reviews
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {isPremium ? (
               <span className={profileHubChipClass('premium')}>

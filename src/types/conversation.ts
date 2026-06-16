@@ -57,6 +57,7 @@ export interface Conversation {
   unread_count: number
   is_archived: boolean
   tenant_id?: number | null
+  business_info_id?: number | null
   created_at: string
   updated_at: string
 }

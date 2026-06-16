@@ -316,4 +316,10 @@
   body.app-bottom-nav-active {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
+
+  @media (min-width: 1024px) {
+    body.app-bottom-nav-active {
+      padding-bottom: 0;
+    }
+  }
 }

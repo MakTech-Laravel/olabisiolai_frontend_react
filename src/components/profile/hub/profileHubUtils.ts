@@ -16,4 +16,5 @@ export function isBusinessVerified(status: string): boolean {
 export type ProfileHubBusiness = VendorBusinessProfile & {
   isPremiumActive?: boolean
   followersCount?: number
+  reviewsCount?: number
 }

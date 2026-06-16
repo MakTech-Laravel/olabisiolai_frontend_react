@@ -242,6 +242,12 @@ export function normalizeConversation(raw: Record<string, unknown>): Conversatio
     unread_count: Number(raw.unread_count ?? 0),
     is_archived: Boolean(raw.is_archived),
     tenant_id: raw.tenant_id as number | null | undefined,
+    business_info_id:
+      typeof raw.business_info_id === 'number' && raw.business_info_id > 0
+        ? raw.business_info_id
+        : raw.business_info_id != null && String(raw.business_info_id).trim() !== ''
+          ? Number(raw.business_info_id) || null
+          : peer?.business_info_id ?? null,
     created_at: String(raw.created_at ?? ''),
     updated_at: String(raw.updated_at ?? ''),
   }

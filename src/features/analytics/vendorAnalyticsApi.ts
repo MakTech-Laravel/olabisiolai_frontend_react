@@ -35,6 +35,7 @@ export type VendorAnalyticsData = {
   range: VendorAnalyticsRange;
   rangeLabel: string;
   stats: VendorAnalyticsStat[];
+  messagesCount: number;
   trafficTrend: {
     viewsHeights: number[];
     enquiriesHeights: number[];
@@ -46,6 +47,7 @@ export type VendorAnalyticsData = {
     channels: VendorAnalyticsChannel[];
     conicGradient: string;
   };
+  contactLeadsByChannel: Array<{ key: string; label: string; count: number; percent: number }>;
   reachAreas: { area: string; value: number }[];
   engagementHeatmap: {
     grid: number[][];
@@ -180,8 +182,14 @@ function parseStats(raw: RawRecord): VendorAnalyticsStat[] {
 
 export async function fetchVendorAnalytics(
   range: VendorAnalyticsRange = "30d",
+  businessId?: number,
 ): Promise<VendorAnalyticsData> {
-  const res = await request.get("/vendor/analytics", { params: { range } });
+  const res = await request.get("/vendor/analytics", {
+    params: {
+      range,
+      ...(businessId != null && businessId > 0 ? { business_id: businessId } : {}),
+    },
+  });
   const data = unwrapData(res);
 
   const traffic = asRecord(data.traffic_trend) ?? {};
@@ -189,6 +197,21 @@ export async function fetchVendorAnalytics(
   const heatmap = asRecord(data.engagement_heatmap) ?? {};
   const preview = asRecord(data.preview) ?? {};
   const statsRaw = asRecord(data.stats) ?? {};
+  const contactLeadsRaw = Array.isArray(data.contact_leads_by_channel)
+    ? data.contact_leads_by_channel
+    : [];
+  const contactLeadsByChannel = contactLeadsRaw
+    .map((item) => {
+      const row = asRecord(item);
+      if (!row) return null;
+      return {
+        key: pickString(row, ['key']),
+        label: pickString(row, ['label']),
+        count: asNumber(row.count),
+        percent: asNumber(row.percent),
+      };
+    })
+    .filter((item): item is { key: string; label: string; count: number; percent: number } => item !== null);
 
   const channels = Array.isArray(channelPayload.channels)
     ? channelPayload.channels
@@ -262,6 +285,7 @@ export async function fetchVendorAnalytics(
     range: (pickString(data, ["range"], "30d") as VendorAnalyticsRange) || "30d",
     rangeLabel: pickString(data, ["range_label"], "Last 30 Days"),
     stats: parseStats(data),
+    messagesCount: asNumber(statsRaw.messages_count),
     trafficTrend: {
       viewsHeights,
       enquiriesHeights,
@@ -273,6 +297,7 @@ export async function fetchVendorAnalytics(
       channels,
       conicGradient: buildConicGradient(channels),
     },
+    contactLeadsByChannel,
     reachAreas,
     engagementHeatmap: {
       grid,

@@ -7,6 +7,11 @@ import { MobileDrawer } from '@/components/layout/MobileDrawer'
 import { ChatErrorBoundary } from '@/components/ui/ChatErrorBoundary'
 import { Button } from '@/components/ui/button'
 import { useConversations } from '@/hooks/useConversations'
+import {
+  filterConversationsByInbox,
+  MessagingInboxTabs,
+  type MessagingInboxKey,
+} from '@/features/messaging/MessagingInboxTabs'
 import { ConversationView } from '@/features/messaging/ConversationView'
 import { NewConversationModal } from '@/features/messaging/NewConversationModal'
 import { useMessagingStore } from '@/store/messagingStore'
@@ -50,6 +55,11 @@ export function MessagingLayout({
   const { data: conversations } = useConversations()
   useMessagingPresenceLifecycle(Boolean(selfId))
   const firstConversationUuid = conversations?.[0]?.uuid ?? null
+  const [activeInbox, setActiveInbox] = React.useState<MessagingInboxKey>('all')
+  const filteredConversations = React.useMemo(
+    () => filterConversationsByInbox(conversations ?? [], activeInbox),
+    [conversations, activeInbox],
+  )
 
   const prefetchMessages = React.useCallback(
     (uuid: string) => {
@@ -161,11 +171,18 @@ export function MessagingLayout({
           New
         </Button>
       </div>
+      <MessagingInboxTabs
+        conversations={conversations ?? []}
+        activeInbox={activeInbox}
+        onChange={setActiveInbox}
+        className="px-2"
+      />
       <ConversationList
         activeUuid={activeUuid}
         selfUserId={selfId}
         onSelect={selectConversation}
         onSearchPick={onSearchPick}
+        conversations={filteredConversations}
       />
     </div>
   )

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
+import { ProfileManageReviewsSection } from '@/components/profile/hub/ProfileManageReviewsSection'
+import { ProfileContactLeadsBreakdown } from '@/components/profile/hub/ProfileContactLeadsBreakdown'
 import { ProfileInsightsPanel } from '@/components/profile/hub/ProfileInsightsPanel'
 import {
   ProfileManageBackBar,
@@ -166,6 +168,20 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
                 {business.categoryName}
                 {business.locationLabel ? ` · ${business.locationLabel}` : ''}
               </p>
+              <div className="mt-3 flex gap-6">
+                <p className="text-left">
+                  <b className="font-heading text-[17px] font-bold text-ink">
+                    {(business.followersCount ?? 0).toLocaleString()}
+                  </b>
+                  <span className="ml-1.5 text-[12.5px] text-chat-meta">followers</span>
+                </p>
+                <p className="text-left">
+                  <b className="font-heading text-[17px] font-bold text-ink">
+                    {(business.reviewsCount ?? 0).toLocaleString()}
+                  </b>
+                  <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews</span>
+                </p>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {isPremiumActive ? (
                   <span className={profileHubChipClass('premium')}>
@@ -194,8 +210,15 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
               followersCount={business.followersCount}
               isPremiumActive={isPremiumActive}
             />
+            <ProfileContactLeadsBreakdown businessId={business.id} />
 
             <div className="px-[18px] pb-6 pt-2">
+              <ProfileManageReviewsSection
+                businessId={business.id}
+                reviewsCount={business.reviewsCount ?? 0}
+                onNavigate={onClose}
+              />
+
               <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05)]">
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"

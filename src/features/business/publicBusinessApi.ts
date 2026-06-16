@@ -6,6 +6,7 @@ import {
   type BusinessHoursDisplayRow,
 } from '@/features/business/businessHours';
 import { parseSocialAccounts, type SocialAccount } from '@/features/business/socialAccounts';
+import { parseCatalogItems, type BusinessCatalogItem } from '@/features/catalog/businessCatalogApi';
 import { normalizeSubcategories } from '@/features/categories/categoryParsers';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 
@@ -53,6 +54,9 @@ export type PublicBusiness = {
   vendorUserUuid: string | null;
   businessHours: BusinessHourEntry[];
   businessHoursDisplay: BusinessHoursDisplayRow[];
+  catalogItems: BusinessCatalogItem[];
+  catalogLocked: boolean;
+  catalogCount: number;
 };
 
 export type PublicBusinessesPage = {
@@ -236,6 +240,9 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const verifiedSince = verifiedSinceRaw || null;
   const responseTimeRaw = str(r.response_time_label ?? r.responseTimeLabel, "").trim();
   const responseTimeLabel = responseTimeRaw || null;
+  const catalogItems = parseCatalogItems(r.catalog_items ?? r.catalogItems);
+  const catalogLocked = r.catalog_locked === true || r.catalogLocked === true;
+  const catalogCount = num(r.catalog_count ?? r.catalogCount, catalogItems.length);
 
   return {
     id,
@@ -273,6 +280,9 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
     vendorUserUuid,
     businessHours,
     businessHoursDisplay,
+    catalogItems,
+    catalogLocked,
+    catalogCount,
   };
 }
 

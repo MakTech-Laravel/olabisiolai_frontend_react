@@ -28,20 +28,23 @@ export function ConversationList({
   selfUserId,
   onSelect,
   onSearchPick,
+  conversations,
 }: {
   activeUuid: string | null
   selfUserId: number
   onSelect: (uuid: string) => void
   onSearchPick: (c: Conversation) => void
+  conversations?: Conversation[]
 }) {
   const { data, isLoading } = useConversations()
+  const list = conversations ?? data ?? []
   const typingUsersMap = useMessagingStore((s) => s.typingUsers)
 
   if (isLoading) {
     return <ConversationListSkeleton />
   }
 
-  if (!data?.length) {
+  if (!list.length) {
     return (
       <EmptyState
         title="No conversations yet"
@@ -56,7 +59,7 @@ export function ConversationList({
         <ConversationSearch onPick={onSearchPick} />
       </div>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-2 pb-4">
-        {data.map((c) => (
+        {list.map((c) => (
           <ConversationItem
             key={c.uuid}
             conversation={c}

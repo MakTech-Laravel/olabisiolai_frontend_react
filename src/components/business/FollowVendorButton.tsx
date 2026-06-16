@@ -15,7 +15,7 @@ type FollowVendorButtonProps = {
   disabled?: boolean
   listingPath: string
   className?: string
-  variant?: 'default' | 'outline'
+  variant?: 'default' | 'outline' | 'pill'
   size?: 'default' | 'compact'
   showLabel?: boolean
   fullWidth?: boolean
@@ -79,7 +79,8 @@ export function FollowVendorButton({
   }
 
   const label = isFollowing ? 'Following' : 'Follow'
-  const resolvedVariant = isFollowing && fullWidth ? 'default' : variant
+  const isPill = variant === 'pill'
+  const resolvedVariant = isPill ? 'outline' : isFollowing && fullWidth ? 'default' : variant
 
   const isCompact = size === 'compact'
 
@@ -92,24 +93,37 @@ export function FollowVendorButton({
       aria-pressed={isFollowing}
       className={cn(
         'gap-2',
-        isCompact && 'h-8 rounded-full px-3 text-xs font-semibold',
-        fullWidth && 'h-14 w-full rounded-xl text-base font-medium',
-        !fullWidth && isFollowing && variant === 'outline' && 'border-brand bg-brand/5 text-brand',
+        isPill &&
+          'h-auto rounded-full border-[1.5px] border-chat-accent bg-chat-accent px-[18px] py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#1568C0] hover:text-white',
+        isPill &&
+          isFollowing &&
+          'border-[#cfe2fb] bg-white text-chat-accent hover:bg-[#EAF2FD] hover:text-[#1568C0]',
+        isCompact && !isPill && 'h-8 rounded-full px-3 text-xs font-semibold',
+        fullWidth && !isPill && 'h-14 w-full rounded-xl text-base font-medium',
+        !fullWidth && !isPill && isFollowing && variant === 'outline' && 'border-brand bg-brand/5 text-brand',
         fullWidth &&
+          !isPill &&
           isFollowing &&
           'border border-brand bg-brand text-ice hover:bg-brand/90 hover:text-ice',
         fullWidth &&
+          !isPill &&
           !isFollowing &&
           'border border-brand bg-surface-soft text-brand hover:bg-surface-soft/80',
         className,
       )}
     >
-      {!isCompact ? (
+      {!isCompact && !isPill ? (
         isFollowing ? (
           <UserCheck className="size-5 shrink-0" aria-hidden />
         ) : (
           <UserPlus className="size-5 shrink-0" aria-hidden />
         )
+      ) : null}
+      {isPill && !isFollowing ? (
+        <UserPlus className="size-4 shrink-0" aria-hidden />
+      ) : null}
+      {isPill && isFollowing ? (
+        <UserCheck className="size-4 shrink-0" aria-hidden />
       ) : null}
       {showLabel ? (loading ? 'Please wait…' : label) : null}
     </Button>

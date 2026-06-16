@@ -242,3 +242,85 @@ export function appendBusinessHoursToFormData(formData: FormData, hours: Busines
 export function cloneBusinessHours(hours: BusinessHourEntry[]): BusinessHourEntry[] {
   return hours.map((entry) => ({ ...entry }));
 }
+
+const JS_DAY_TO_BUSINESS_DAY: BusinessDay[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+export function currentBusinessDay(date = new Date()): BusinessDay {
+  return JS_DAY_TO_BUSINESS_DAY[date.getDay()];
+}
+
+function timeToMinutes(value: string | null): number | null {
+  if (!value) return null;
+  const [hourPart, minutePart] = value.split(":");
+  const hour = Number(hourPart);
+  const minute = Number(minutePart);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  return hour * 60 + minute;
+}
+
+function isOpenAtMinutes(
+  opensAt: string | null,
+  closesAt: string | null,
+  nowMinutes: number,
+): boolean {
+  const open = timeToMinutes(opensAt);
+  const close = timeToMinutes(closesAt);
+  if (open === null || close === null) return false;
+  if (close <= open) {
+    return nowMinutes >= open || nowMinutes < close;
+  }
+  return nowMinutes >= open && nowMinutes < close;
+}
+
+export function isBusinessOpenNow(
+  hours?: BusinessHourEntry[] | unknown,
+  displayRows?: BusinessHoursDisplayRow[] | unknown,
+  date = new Date(),
+): boolean {
+  const parsedRows = parseBusinessHoursDisplay(displayRows);
+  const useDisplayRows = parsedRows.length > 0 && parsedRows.some(rowHasSchedule);
+
+  if (useDisplayRows) {
+    const todayMeta = BUSINESS_DAYS.find((d) => d.day === currentBusinessDay(date));
+    const todayRow = parsedRows.find(
+      (row) => row.label.toLowerCase() === todayMeta?.label.toLowerCase(),
+    );
+    if (!todayRow || todayRow.isClosed) return false;
+    const nowMinutes = date.getHours() * 60 + date.getMinutes();
+    return isOpenAtMinutes(todayRow.opensAt, todayRow.closesAt, nowMinutes);
+  }
+
+  const parsedHours = parseBusinessHours(hours);
+  const today = currentBusinessDay(date);
+  const todayEntry = parsedHours.find((entry) => entry.day === today);
+  if (!todayEntry || todayEntry.isClosed) return false;
+  const nowMinutes = date.getHours() * 60 + date.getMinutes();
+  return isOpenAtMinutes(todayEntry.opensAt, todayEntry.closesAt, nowMinutes);
+}
+
+function rowHasSchedule(row: BusinessHoursDisplayRow): boolean {
+  if (row.isClosed) return true;
+  return Boolean(
+    row.opensAtFormatted ||
+      row.closesAtFormatted ||
+      (row.opensAt && row.closesAt),
+  );
+}
+
+export function isTodayHoursLabel(label: string, date = new Date()): boolean {
+  const todayMeta = BUSINESS_DAYS.find((d) => d.day === currentBusinessDay(date));
+  if (!todayMeta) return false;
+  const normalized = label.trim().toLowerCase();
+  return (
+    normalized === todayMeta.label.toLowerCase() ||
+    normalized === todayMeta.short.toLowerCase()
+  );
+}

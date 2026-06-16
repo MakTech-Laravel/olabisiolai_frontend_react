@@ -22,6 +22,7 @@ import {
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
+import { businessPageOwnerPhotoGrid } from '@/lib/businessPageLayout'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
@@ -75,8 +76,8 @@ function useOwnerProfileEditor(onProfileUpdated?: () => void) {
     }
   }
 
-  async function saveProfile(patch: Parameters<typeof buildUpdatePayload>[1], successMessage: string) {
-    if (!profile) return
+  async function saveProfile(patch: Parameters<typeof buildUpdatePayload>[1], successMessage: string): Promise<boolean> {
+    if (!profile) return false
 
     setLoading(true)
     try {
@@ -86,8 +87,10 @@ function useOwnerProfileEditor(onProfileUpdated?: () => void) {
       onProfileUpdated?.()
       await queryClient.invalidateQueries({ queryKey: ['business'] })
       await queryClient.invalidateQueries({ queryKey: ['vendor', 'business'] })
+      return true
     } catch (error) {
       showError(getVendorBusinessUpdateError(error, 'Could not save changes. Please try again.'))
+      return false
     } finally {
       setLoading(false)
     }
@@ -272,6 +275,145 @@ export function VendorOwnerCategoryEditButton({
               </select>
             </div>
           ) : null}
+        </div>
+      </VendorOwnerModalShell>
+    </>
+  )
+}
+
+type VendorOwnerDetailsEditButtonProps = OwnerEditButtonProps & {
+  onNameSaved?: (value: string) => void
+  onDescriptionSaved?: (value: string) => void
+}
+
+export function VendorOwnerDetailsEditButton({
+  label = 'details',
+  className,
+  onProfileUpdated,
+  onNameSaved,
+  onDescriptionSaved,
+}: VendorOwnerDetailsEditButtonProps) {
+  const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
+  const categories = formOptions?.categories ?? []
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const [businessName, setBusinessName] = useState('')
+  const [businessDescription, setBusinessDescription] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [subcategory, setSubcategory] = useState('')
+
+  const selectedCategory = categories.find((category) => String(category.id) === categoryId) ?? null
+  const subcategoryOptions = selectedCategory?.subcategories ?? []
+
+  useEffect(() => {
+    if (!profile || !open) return
+    setBusinessName(profile.businessName?.trim() || '')
+    setBusinessDescription(profile.description?.trim() || '')
+    setCategoryId(String(profile.categoryId || ''))
+    setSubcategory(profile.subcategory?.trim() || '')
+  }, [open, profile])
+
+  useEffect(() => {
+    if (!open || subcategoryOptions.length === 0) return
+    if (subcategory && subcategoryOptions.includes(subcategory)) return
+    setSubcategory(subcategoryOptions[0] ?? '')
+  }, [categoryId, open, subcategory, subcategoryOptions])
+
+  return (
+    <>
+      <OwnerEditTrigger label={label} className={className} onClick={() => void openEditor()} />
+      <VendorOwnerModalShell
+        title="Edit details"
+        open={open}
+        loading={loading || formOptionsLoading}
+        onClose={() => setOpen(false)}
+        onSave={async () => {
+          const trimmedName = businessName.trim()
+          if (!trimmedName) {
+            showError('Please enter a business name.')
+            return
+          }
+          if (!categoryId) {
+            showError('Please select a category.')
+            return
+          }
+          if (subcategoryOptions.length > 0 && !subcategory.trim()) {
+            showError('Please select a subcategory.')
+            return
+          }
+          const trimmedDescription = businessDescription.trim()
+          const saved = await saveProfile(
+            {
+              business_name: trimmedName,
+              business_description: trimmedDescription,
+              category_id: Number(categoryId),
+              subcategory: subcategory.trim() || undefined,
+            },
+            'Details updated.',
+          )
+          if (saved) {
+            onNameSaved?.(trimmedName)
+            onDescriptionSaved?.(trimmedDescription)
+          }
+        }}
+        saveDisabled={!businessName.trim() || !categoryId}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-ink">Business name</label>
+            <Input
+              value={businessName}
+              disabled={loading || formOptionsLoading}
+              onChange={(event) => setBusinessName(event.target.value)}
+              placeholder="Your business name"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-ink">Category</label>
+            <select
+              value={categoryId}
+              disabled={loading || formOptionsLoading}
+              onChange={(event) => {
+                setCategoryId(event.target.value)
+                setSubcategory('')
+              }}
+              className="h-11 w-full rounded-md border border-border-light bg-background px-3 text-sm"
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={String(category.id)}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {subcategoryOptions.length > 0 ? (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-ink">Subcategory</label>
+              <select
+                value={subcategory}
+                disabled={loading || formOptionsLoading}
+                onChange={(event) => setSubcategory(event.target.value)}
+                className="h-11 w-full rounded-md border border-border-light bg-background px-3 text-sm"
+              >
+                <option value="">Select subcategory</option>
+                {subcategoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-ink">About</label>
+            <Textarea
+              value={businessDescription}
+              disabled={loading || formOptionsLoading}
+              onChange={(event) => setBusinessDescription(event.target.value)}
+              placeholder="Short description about your business"
+              rows={4}
+            />
+          </div>
         </div>
       </VendorOwnerModalShell>
     </>
@@ -654,5 +796,62 @@ export function VendorOwnerLogoEditButton({
         </div>
       </VendorOwnerModalShell>
     </>
+  )
+}
+
+export function VendorOwnerPhotoGrid({
+  coverPhotos,
+  onProfileUpdated,
+  addSlot,
+}: {
+  coverPhotos: string[]
+  photoLimit: number
+  onProfileUpdated?: () => void
+  addSlot?: React.ReactNode
+}) {
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null)
+
+  async function removePhotoAt(index: number) {
+    if (coverPhotos.length <= 1) {
+      showError('Please keep at least one gallery photo.')
+      return
+    }
+
+    setRemovingIndex(index)
+    try {
+      const profile = await fetchVendorBusinessProfile()
+      const keepPaths = profile.coverPhotoPaths.filter((_, i) => i !== index)
+      if (keepPaths.length < 1) {
+        showError('Please keep at least one gallery photo.')
+        return
+      }
+      await updateVendorBusiness(buildUpdatePayload(profile, { keep_cover_paths: keepPaths }))
+      showSuccess('Photo removed.')
+      onProfileUpdated?.()
+    } catch (error) {
+      showError(getVendorBusinessUpdateError(error, 'Could not remove photo.'))
+    } finally {
+      setRemovingIndex(null)
+    }
+  }
+
+  return (
+    <div className={businessPageOwnerPhotoGrid}>
+      {coverPhotos.map((src, index) => (
+        <div key={`${src}-${index}`} className="relative aspect-square overflow-hidden rounded-[13px] lg:rounded-xl">
+          <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+          <button
+            type="button"
+            disabled={removingIndex === index}
+            onClick={() => void removePhotoAt(index)}
+            className="edit-only absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-60"
+            aria-label={`Remove photo ${index + 1}`}
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ))}
+      {addSlot}
+    </div>
   )
 }

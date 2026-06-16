@@ -14,6 +14,9 @@ import {
   ProfileHubHeader,
   ProfileIdentitySection,
 } from '@/components/profile/hub/ProfileIdentitySection'
+import { ProfileHubFooter } from '@/components/profile/hub/ProfileHubFooter'
+import { ProfileHubReferralCard } from '@/components/profile/hub/ProfileHubReferralCard'
+import { ProfileHubWalletCard } from '@/components/profile/hub/ProfileHubWalletCard'
 import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
 import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
@@ -91,6 +94,7 @@ export default function UnifiedProfile() {
       ...business,
       isPremiumActive: business.isPremiumActive,
       followersCount: business.followersCount,
+      reviewsCount: business.reviewsCount,
     }))
   }, [businessesQuery.data])
 
@@ -189,6 +193,11 @@ export default function UnifiedProfile() {
 
               <ProfilePersonalTools reviewsCount={reviewsCount} />
 
+              {/* <div className="space-y-3 px-[18px] lg:px-0">
+                <ProfileHubWalletCard />
+                <ProfileHubReferralCard />
+              </div> */}
+
               <ProfileBusinessSection
                 businesses={hubBusinesses}
                 isLoading={businessesQuery.isLoading}
@@ -196,6 +205,7 @@ export default function UnifiedProfile() {
                 onManage={handleManage}
                 onAddBusiness={() => void handleAddBusiness()}
               />
+              <ProfileHubFooter />
             </div>
           </div>
         </main>

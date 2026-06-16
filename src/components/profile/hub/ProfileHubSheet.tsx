@@ -24,7 +24,7 @@ export function ProfileHubSheet({ open, title, subtitle, onClose, children }: Pr
         aria-label="Close panel"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[88dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-white px-[18px] pb-[calc(20px+env(safe-area-inset-bottom))] pt-2.5 shadow-xl lg:max-h-[min(85dvh,640px)] lg:rounded-2xl lg:pb-5">
+      <div className="relative z-10 flex max-h-[88dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[24px] bg-white px-[18px] pb-[calc(20px+env(safe-area-inset-bottom))] pt-2.5 shadow-xl lg:max-h-[min(85dvh,720px)] lg:max-w-xl lg:rounded-2xl lg:pb-5">
         <div className="mx-auto mb-3.5 h-1 w-10 shrink-0 rounded-full bg-[#dde2ea] lg:hidden" aria-hidden />
         {title ? <h2 className="font-heading text-[19px] font-bold text-ink">{title}</h2> : null}
         {subtitle ? <p className="mt-1 mb-4 text-[13.5px] leading-relaxed text-body-secondary">{subtitle}</p> : null}

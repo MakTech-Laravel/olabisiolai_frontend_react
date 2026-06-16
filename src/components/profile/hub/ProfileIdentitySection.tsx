@@ -117,7 +117,7 @@ export function ProfileIdentitySection({
             </Link>
             <Link to="/user/reviews" className="text-left">
               <b className="font-heading text-[17px] font-bold text-ink">{reviewsCount.toLocaleString()}</b>
-              <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews</span>
+              <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews written</span>
             </Link>
           </div>
         </div>

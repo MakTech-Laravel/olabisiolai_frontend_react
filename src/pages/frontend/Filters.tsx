@@ -55,6 +55,9 @@ const fallbackBusiness = (
   vendorUserUuid: null,
   businessHours: [],
   businessHoursDisplay: [],
+  catalogItems: [],
+  catalogLocked: true,
+  catalogCount: 0,
 });
 
 const FALLBACK_BUSINESSES: PublicBusiness[] = [

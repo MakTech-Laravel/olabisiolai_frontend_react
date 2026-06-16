@@ -59,7 +59,7 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
 
   const analyticsQuery = useQuery({
     queryKey: ['vendor', 'analytics', 'profile-hub', businessId, range],
-    queryFn: () => fetchVendorAnalytics(mapInsightsRange(range)),
+    queryFn: () => fetchVendorAnalytics(mapInsightsRange(range), businessId),
     enabled: !locked,
     staleTime: 60_000,
   })
@@ -81,7 +81,9 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
       analyticsQuery.data?.stats.find((s) => /lead|enquir/i.test(s.title))?.value ??
       formatDashboardCount(dashboardQuery.data?.stats.enquiries ?? 0),
     follows: formatDashboardCount(followersCount),
-    msgs: formatDashboardCount(notificationsQuery.data?.unread_count ?? 0),
+    msgs: isLoading
+      ? '—'
+      : formatDashboardCount(analyticsQuery.data?.messagesCount ?? notificationsQuery.data?.unread_count ?? 0),
   }
 
   return (

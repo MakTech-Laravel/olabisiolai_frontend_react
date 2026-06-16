@@ -30,6 +30,7 @@ function asNumber(value: unknown): number {
 
 export type UserBusinessListItem = VendorBusinessProfile & {
   followersCount: number
+  reviewsCount: number
 }
 
 function parseBoolean(value: unknown): boolean {
@@ -45,6 +46,7 @@ function parseListItem(raw: unknown): UserBusinessListItem | null {
     ...business,
     isPremiumActive: business.isPremiumActive || parseBoolean(item?.is_premium_active),
     followersCount: asNumber(item?.followers_count),
+    reviewsCount: asNumber(item?.reviews_count),
   }
 }
 

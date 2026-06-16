@@ -6,6 +6,7 @@ import { suspensePage } from "@/routes/routeUtils";
 
 const UserDashboard = lazy(() => import("@/pages/user/UserDashboard"));
 const UnifiedProfile = lazy(() => import("@/pages/user/UnifiedProfile"));
+const UserWallet = lazy(() => import("@/pages/user/UserWallet"));
 const Following = lazy(() => import("@/pages/user/Following"));
 const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
@@ -25,6 +26,7 @@ export const userRoutes: RouteObject = {
   children: [
     { path: "/user/dashboard", element: suspensePage(UserDashboard) },
     { path: "/user/profile", element: suspensePage(UnifiedProfile) },
+    { path: "/user/wallet", element: suspensePage(UserWallet) },
     { path: "/user/following", element: suspensePage(Following) },
     { path: "/user/favorites", element: <Navigate to="/user/following" replace /> },
     { path: "/user/messages", element: suspensePage(Messages) },

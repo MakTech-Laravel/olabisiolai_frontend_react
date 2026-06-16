@@ -33,5 +33,5 @@ export async function startDirectConversationWithVendor(input: {
     throw new Error('This business cannot receive direct messages yet.')
   }
 
-  return createConversation([peerUuid])
+  return createConversation([peerUuid], input.businessInfoId)
 }
