@@ -73,7 +73,7 @@ export default function DirectMessage() {
 
         <div
           className={cn(
-            "relative mt-6 flex max-h-[min(1024px,calc(100dvh-10rem))] min-h-[min(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
+            "relative mt-6 flex max-h-[min(1024px,calc(100dvh-10rem))] min-h-[min(640px,calc(100dvh-16.5rem))] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
           )}
         >
           {starting || pendingPeer ? (

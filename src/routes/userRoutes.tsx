@@ -13,6 +13,7 @@ const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
 const SettingsHub = lazy(() => import("@/pages/user/SettingsHub"));
 const AccountSettings = lazy(() => import("@/pages/user/AccountSettings"));
 const MyReviews = lazy(() => import("@/pages/user/MyReviews"));
+const InviteEarn = lazy(() => import("@/pages/user/InviteEarn"));
 const ReportIssue = lazy(() => import("@/pages/user/ReportIssue"));
 const Account = lazy(() => import("@/pages/frontend/Account"));
 
@@ -34,6 +35,7 @@ export const userRoutes: RouteObject = {
     { path: "/user/settings", element: suspensePage(SettingsHub) },
     { path: "/user/settings/account", element: suspensePage(AccountSettings) },
     { path: "/user/reviews", element: suspensePage(MyReviews) },
+    { path: "/user/referrals", element: suspensePage(InviteEarn) },
     { path: "/user/report", element: suspensePage(ReportIssue) },
     { path: "/account", element: suspensePage(Account) },
   ],

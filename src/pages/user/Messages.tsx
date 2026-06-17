@@ -1,9 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
+import { fetchUserBusinesses } from "@/api/userBusinesses";
 import { useAuth } from "@/auth/useAuth";
 import { UserShell } from "@/components/partials/user/UserShell";
 import { MessagingLayout } from "@/features/messaging/MessagingLayout";
+import type { MessagingInboxKey } from "@/features/messaging/MessagingInboxTabs";
 import { useStartDirectConversation } from "@/hooks/useStartDirectConversation";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +37,34 @@ const footerColumns = [
 
 export default function Messages() {
   const { user, isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
+  const businessIdParam = Number(searchParams.get("business_id") ?? "");
+  const scope = searchParams.get("scope");
+  const inboxScope: MessagingInboxKey | undefined =
+    Number.isFinite(businessIdParam) && businessIdParam > 0
+      ? (`business:${businessIdParam}` as const)
+      : scope === "personal"
+        ? "personal"
+        : undefined;
+
+  const businessesQuery = useQuery({
+    queryKey: ["user", "businesses", "messages-title"],
+    queryFn: fetchUserBusinesses,
+    enabled: Boolean(inboxScope?.startsWith("business:")),
+    staleTime: 60_000,
+  });
+
+  const businessTitle =
+    inboxScope?.startsWith("business:") && Number.isFinite(businessIdParam)
+      ? businessesQuery.data?.find((business) => business.id === businessIdParam)?.businessName
+      : null;
+
+  const pageTitle =
+    inboxScope === "personal"
+      ? "Your messages"
+      : businessTitle
+        ? `${businessTitle} messages`
+        : "Messages";
 
   const { starting, pendingPeer } = useStartDirectConversation({
     isAuthenticated,
@@ -57,7 +88,12 @@ export default function Messages() {
               </p>
             </div>
           ) : null}
-          <MessagingLayout selfUser={user} conversationQueryParam="c" />
+          <MessagingLayout
+            selfUser={user}
+            conversationQueryParam="c"
+            inboxScope={inboxScope}
+            title={pageTitle}
+          />
         </div>
       </UserShell>
 

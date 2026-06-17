@@ -1,11 +1,12 @@
-import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
   ChevronRight,
   Crown,
   Loader2,
+  MessageSquare,
   Pencil,
   Rocket,
   Settings,
@@ -321,6 +322,14 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                     onClick={() => void openVendorRoute(VENDOR_PREMIUM_PAYMENT_PATH)}
                   />
                 )}
+                <ManageToolRow
+                  iconClass="bg-[#EAF2FD] text-chat-accent"
+                  icon={<MessageSquare className="size-5" strokeWidth={2} />}
+                  title="Messages"
+                  subtitle="Customer enquiries for this business"
+                  to={`/user/messages?business_id=${business.id}`}
+                  onNavigate={onClose}
+                />
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
                   icon={<Share2 className="size-5" strokeWidth={2} />}

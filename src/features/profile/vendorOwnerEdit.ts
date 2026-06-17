@@ -11,6 +11,9 @@ export type OwnerProfilePatch = Partial<{
   whatsapp: string
   website: string
   street_address: string
+  latitude?: number
+  longitude?: number
+  google_place_id?: string
   services: string[]
   business_hours: BusinessHourEntry[]
   keep_cover_paths: string[]
@@ -77,6 +80,9 @@ export function buildUpdatePayload(
     whatsapp: (patch.whatsapp ?? profile.whatsapp)?.trim() || undefined,
     website: (patch.website ?? profile.website)?.trim() || undefined,
     full_address: (patch.street_address ?? profile.streetAddress)?.trim() || undefined,
+    latitude: patch.latitude ?? profile.latitude ?? undefined,
+    longitude: patch.longitude ?? profile.longitude ?? undefined,
+    google_place_id: patch.google_place_id ?? profile.googlePlaceId ?? undefined,
     services,
     social_accounts: patch.social_accounts ?? profile.socialAccounts,
     business_hours: patch.business_hours ?? profile.businessHours,

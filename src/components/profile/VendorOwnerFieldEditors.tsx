@@ -4,6 +4,10 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import { BusinessHoursEditor } from '@/components/business/BusinessHoursEditor'
 import { LocationCascadeSelects } from '@/components/locations/LocationCascadeSelects'
+import { GoogleAddressAutocomplete } from '@/components/maps/GoogleAddressAutocomplete'
+import { env } from '@/config/env'
+import { matchVendorLocationFromGoogle } from '@/features/locations/matchVendorLocationFromGoogle'
+import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
 import { VendorOwnerModalShell } from '@/components/profile/VendorOwnerModalShell'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -120,6 +124,9 @@ export function VendorOwnerLocationEditButton({
   const [city, setCity] = useState('')
   const [locationId, setLocationId] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
+  const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile || !open) return
@@ -128,7 +135,27 @@ export function VendorOwnerLocationEditButton({
     setCity(selected?.city || profile.city || '')
     setLocationId(selected?.id || String(profile.locationId || ''))
     setStreetAddress(profile.streetAddress || '')
+    setLatitude(profile.latitude ?? null)
+    setLongitude(profile.longitude ?? null)
+    setGooglePlaceId(profile.googlePlaceId ?? null)
   }, [open, parsedLocations, profile])
+
+  function applyGooglePick(pick: LgaMapPickResult) {
+    const formatted = pick.formattedAddress?.trim() || ''
+    if (formatted) {
+      setStreetAddress(formatted)
+    }
+    setLatitude(pick.lat)
+    setLongitude(pick.lng)
+    setGooglePlaceId(pick.googlePlaceId)
+
+    const matched = matchVendorLocationFromGoogle(pick, parsedLocations)
+    if (matched) {
+      setState(matched.state)
+      setCity(matched.city)
+      setLocationId(matched.id)
+    }
+  }
 
   const states = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations])
   const cities = useMemo(
@@ -162,12 +189,30 @@ export function VendorOwnerLocationEditButton({
               city: selectedEntry?.city ?? city,
               lga: selectedEntry?.lga ?? profile?.lga ?? '',
               street_address: streetAddress.trim(),
+              latitude: latitude ?? undefined,
+              longitude: longitude ?? undefined,
+              google_place_id: googlePlaceId ?? undefined,
             },
             'Location updated.',
           )
         }}
         saveDisabled={!locationId}
       >
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-ink">Street address</label>
+          <GoogleAddressAutocomplete
+            apiKey={env.googleMapsApiKey}
+            value={streetAddress}
+            onValueChange={setStreetAddress}
+            onPick={applyGooglePick}
+            disabled={loading || formOptionsLoading}
+            placeholder="e.g. 7 Adeola Odeku Street, Victoria Island"
+          />
+          <p className="mt-2 text-[12px] text-body-secondary">
+            Type to search — Google suggestions appear as you type. State, city, and LGA below are filled
+            automatically when possible.
+          </p>
+        </div>
         <LocationCascadeSelects
           state={state}
           city={city}
@@ -188,17 +233,6 @@ export function VendorOwnerLocationEditButton({
           disabled={loading || formOptionsLoading}
           stateLoading={formOptionsLoading}
         />
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink">
-            Street address <span className="font-normal text-body-secondary">(optional)</span>
-          </label>
-          <Input
-            value={streetAddress}
-            onChange={(event) => setStreetAddress(event.target.value)}
-            disabled={loading || formOptionsLoading}
-            placeholder="e.g. 7 Elliot Street"
-          />
-        </div>
       </VendorOwnerModalShell>
     </>
   )
