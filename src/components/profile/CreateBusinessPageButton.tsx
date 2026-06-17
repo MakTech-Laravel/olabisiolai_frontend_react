@@ -7,7 +7,7 @@ import { fetchUserBusinesses, createUserBusiness } from '@/api/userBusinesses'
 import { getProfileModeErrorMessage, switchToVendorMode } from '@/api/userMode'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
-import { showError, showSuccess } from '@/lib/sweetAlert'
+import { showError, showSuccess, alert } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 type CreateBusinessPageButtonProps = {
   className?: string
@@ -36,6 +36,19 @@ export function CreateBusinessPageButton({
   const hasBusiness = businessCount > 0
   async function handleCreate() {
     if (loading) return
+
+    const confirmed = await alert.confirm({
+      title: businessCount > 0 ? 'Add another business?' : 'Create a business page?',
+      text:
+        businessCount > 0
+          ? 'A new business page will be created. You can edit its details afterwards.'
+          : 'We will set up a free business page for you instantly. You can edit everything later.',
+      icon: 'question',
+      confirmText: 'Yes, create',
+      cancelText: 'Cancel',
+    })
+
+    if (!confirmed) return
 
     setLoading(true)
     try {

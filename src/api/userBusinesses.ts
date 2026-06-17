@@ -70,6 +70,16 @@ export async function createUserBusiness(businessName?: string): Promise<UserBus
   return business
 }
 
+export async function deleteUserBusiness(businessId: number): Promise<void> {
+  const res = await request.delete(`/user/businesses/${businessId}`)
+  const root = asRecord(res.data)
+
+  if (!root || root.success !== true) {
+    const message = pickString(root ?? {}, ['message'], 'Failed to delete business page.')
+    throw new Error(message)
+  }
+}
+
 export async function setActiveBusinessId(businessId: number | null): Promise<void> {
   await request.patch('/user/settings', {
     settings: {

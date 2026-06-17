@@ -20,7 +20,7 @@ import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTo
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
 import { useProfilePhotoUpload } from '@/hooks/useProfilePhotoUpload'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
-import { showError, showSuccess } from '@/lib/sweetAlert'
+import { showError, showSuccess, alert } from '@/lib/sweetAlert'
 
 const DEFAULT_AVATAR = '/images/avatar/default-header-avatar.png'
 
@@ -131,6 +131,16 @@ export default function UnifiedProfile() {
   async function handleAddBusiness() {
     if (isAddingBusiness) return
 
+    const confirmed = await alert.confirm({
+      title: 'Add another business?',
+      text: 'A new business page will be created. You can edit its details afterwards.',
+      icon: 'question',
+      confirmText: 'Yes, create',
+      cancelText: 'Cancel',
+    })
+
+    if (!confirmed) return
+
     setIsAddingBusiness(true)
     try {
       const created = await createUserBusiness()
@@ -191,10 +201,6 @@ export default function UnifiedProfile() {
 
               <ProfilePersonalTools reviewsCount={reviewsCount} />
 
-              {/* <div className="space-y-3 px-[18px] lg:px-0">
-                <ProfileHubReferralCard />
-              </div> */}
-
               <ProfileBusinessSection
                 businesses={hubBusinesses}
                 isLoading={businessesQuery.isLoading}
@@ -212,6 +218,7 @@ export default function UnifiedProfile() {
         business={manageBusiness}
         open={manageBusiness !== null}
         onClose={() => setManageBusiness(null)}
+        onBusinessDeleted={() => setManageBusiness(null)}
       />
 
       <ProfileAccountSwitcherSheet

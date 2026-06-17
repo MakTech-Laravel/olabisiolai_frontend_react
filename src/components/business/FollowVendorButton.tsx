@@ -94,7 +94,7 @@ export function FollowVendorButton({
       className={cn(
         'gap-2',
         isPill &&
-          'h-auto rounded-full border-[1.5px] border-chat-accent bg-chat-accent px-[18px] py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#1568C0] hover:text-white',
+          'h-auto rounded-full border-[1.5px] border-chat-accent bg-chat-accent px-[18px] py-2 text-sm font-semibold text-white shadow-none hover:bg-[#1568C0] hover:text-white',
         isPill &&
           isFollowing &&
           'border-[#cfe2fb] bg-white text-chat-accent hover:bg-[#EAF2FD] hover:text-[#1568C0]',
@@ -114,16 +114,16 @@ export function FollowVendorButton({
     >
       {!isCompact && !isPill ? (
         isFollowing ? (
-          <UserCheck className="size-5 shrink-0" aria-hidden />
+          <UserCheck className="w-4 h-4 shrink-0" aria-hidden />
         ) : (
-          <UserPlus className="size-5 shrink-0" aria-hidden />
+          <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
         )
       ) : null}
       {isPill && !isFollowing ? (
-        <UserPlus className="size-4 shrink-0" aria-hidden />
+        <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
       ) : null}
       {isPill && isFollowing ? (
-        <UserCheck className="size-4 shrink-0" aria-hidden />
+        <UserCheck className="w-4 h-4 shrink-0" aria-hidden />
       ) : null}
       {showLabel ? (loading ? 'Please wait…' : label) : null}
     </Button>

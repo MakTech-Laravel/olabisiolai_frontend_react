@@ -21,6 +21,12 @@ import {
   uniqueLocationStates,
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
+import {
+  normalizeSocialInput,
+  socialPlatformLabel,
+  type SocialAccount,
+  type SocialPlatform,
+} from '@/features/business/socialAccounts'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageOwnerPhotoGrid } from '@/lib/businessPageLayout'
 import { showError, showSuccess } from '@/lib/sweetAlert'
@@ -113,6 +119,7 @@ export function VendorOwnerLocationEditButton({
   const [state, setState] = useState('')
   const [city, setCity] = useState('')
   const [locationId, setLocationId] = useState('')
+  const [streetAddress, setStreetAddress] = useState('')
 
   useEffect(() => {
     if (!profile || !open) return
@@ -120,6 +127,7 @@ export function VendorOwnerLocationEditButton({
     setState(selected?.state || profile.state || '')
     setCity(selected?.city || profile.city || '')
     setLocationId(selected?.id || String(profile.locationId || ''))
+    setStreetAddress(profile.streetAddress || '')
   }, [open, parsedLocations, profile])
 
   const states = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations])
@@ -153,6 +161,7 @@ export function VendorOwnerLocationEditButton({
               state: selectedEntry?.state ?? state,
               city: selectedEntry?.city ?? city,
               lga: selectedEntry?.lga ?? profile?.lga ?? '',
+              street_address: streetAddress.trim(),
             },
             'Location updated.',
           )
@@ -179,6 +188,17 @@ export function VendorOwnerLocationEditButton({
           disabled={loading || formOptionsLoading}
           stateLoading={formOptionsLoading}
         />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-ink">
+            Street address <span className="font-normal text-body-secondary">(optional)</span>
+          </label>
+          <Input
+            value={streetAddress}
+            onChange={(event) => setStreetAddress(event.target.value)}
+            disabled={loading || formOptionsLoading}
+            placeholder="e.g. 7 Elliot Street"
+          />
+        </div>
       </VendorOwnerModalShell>
     </>
   )
@@ -425,18 +445,52 @@ export function VendorOwnerContactEditButton({
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
+  const CONTACT_SOCIAL_PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'tiktok', 'linkedin', 'x']
   const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [phone, setPhone] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [website, setWebsite] = useState('')
+  const [socialValues, setSocialValues] = useState<Record<SocialPlatform, string>>({
+    facebook: '',
+    instagram: '',
+    tiktok: '',
+    linkedin: '',
+    x: '',
+    youtube: '',
+    pinterest: '',
+    threads: '',
+    snapchat: '',
+  })
 
   useEffect(() => {
-    if (profile && open) {
-      setPhone(profile.phone)
-      setWhatsapp(profile.whatsapp)
-      setWebsite(profile.website)
-    }
+    if (!profile || !open) return
+    setPhone(profile.phone)
+    setWhatsapp(profile.whatsapp)
+    setWebsite(profile.website)
+    setSocialValues({
+      facebook: profile.socialAccounts.find((account) => account.platform === 'facebook')?.url ?? '',
+      instagram: profile.socialAccounts.find((account) => account.platform === 'instagram')?.url ?? '',
+      tiktok: profile.socialAccounts.find((account) => account.platform === 'tiktok')?.url ?? '',
+      linkedin: profile.socialAccounts.find((account) => account.platform === 'linkedin')?.url ?? '',
+      x: profile.socialAccounts.find((account) => account.platform === 'x')?.url ?? '',
+      youtube: profile.socialAccounts.find((account) => account.platform === 'youtube')?.url ?? '',
+      pinterest: profile.socialAccounts.find((account) => account.platform === 'pinterest')?.url ?? '',
+      threads: profile.socialAccounts.find((account) => account.platform === 'threads')?.url ?? '',
+      snapchat: profile.socialAccounts.find((account) => account.platform === 'snapchat')?.url ?? '',
+    })
   }, [open, profile])
+
+  function buildSocialAccounts(): SocialAccount[] {
+    const edited = CONTACT_SOCIAL_PLATFORMS.map((platform) => ({
+      platform,
+      url: normalizeSocialInput(platform, socialValues[platform] ?? ''),
+    })).filter((account) => account.url)
+    const preserved =
+      profile?.socialAccounts.filter((account) => !CONTACT_SOCIAL_PLATFORMS.includes(account.platform)) ??
+      []
+
+    return [...preserved, ...edited]
+  }
 
   return (
     <>
@@ -448,7 +502,12 @@ export function VendorOwnerContactEditButton({
         onClose={() => setOpen(false)}
         onSave={() =>
           void saveProfile(
-            { phone: phone.trim(), whatsapp: whatsapp.trim(), website: website.trim() },
+            {
+              phone: phone.trim(),
+              whatsapp: whatsapp.trim(),
+              website: website.trim(),
+              social_accounts: buildSocialAccounts(),
+            },
             'Contact details updated.',
           )
         }
@@ -467,6 +526,19 @@ export function VendorOwnerContactEditButton({
             <label className="mb-1.5 block text-sm font-medium text-ink">Website</label>
             <Input value={website} onChange={(event) => setWebsite(event.target.value)} disabled={loading} />
           </div>
+          {CONTACT_SOCIAL_PLATFORMS.map((platform) => (
+            <div key={platform}>
+              <label className="mb-1.5 block text-sm font-medium text-ink">{socialPlatformLabel(platform)}</label>
+              <Input
+                value={socialValues[platform]}
+                onChange={(event) =>
+                  setSocialValues((current) => ({ ...current, [platform]: event.target.value }))
+                }
+                disabled={loading}
+                placeholder="@handle or profile link"
+              />
+            </div>
+          ))}
         </div>
       </VendorOwnerModalShell>
     </>

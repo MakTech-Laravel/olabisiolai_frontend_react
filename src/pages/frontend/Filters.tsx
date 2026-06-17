@@ -2,13 +2,13 @@ import { FiltersResultsMap, type MapBusinessPin } from "@/components/maps/Filter
 import FiltersSection from "@/components/sections/filters/FiltersSection";
 import ServiceCard from "@/components/sections/filters/ServiceCard";
 import { env } from "@/config/env";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useLocationCatalog } from "@/features/locations/useLocationCatalog";
 import { fetchPublicBusinessesPage, type PublicBusiness } from "@/features/business/publicBusinessApi";
 import { DEFAULT_GEO_SEARCH_RADIUS_KM } from "@/features/maps/geoMapTypes";
 import { ChevronLeft, Loader2, Map as MapIcon, RotateCcw, SlidersHorizontal, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { router } from "@/routes/router";
@@ -83,8 +83,6 @@ export default function Filters() {
   const selectedLocationId = Number.isFinite(locationRaw) && locationRaw > 0 ? locationRaw : null;
   const ratingRaw = Number(searchParams.get("rating") ?? "");
   const selectedMinRating = Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? ratingRaw : null;
-  const pageRaw = Number(searchParams.get("page") ?? "");
-  const currentPage = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
   const mapLat = parseCoord(searchParams.get("lat"));
   const mapLng = parseCoord(searchParams.get("lng"));
   const mapPlaceLabel = (searchParams.get("place") ?? "").trim();
@@ -100,12 +98,8 @@ export default function Filters() {
   const { data: apiCategories = [], isPending: categoriesLoading } = useCategoryCatalog();
   const { data: catalogLocations = [] } = useLocationCatalog();
   const perPage = 10;
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  /**
-   * Category filter from URL — must NOT wait for `apiCategories` to load.
-   * Otherwise the first API call runs without `category_id` and wrong cards appear
-   * while the sidebar still shows the selected category.
-   */
   const filterCategoryId = useMemo<number | null>(() => {
     const rawId = Number(categoryIdParam ?? "");
     if (Number.isFinite(rawId) && rawId > 0) {
@@ -135,21 +129,35 @@ export default function Filters() {
     return subcategoryOptions.includes(subcategoryParam) ? subcategoryParam : null;
   }, [subcategoryParam, subcategoryOptions]);
 
-  const businessesQuery = useQuery({
-    queryKey: [
+  const filterQueryKey = useMemo(
+    () => [
       "filters",
       filterCategoryId,
       filterSubcategory,
       selectedLocationId,
       searchTerm,
       verifiedOnly,
-      currentPage,
       perPage,
       mapLat,
       mapLng,
       geoRadiusKm,
     ],
-    queryFn: () =>
+    [
+      filterCategoryId,
+      filterSubcategory,
+      selectedLocationId,
+      searchTerm,
+      verifiedOnly,
+      perPage,
+      mapLat,
+      mapLng,
+      geoRadiusKm,
+    ],
+  );
+
+  const businessesQuery = useInfiniteQuery({
+    queryKey: filterQueryKey,
+    queryFn: ({ pageParam }) =>
       fetchPublicBusinessesPage({
         category_id: filterCategoryId ?? undefined,
         subcategory: filterSubcategory ?? undefined,
@@ -159,11 +167,15 @@ export default function Filters() {
         radius_km: hasGeoSearch ? geoRadiusKm : undefined,
         search: searchTerm || undefined,
         verification_status: verifiedOnly ? "approved" : undefined,
-        page: currentPage,
+        page: pageParam,
         per_page: perPage,
       }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.currentPage < lastPage.lastPage ? lastPage.currentPage + 1 : undefined,
     staleTime: 60_000,
   });
+
   const businesses = useMemo<PublicBusiness[]>(() => {
     if (businessesQuery.isError) {
       const hasActiveFilters =
@@ -174,9 +186,9 @@ export default function Filters() {
         verifiedOnly;
       return hasActiveFilters ? [] : FALLBACK_BUSINESSES;
     }
-    return businessesQuery.data?.items ?? [];
+    return businessesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   }, [
-    businessesQuery.data?.items,
+    businessesQuery.data?.pages,
     businessesQuery.isError,
     filterCategoryId,
     selectedLocationId,
@@ -337,9 +349,31 @@ export default function Filters() {
     }
   }, [hasGeoSearch, searchParams]);
 
-  const totalPages = Math.max(1, businessesQuery.data?.lastPage ?? 1);
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const showPagination = totalPages > 1;
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (
+          first?.isIntersecting &&
+          businessesQuery.hasNextPage &&
+          !businessesQuery.isFetchingNextPage
+        ) {
+          void businessesQuery.fetchNextPage();
+        }
+      },
+      { rootMargin: "240px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [
+    businessesQuery.fetchNextPage,
+    businessesQuery.hasNextPage,
+    businessesQuery.isFetchingNextPage,
+  ]);
 
   const hasActiveFilters = useMemo(() => {
     const hasCategoryInUrl =
@@ -351,8 +385,7 @@ export default function Filters() {
       selectedLocationId != null ||
       hasGeoSearch ||
       selectedMinRating != null ||
-      filterSubcategory != null ||
-      currentPage > 1
+      filterSubcategory != null
     );
   }, [
     categoryIdParam,
@@ -363,7 +396,6 @@ export default function Filters() {
     selectedLocationId,
     hasGeoSearch,
     selectedMinRating,
-    currentPage,
   ]);
 
   const onResetFiltersClick = useCallback(
@@ -612,60 +644,11 @@ export default function Filters() {
             )}
           </div>
 
-          {/* Pagination — only when more than perPage (10) results */}
-          {showPagination ? (
-          <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 flex-wrap">
-            <button
-              className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50"
-              disabled={safeCurrentPage <= 1}
-              onClick={() => {
-                const nextPage = Math.max(1, safeCurrentPage - 1);
-                const next = new URLSearchParams(searchParams);
-                if (nextPage <= 1) next.delete("page");
-                else next.set("page", String(nextPage));
-                setSearchParams(next, { replace: true });
-              }}
-            >
-              <ChevronLeft size={16} className="text-muted-foreground" />
-            </button>
-
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              {Array.from({ length: totalPages }).map((_, index) => {
-                const page = index + 1;
-                return (
-                  <button
-                    key={page}
-                    onClick={() => {
-                      const next = new URLSearchParams(searchParams);
-                      if (page <= 1) next.delete("page");
-                      else next.set("page", String(page));
-                      setSearchParams(next, { replace: true });
-                    }}
-                    className={`w-8 h-8 sm:w-10 sm:h-10 text-xs sm:text-sm rounded-lg ${page === safeCurrentPage
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border text-text-primary hover:bg-muted"
-                      } ${page > 5 ? "hidden sm:flex items-center justify-center" : "flex items-center justify-center"}`}
-                  >
-                    {page.toString().padStart(2, "0")}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50"
-              disabled={safeCurrentPage >= totalPages}
-              onClick={() => {
-                const nextPage = Math.min(totalPages, safeCurrentPage + 1);
-                const next = new URLSearchParams(searchParams);
-                next.set("page", String(nextPage));
-                setSearchParams(next, { replace: true });
-              }}
-            >
-              <ChevronLeft size={16} className="text-muted-foreground rotate-180" />
-            </button>
+          <div ref={loadMoreRef} className="flex min-h-12 items-center justify-center py-4">
+            {businessesQuery.isFetchingNextPage ? (
+              <Loader2 className="size-6 animate-spin text-primary" aria-label="Loading more businesses" />
+            ) : null}
           </div>
-          ) : null}
         </div>
 
         {/* Map Section — hidden on mobile, visible on lg+ */}

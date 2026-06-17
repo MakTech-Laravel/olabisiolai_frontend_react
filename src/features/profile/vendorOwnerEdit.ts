@@ -1,5 +1,6 @@
 import type { BusinessHourEntry } from '@/features/business/businessHours'
 import { resolveSubcategoryFromServices } from '@/features/business/publicBusinessApi'
+import type { SocialAccount } from '@/features/business/socialAccounts'
 import type { UpdateVendorBusinessPayload } from '@/features/business/vendorBusinessApi'
 import type { VendorBusinessProfile } from '@/features/business/vendorBusinessProfileApi'
 
@@ -9,6 +10,7 @@ export type OwnerProfilePatch = Partial<{
   phone: string
   whatsapp: string
   website: string
+  street_address: string
   services: string[]
   business_hours: BusinessHourEntry[]
   keep_cover_paths: string[]
@@ -21,6 +23,7 @@ export type OwnerProfilePatch = Partial<{
   state: string
   city: string
   lga: string
+  social_accounts: SocialAccount[]
 }>
 
 function resolveServicesForUpdate(
@@ -73,9 +76,9 @@ export function buildUpdatePayload(
     phone: patch.phone ?? profile.phone,
     whatsapp: (patch.whatsapp ?? profile.whatsapp)?.trim() || undefined,
     website: (patch.website ?? profile.website)?.trim() || undefined,
-    full_address: profile.streetAddress,
+    full_address: (patch.street_address ?? profile.streetAddress)?.trim() || undefined,
     services,
-    social_accounts: profile.socialAccounts,
+    social_accounts: patch.social_accounts ?? profile.socialAccounts,
     business_hours: patch.business_hours ?? profile.businessHours,
   }
 

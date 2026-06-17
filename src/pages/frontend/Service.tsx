@@ -210,6 +210,9 @@ export default function Service() {
     stateData?.image ??
     FALLBACK_LOGO;
 
+  const publicLogoUrl = business?.logoUrl ?? stateData?.logoUrl ?? null;
+  const website = business?.website ?? stateData?.website ?? null;
+
   const heroCover = coverPhotos[0] ?? FALLBACK_COVER;
   const vendorUserUuid = business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
   const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
@@ -323,10 +326,12 @@ export default function Service() {
               boostActive={boostActive}
               isPremium={isPremium}
               heroCover={heroCover}
+              logoUrl={publicLogoUrl}
               coverPhotos={coverPhotos}
               photoLimit={photoLimit}
               contactPhone={contactPhone}
               whatsappUrl={whatsappUrl}
+              website={website}
               socialAccounts={socialAccounts}
               catalogItems={catalogItems}
               catalogLocked={catalogLocked}
@@ -339,6 +344,9 @@ export default function Service() {
               reviewPage={reviewPage}
               onReviewPageChange={(page) => {
                 setReviewPage(page);
+                reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              onSeeAllReviews={() => {
                 reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
               onFollowersChange={(count) => setFollowersCount(count)}
@@ -375,10 +383,12 @@ export default function Service() {
           boostActive={boostActive}
           isPremium={isPremium}
           heroCover={heroCover}
+          logoUrl={publicLogoUrl}
           coverPhotos={coverPhotos}
           photoLimit={photoLimit}
           contactPhone={contactPhone}
           whatsappUrl={whatsappUrl}
+          website={website}
           socialAccounts={socialAccounts}
           catalogItems={catalogItems}
           catalogLocked={catalogLocked}
@@ -391,6 +401,9 @@ export default function Service() {
           reviewPage={reviewPage}
           onReviewPageChange={(page) => {
             setReviewPage(page);
+            reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          onSeeAllReviews={() => {
             reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
           onFollowersChange={(count) => setFollowersCount(count)}
