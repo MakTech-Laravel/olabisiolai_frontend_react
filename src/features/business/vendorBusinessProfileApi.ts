@@ -27,6 +27,9 @@ export type VendorBusinessProfile = {
   locationLabel: string;
   locationFullName: string;
   streetAddress: string;
+  latitude: number | null;
+  longitude: number | null;
+  googlePlaceId: string | null;
   description: string;
   services: string[];
   phone: string;
@@ -126,6 +129,9 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     locationLabel: locationLabel || locationFullName,
     locationFullName,
     streetAddress: pickString(item, ["street_address", "full_address"], ""),
+    latitude: asNumber(item.latitude ?? item.lat),
+    longitude: asNumber(item.longitude ?? item.lng),
+    googlePlaceId: pickString(item, ["google_place_id", "googlePlaceId"], "") || null,
     description: pickString(item, ["business_description", "description"], ""),
     services: parseStringArray(item.services_offered),
     phone: pickString(item, ["phone"], ""),

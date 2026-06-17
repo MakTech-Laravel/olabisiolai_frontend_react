@@ -1,4 +1,4 @@
-import { ChevronRight, Heart, Settings, Star } from 'lucide-react'
+import { ChevronRight, Heart, MessageSquare, Settings, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ProfileHubSection } from './ProfileHubSection'
@@ -9,6 +9,12 @@ const tools = [
     description: 'Every business you follow & save',
     to: '/user/following',
     icon: Heart,
+  },
+  {
+    label: 'Messages',
+    description: 'Your personal conversations',
+    to: '/user/messages?scope=personal',
+    icon: MessageSquare,
   },
   {
     label: 'Reviews written',

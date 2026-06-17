@@ -98,10 +98,12 @@ type BusinessPublicPageViewProps = {
   boostActive: boolean;
   isPremium: boolean;
   heroCover: string;
+  logoUrl?: string | null;
   coverPhotos: string[];
   photoLimit: number;
   contactPhone: string | null;
   whatsappUrl: string | null;
+  website?: string | null;
   socialAccounts: SocialAccount[];
   catalogItems: BusinessCatalogItem[];
   catalogLocked: boolean;
@@ -118,6 +120,7 @@ type BusinessPublicPageViewProps = {
   pagination: { current_page: number; last_page: number; total: number };
   reviewPage: number;
   onReviewPageChange: (page: number) => void;
+  onSeeAllReviews?: () => void;
   onFollowersChange: (count: number, following?: boolean) => void;
   onOpenPhotos: () => void;
   onWriteReview: () => void;
@@ -152,10 +155,12 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     boostActive,
     isPremium,
     heroCover,
+    logoUrl,
     coverPhotos,
     photoLimit,
     contactPhone,
     whatsappUrl,
+    website,
     socialAccounts,
     catalogItems,
     catalogLocked,
@@ -167,6 +172,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     pagination,
     reviewPage,
     onReviewPageChange,
+    onSeeAllReviews,
     onFollowersChange,
     onOpenPhotos,
     onWriteReview,
@@ -245,8 +251,8 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     ) : null;
 
   const socialPanel =
-    socialAccounts.length > 0 ? (
-      <BusinessSocialLinks accounts={socialAccounts} title="Find us online" className="border-0 p-0" />
+    socialAccounts.length > 0 || website?.trim() ? (
+      <BusinessSocialLinks accounts={socialAccounts} website={website} title="" className="border-0 p-0" />
     ) : null;
 
   const sidebarContent = (
@@ -260,9 +266,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
           <h2 className={cn(businessPageSectionTitle, "mb-3 hidden lg:block")}>Business hours</h2>
           {hoursPanel}
         </div>
-      ) : null}
-      {socialPanel ? (
-        <div className="rounded-2xl border border-border-light bg-white p-5 shadow-sm">{socialPanel}</div>
       ) : null}
     </>
   );
@@ -332,6 +335,15 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
           </div>
 
           <section className={cn("mt-4", businessPageSectionX, businessPageIdentityCard)}>
+            <div className="relative mb-3 flex size-16 items-center justify-center overflow-hidden rounded-[18px] bg-gradient-to-br from-[#1C86E8] to-[#1B4FD8] shadow-sm lg:size-20 lg:rounded-2xl">
+              {logoUrl ? (
+                <img src={logoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <span className="font-heading text-2xl font-bold text-white lg:text-3xl">
+                  {name.trim().charAt(0).toUpperCase() || "B"}
+                </span>
+              )}
+            </div>
             <h1 className={businessPageTitle}>{name}</h1>
             {locationText ? (
               <p className="mt-2 flex items-start gap-1.5 text-[13.5px] text-body-secondary lg:text-base">
@@ -500,15 +512,26 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                   <span className="text-sm font-semibold text-stat-muted lg:text-base">({pagination.total})</span>
                 ) : null}
               </h2>
-              {capabilities.review ? (
-                <button
-                  type="button"
-                  onClick={onWriteReview}
-                  className="text-sm font-semibold text-chat-accent hover:underline lg:text-base"
-                >
-                  Write a review
-                </button>
-              ) : null}
+              <div className="flex items-center gap-3">
+                {pagination.total > reviewsList.length || pagination.last_page > 1 ? (
+                  <button
+                    type="button"
+                    onClick={onSeeAllReviews}
+                    className="text-sm font-semibold text-chat-accent hover:underline lg:text-base"
+                  >
+                    See all reviews
+                  </button>
+                ) : null}
+                {capabilities.review ? (
+                  <button
+                    type="button"
+                    onClick={onWriteReview}
+                    className="text-sm font-semibold text-chat-accent hover:underline lg:text-base"
+                  >
+                    Write a review
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {rating > 0 && reviewCount > 0 ? (
@@ -584,7 +607,10 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
           </section>
 
           {socialPanel ? (
-            <section className={cn("pb-4 pt-6 lg:hidden", businessPageSectionX)}>{socialPanel}</section>
+            <section className={cn("pb-4 pt-6", businessPageSectionX)}>
+              <h2 className={cn(businessPageSectionTitle, "mb-3")}>Find us online</h2>
+              <div className="rounded-2xl border border-border-light bg-white p-5 shadow-sm">{socialPanel}</div>
+            </section>
           ) : null}
         </div>
 

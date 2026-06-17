@@ -195,7 +195,7 @@ export function MessageInput({
             onKeyDown={onKeyDown}
             placeholder="Type your message here..."
             disabled={disabled}
-            className="max-h-32 min-h-12 overflow-y-auto rounded-2xl border-0 bg-chat-input-bg py-3 pl-5 pr-12 text-sm text-ink scrollbar-hide placeholder:text-placeholder-text focus-visible:ring-2 focus-visible:ring-chat-accent-ring"
+            className="max-h-32 min-h-14 overflow-y-auto rounded-2xl border-0 bg-chat-input-bg py-3 pl-5 pr-12 text-sm text-ink scrollbar-hide placeholder:text-placeholder-text focus-visible:ring-2 focus-visible:ring-chat-accent-ring"
           />
           <div ref={emojiAnchorRef} className="absolute bottom-1.5 right-2">
             <Button

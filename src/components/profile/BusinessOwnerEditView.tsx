@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
-import { BadgeCheck, Lock, MapPin, Pencil, Star } from 'lucide-react'
+import { BadgeCheck, Globe, Lock, MapPin, Phone, Star, type LucideIcon } from 'lucide-react'
 
 import { BusinessHoursDisplay } from '@/components/business/BusinessHoursDisplay'
+import { SocialPlatformIcon } from '@/components/business/SocialPlatformIcon'
 import type { PublicBusiness } from '@/features/business/publicBusinessApi'
-import type { SocialAccount } from '@/features/business/socialAccounts'
+import type { SocialAccount, SocialPlatform } from '@/features/business/socialAccounts'
+import { isSocialPlatform, socialPlatformLabel } from '@/features/business/socialAccounts'
 import {
   VendorOwnerContactEditButton,
   VendorOwnerDetailsEditButton,
@@ -80,6 +82,21 @@ function OwnerEditButton({
   )
 }
 
+type ContactRow = {
+  label: string
+  value: string
+  icon: LucideIcon | SocialPlatform
+}
+
+function ContactRowIcon({ icon }: { icon: ContactRow['icon'] }) {
+  if (typeof icon === 'string' && isSocialPlatform(icon)) {
+    return <SocialPlatformIcon platform={icon} className="size-4" aria-hidden />
+  }
+
+  const Icon = icon as LucideIcon
+  return <Icon className="size-4 opacity-100" aria-hidden />
+}
+
 function AspectCover({ src, className }: { src: string; className?: string }) {
   return (
     <div className={cn('relative isolate overflow-hidden bg-border-light', className)}>
@@ -117,18 +134,19 @@ export function BusinessOwnerEditView({
   const managePath = `/user/profile`
 
   const contactRows = [
-    phone ? { label: 'Phone', value: phone } : null,
-    whatsapp ? { label: 'WhatsApp', value: whatsapp } : null,
-    website ? { label: 'Website', value: website } : null,
+    phone ? { label: 'Phone', value: phone, icon: Phone } : null,
+    whatsapp ? { label: 'WhatsApp', value: whatsapp, icon: Phone } : null,
+    website ? { label: 'Website', value: website, icon: Globe } : null,
     ...socialAccounts.map((account) => ({
-      label: account.platform,
+      label: socialPlatformLabel(account.platform),
       value: account.url,
+      icon: account.platform,
     })),
-  ].filter(Boolean) as Array<{ label: string; value: string }>
+  ].filter(Boolean) as ContactRow[]
 
   return (
     <div className={businessPageOwnerOuter}>
-      <div id="owner-details" className={cn('scroll-mt-28', businessPageSectionX)}>
+      <div id="owner-details" className={cn('scroll-mt-28 grid grid-cols-1 gap-4 lg:grid-cols-2', businessPageSectionX)}>
         <div className="relative">
           <AspectCover src={heroCover} className={businessPageHero} />
           <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-black/5 lg:rounded-2xl" aria-hidden />
@@ -151,7 +169,7 @@ export function BusinessOwnerEditView({
           </div>
         </div>
 
-        <div className={cn('relative mt-4', businessPageIdentityCard)}>
+        <div className={cn('relative mt-4 lg:mt-0', businessPageIdentityCard)}>
           <div className="edit-only absolute right-3.5 top-3.5 z-10 lg:right-4 lg:top-4">
             <OwnerEditButton label="Edit details" variant="light">
               <VendorOwnerDetailsEditButton
@@ -201,7 +219,7 @@ export function BusinessOwnerEditView({
           </p>
         </div>
 
-        <div className="mt-3.5 flex w-full flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3.5 shadow-sm lg:px-5">
+        <div className="col-span-1 lg:col-span-2 mt-3.5 flex w-full flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3.5 shadow-sm lg:px-5">
           {verified ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF2FD] px-2.5 py-1 text-[11.5px] font-bold text-chat-accent">
               <BadgeCheck className="size-3 fill-chat-accent text-white" aria-hidden />
@@ -324,7 +342,7 @@ export function BusinessOwnerEditView({
                   )}
                 >
                   <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px] bg-auth-bg text-body-secondary">
-                    <Pencil className="size-4 opacity-0" aria-hidden />
+                    <ContactRowIcon icon={row.icon} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <small className="block text-[11.5px] text-stat-muted">{row.label}</small>

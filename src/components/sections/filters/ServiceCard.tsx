@@ -130,7 +130,7 @@ export default function ServiceCard({
         </div>
       </div>
       <div className="w-full p-6">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-inter font-semibold text-text-primary">
             <BusinessProfileLink businessId={id} businessName={name} />
           </h3>
@@ -140,19 +140,16 @@ export default function ServiceCard({
               initialFollowing={isFollowing}
               listingPath={listingPath}
               size="compact"
-              variant="outline"
+              variant="pill"
             />
           ) : null}
         </div>
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
         </p>
-        {followersCount > 0 ? (
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
-            {followersCount.toLocaleString()}{" "}
-            {followersCount === 1 ? "follower" : "followers"}
-          </p>
-        ) : null}
+        <p className="mb-2 text-xs font-medium text-muted-foreground">
+          {followersCount.toLocaleString()} {followersCount === 1 ? "follower" : "followers"}
+        </p>
         <div className="flex items-center mb-2">
           <MapPin className="w-4 h-4 mr-1 text-text-secondary" />
           <span className="text-sm text-text-secondary font-inter font-medium wrap-break-word">

@@ -1,12 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
   ChevronRight,
   Crown,
+  Loader2,
+  MessageSquare,
   Pencil,
   Rocket,
   Settings,
   Share2,
+  Trash2,
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
@@ -18,16 +23,18 @@ import {
   profileHubChipClass,
 } from '@/components/profile/hub/ProfileIdentitySection'
 import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } from '@/components/profile/hub/profileHubUtils'
-import { setActiveBusinessId } from '@/api/userBusinesses'
+import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
 import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
 import { businessProfilePath } from '@/lib/businessProfile'
+import { alert, showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 type ProfileManageSheetProps = {
   business: ProfileHubBusiness | null
   open: boolean
   onClose: () => void
+  onBusinessDeleted?: () => void
 }
 
 function ManageToolRow({
@@ -89,8 +96,10 @@ function businessInitials(name: string): string {
   return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase()
 }
 
-export function ProfileManageSheet({ business, open, onClose }: ProfileManageSheetProps) {
+export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted }: ProfileManageSheetProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [isDeleting, setIsDeleting] = useState(false)
   const isPremiumActive = business?.isPremiumActive === true
   const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
 
@@ -110,6 +119,34 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
   async function handleShare() {
     if (!business) return
     await shareProfileUrl(publicUrl, business.businessName ?? 'Business')
+  }
+
+  async function handleDeletePage() {
+    if (!business || isDeleting) return
+
+    const confirmed = await alert.confirm({
+      title: 'Delete business page?',
+      text: `This will permanently remove "${business.businessName}". This cannot be undone.`,
+      icon: 'warning',
+      confirmText: 'Yes, delete',
+      cancelText: 'Cancel',
+      confirmButtonColor: '#dc2626',
+    })
+
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      await deleteUserBusiness(business.id)
+      await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
+      showSuccess('Business page deleted.')
+      onClose()
+      onBusinessDeleted?.()
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Could not delete this business page.')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -210,7 +247,7 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
               followersCount={business.followersCount}
               isPremiumActive={isPremiumActive}
             />
-            <ProfileContactLeadsBreakdown businessId={business.id} />
+            <ProfileContactLeadsBreakdown businessId={business.id} isPremiumActive={isPremiumActive} />
 
             <div className="px-[18px] pb-6 pt-2">
               <ProfileManageReviewsSection
@@ -287,6 +324,14 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
                 )}
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
+                  icon={<MessageSquare className="size-5" strokeWidth={2} />}
+                  title="Messages"
+                  subtitle="Customer enquiries for this business"
+                  to={`/user/messages?business_id=${business.id}`}
+                  onNavigate={onClose}
+                />
+                <ManageToolRow
+                  iconClass="bg-[#EAF2FD] text-chat-accent"
                   icon={<Share2 className="size-5" strokeWidth={2} />}
                   title="Share page"
                   subtitle="Send your business link to customers"
@@ -310,6 +355,19 @@ export function ProfileManageSheet({ business, open, onClose }: ProfileManageShe
                 <Pencil className="size-[18px] text-body-secondary" strokeWidth={2} aria-hidden />
                 View &amp; edit page
               </Link>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => void handleDeletePage()}
+                className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-[#f5c4c4] bg-white px-3.5 py-3.5 text-[14.5px] font-semibold text-brand disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isDeleting ? (
+                  <Loader2 className="size-[18px] animate-spin" aria-hidden />
+                ) : (
+                  <Trash2 className="size-[18px]" strokeWidth={2} aria-hidden />
+                )}
+                {isDeleting ? 'Deleting…' : 'Delete page'}
+              </button>
             </div>
           </div>
         </>

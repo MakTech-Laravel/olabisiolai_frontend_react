@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, MessageSquare, Search, UserRound } from 'lucide-react'
+import { Gift, Home, Search, UserRound } from 'lucide-react'
 
 import { useAuth } from '@/auth/useAuth'
 import { isBottomNavActive, shouldShowAppBottomNav } from '@/lib/appNavigation'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
-  key: 'home' | 'search' | 'messages' | 'profile'
+  key: 'home' | 'search' | 'referral' | 'profile'
   label: string
   to: string
   icon: typeof Home
@@ -16,7 +16,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { key: 'home', label: 'Home', to: '/', icon: Home },
   { key: 'search', label: 'Search', to: '/filters', icon: Search },
-  { key: 'messages', label: 'Messages', to: '/user/messages', icon: MessageSquare, requiresAuth: true },
+  { key: 'referral', label: 'Referral', to: '/user/referrals', icon: Gift, requiresAuth: true },
   { key: 'profile', label: 'Profile', to: '/user/profile', icon: UserRound, requiresAuth: true },
 ]
 
@@ -40,8 +40,8 @@ export function AppBottomNav() {
       <div className="mx-auto flex h-16 max-w-lg items-stretch justify-around px-2">
         {visibleItems.map(({ key, label, to, icon: Icon }) => {
           const active =
-            key === 'messages'
-              ? pathname.startsWith('/user/messages') || pathname.startsWith('/messages')
+            key === 'referral'
+              ? pathname.startsWith('/user/referrals')
               : key === 'profile'
                 ? pathname.startsWith('/user/profile') || pathname.startsWith('/user/settings')
                 : isBottomNavActive(pathname, to)
@@ -66,11 +66,11 @@ export function AppBottomNav() {
           <>
             <button
               type="button"
-              onClick={() => navigate('/login', { state: { from: '/user/messages' } })}
+              onClick={() => navigate('/login', { state: { from: '/user/referrals' } })}
               className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground hover:text-ink"
             >
-              <MessageSquare className="size-5 shrink-0" aria-hidden />
-              <span className="truncate">Messages</span>
+              <Gift className="size-5 shrink-0" aria-hidden />
+              <span className="truncate">Referral</span>
             </button>
             <button
               type="button"

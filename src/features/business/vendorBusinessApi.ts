@@ -22,6 +22,9 @@ export type CreateVendorBusinessPayload = {
   city: string;
   lga: string;
   full_address?: string;
+  latitude?: number;
+  longitude?: number;
+  google_place_id?: string;
   business_description: string;
   services: string[];
   phone: string;
@@ -124,6 +127,9 @@ export type UpdateVendorBusinessPayload = {
   city: string;
   lga: string;
   full_address?: string;
+  latitude?: number;
+  longitude?: number;
+  google_place_id?: string;
   business_description: string;
   services: string[];
   phone: string;
@@ -160,6 +166,15 @@ function buildUpdateVendorBusinessJsonBody(
   if (payload.full_address?.trim()) {
     body.full_address = payload.full_address.trim();
   }
+  if (payload.latitude != null && Number.isFinite(payload.latitude)) {
+    body.latitude = payload.latitude;
+  }
+  if (payload.longitude != null && Number.isFinite(payload.longitude)) {
+    body.longitude = payload.longitude;
+  }
+  if (payload.google_place_id?.trim()) {
+    body.google_place_id = payload.google_place_id.trim();
+  }
   body.social_accounts = (payload.social_accounts ?? []).map((account) => ({
     platform: account.platform,
     url: account.url.trim(),
@@ -192,6 +207,13 @@ function appendUpdateVendorBusinessFormData(
   appendIfTruthy(formData, "whatsapp", payload.whatsapp);
   appendIfTruthy(formData, "website", payload.website);
   appendIfTruthy(formData, "full_address", payload.full_address);
+  if (payload.latitude != null && Number.isFinite(payload.latitude)) {
+    formData.append("latitude", String(payload.latitude));
+  }
+  if (payload.longitude != null && Number.isFinite(payload.longitude)) {
+    formData.append("longitude", String(payload.longitude));
+  }
+  appendIfTruthy(formData, "google_place_id", payload.google_place_id);
   appendSocialAccountsToFormData(formData, payload.social_accounts ?? []);
 
   payload.services

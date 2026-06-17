@@ -95,7 +95,7 @@ export function LocationCascadeSelects({
         ))}
       </SelectShell>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 mt-2">
         <SelectShell
           label="City"
           value={city}
