@@ -104,7 +104,7 @@ export default function InviteEarn() {
               <div className="text-right">
                 <small className="block text-[11.5px] text-white/55">Earned</small>
                 <span className="font-heading text-[21px] font-extrabold text-[#E8C677]">
-                  {formatNaira(earned)}
+                  {formatNaira(earned, { freeLabel: false })}
                 </span>
               </div>
             </div>

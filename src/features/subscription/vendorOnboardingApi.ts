@@ -64,9 +64,13 @@ export function onboardingRedirectPath(status: VendorOnboardingStatus): string {
   return '/user/profile';
 }
 
-/** After vendor login — skip legacy plan-form; go to business profile, payment, or hub. */
+/** After vendor login — personal profile hub (all businesses), not the business edit page. */
 export async function resolveVendorPostLoginPath(): Promise<string> {
   const status = await fetchVendorOnboardingStatus();
 
-  return onboardingRedirectPath(status);
+  if (status.subscription?.requires_payment) {
+    return '/vendor/premium-payment';
+  }
+
+  return '/user/profile';
 }
