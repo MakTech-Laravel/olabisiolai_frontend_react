@@ -5,7 +5,7 @@ import { fetchPublicBusinesses } from "@/features/business/publicBusinessApi";
 
 function SkeletonCard() {
   return (
-    <div className="bg-card rounded-lg shadow-md overflow-hidden animate-pulse h-150 flex flex-col">
+    <div className="bg-card rounded-lg shadow-md overflow-hidden animate-pulse flex h-full min-h-[32rem] flex-col">
       <div className="w-full h-48 bg-muted" />
       <div className="p-6 space-y-3 flex flex-col flex-1">
         <div className="h-4 bg-muted rounded w-3/4" />
@@ -44,7 +44,7 @@ export default function Featured() {
 
         <div className="mt-12">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 items-stretch gap-12 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -60,7 +60,7 @@ export default function Featured() {
               No businesses available at the moment.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 items-stretch gap-12 md:grid-cols-2 lg:grid-cols-3">
               {list.slice(0, 6).map((business) => (
                 <FeaturedCard
                   key={business.id}

@@ -110,7 +110,7 @@ export function FeaturedCard({
         }
       }}
       className={cn(
-        "bg-card rounded-lg shadow-md overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 h-130 flex flex-col",
+        "flex h-full flex-col overflow-hidden rounded-lg bg-card shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
         isBoosted && "ring-2 ring-amber-400/60",
       )}
     >
@@ -134,7 +134,7 @@ export function FeaturedCard({
           ) : null}
         </div>
       </div>
-      <div className="p-6 flex flex-col flex-1">
+      <div className="flex min-h-0 flex-1 flex-col p-6">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-inter font-semibold text-text-primary">
             <BusinessProfileLink businessId={id} businessName={name} />
@@ -173,21 +173,23 @@ export function FeaturedCard({
             ({reviews})
           </span>
         </div>
-        <p className="font-normal font-inter text-sm text-text-secondary mb-6 flex-1 line-clamp-2">
+        <p className="mb-4 line-clamp-2 flex-1 font-normal font-inter text-sm text-text-secondary">
           {description}
         </p>
-        <ShowPhoneNumberReveal
-          phoneNumber={contactPhone}
-          className="mb-3 flex w-full items-center justify-center rounded-lg bg-destructive py-2 font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
-          iconClassName="size-5 shrink-0"
-        />
-        <DirectMessageButton
-          businessInfoId={id}
-          vendorUserUuid={vendorUserUuid}
-          fromPath={pathname}
-          className="w-full py-2"
-          iconClassName="w-5 h-5 mr-2"
-        />
+        <div className="mt-auto shrink-0 space-y-3">
+          <ShowPhoneNumberReveal
+            phoneNumber={contactPhone}
+            className="flex w-full items-center justify-center rounded-lg bg-destructive py-2 font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
+            iconClassName="size-5 shrink-0"
+          />
+          <DirectMessageButton
+            businessInfoId={id}
+            vendorUserUuid={vendorUserUuid}
+            fromPath={pathname}
+            className="w-full py-2"
+            iconClassName="w-5 h-5 mr-2"
+          />
+        </div>
       </div>
     </div>
   );

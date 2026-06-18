@@ -147,9 +147,11 @@ export default function ServiceCard({
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
         </p>
-        <p className="mb-2 text-xs font-medium text-muted-foreground">
-          {followersCount.toLocaleString()} {followersCount === 1 ? "follower" : "followers"}
-        </p>
+        {followersCount > 0 ? (
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            {followersCount.toLocaleString()} {followersCount === 1 ? "follower" : "followers"}
+          </p>
+        ) : null}
         <div className="flex items-center mb-2">
           <MapPin className="w-4 h-4 mr-1 text-text-secondary" />
           <span className="text-sm text-text-secondary font-inter font-medium wrap-break-word">
