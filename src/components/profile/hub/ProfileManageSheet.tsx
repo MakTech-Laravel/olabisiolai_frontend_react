@@ -25,7 +25,7 @@ import {
 import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } from '@/components/profile/hub/profileHubUtils'
 import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
-import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { VENDOR_PREMIUM_INFO_PATH } from '@/hooks/useVendorSubscriptionAccess'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { alert, showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -295,7 +295,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                     icon={<Crown className="size-5" strokeWidth={2} />}
                     title="Upgrade to Premium"
                     subtitle="Analytics, boost, catalog & badge"
-                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_PAYMENT_PATH)}
+                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_INFO_PATH)}
                   />
                 )}
                 {isPremiumActive ? (
@@ -319,7 +319,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                         Premium
                       </span>
                     }
-                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_PAYMENT_PATH)}
+                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_INFO_PATH)}
                   />
                 )}
                 <ManageToolRow

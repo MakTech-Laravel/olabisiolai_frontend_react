@@ -35,6 +35,8 @@ const Trade = lazy(() => import("@/pages/frontend/Trade"));
 const Service = lazy(() => import("@/pages/frontend/Service"));
 const DirectMessage = lazy(() => import("@/pages/frontend/DirectMessage"));
 const GiveReview = lazy(() => import("@/pages/frontend/GiveReview"));
+const BusinessReviews = lazy(() => import("@/pages/frontend/BusinessReviews"));
+const VendorPremiumInfo = lazy(() => import("@/pages/vendor/VendorPremiumInfo"));
 const RedirectChooseYourPlan = lazy(() => import("@/pages/vendor/RedirectChooseYourPlan"));
 const RefundPolicy = lazy(() => import("@/pages/frontend/RefundPolicy"));
 const CommunityGuidelines = lazy(() => import("@/pages/frontend/CommunityGuidelines"));
@@ -51,6 +53,7 @@ export const publicRoutes: RouteObject = {
     { path: "/trade", element: suspensePage(Trade) },
     { path: "/service", element: suspensePage(Service) },
     { path: "/businesses/:slug", element: suspensePage(Service) },
+    { path: "/businesses/:slug/reviews", element: suspensePage(BusinessReviews) },
     { path: "/messages", element: suspensePage(DirectMessage) },
     { path: "/reviews", element: suspensePage(GiveReview) },
     { path: "/about", element: suspensePage(About) },
@@ -97,6 +100,10 @@ export const publicRoutes: RouteObject = {
     {
       path: "/vendor/plan-form",
       element: suspensePage(LegacyVendorOnboardingRedirect),
+    },
+    {
+      path: "/vendor/premium-info",
+      element: suspensePage(VendorPremiumInfo),
     },
     {
       path: "/vendor/premium-payment",

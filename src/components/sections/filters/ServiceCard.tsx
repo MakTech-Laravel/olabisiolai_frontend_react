@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { MapPin, Star, CheckCircle, Zap } from "lucide-react";
 
 import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
@@ -64,6 +65,16 @@ export default function ServiceCard({
   const { pathname } = useLocation();
   const listingPath = businessProfilePath(id);
   const isBoosted = boostStatus === "active";
+  const [following, setFollowing] = useState(isFollowing);
+  const [localFollowersCount, setLocalFollowersCount] = useState(followersCount);
+
+  useEffect(() => {
+    setFollowing(isFollowing);
+  }, [isFollowing, vendorUserId]);
+
+  useEffect(() => {
+    setLocalFollowersCount(followersCount);
+  }, [followersCount, id]);
 
   const goToService = () => {
     navigate(listingPath, {
@@ -109,12 +120,14 @@ export default function ServiceCard({
         isBoosted && "ring-2 ring-amber-400/60",
       )}
     >
-      <div className="w-full relative">
-        <img
-          src={image}
-          alt="Business Image"
-          className="w-full h-full object-cover"
-        />
+      <div className="w-full shrink-0 xl:w-2/5">
+        <div className="relative aspect-[16/10] w-full overflow-hidden xl:aspect-auto xl:min-h-[220px] xl:h-full">
+          <img
+            src={image}
+            alt="Business Image"
+            className="absolute inset-0 size-full object-cover"
+          />
+        </div>
 
         <div className="absolute top-4 left-4 flex flex-wrap gap-2">
           {verified ? (
@@ -135,21 +148,35 @@ export default function ServiceCard({
             <BusinessProfileLink businessId={id} businessName={name} />
           </h3>
           {vendorUserId ? (
-            <FollowVendorButton
-              followingUserId={vendorUserId}
-              initialFollowing={isFollowing}
-              listingPath={listingPath}
-              size="compact"
-              variant="pill"
-            />
+            <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
+              <FollowVendorButton
+                followingUserId={vendorUserId}
+                initialFollowing={following}
+                listingPath={listingPath}
+                size="compact"
+                variant="pill"
+                onFollowChange={(nextFollowing, count) => {
+                  setFollowing(nextFollowing);
+                  if (typeof count === "number") {
+                    setLocalFollowersCount(count);
+                  } else {
+                    setLocalFollowersCount((current) =>
+                      Math.max(0, current + (nextFollowing ? 1 : -1)),
+                    );
+                  }
+                }}
+              />
+            </div>
           ) : null}
         </div>
         <p className="text-primary text-sm font-inter font-medium mb-2">
           {category}
         </p>
-        <p className="mb-2 text-xs font-medium text-muted-foreground">
-          {followersCount.toLocaleString()} {followersCount === 1 ? "follower" : "followers"}
-        </p>
+        {localFollowersCount > 0 ? (
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            {localFollowersCount.toLocaleString()} {localFollowersCount === 1 ? "follower" : "followers"}
+          </p>
+        ) : null}
         <div className="flex items-center mb-2">
           <MapPin className="w-4 h-4 mr-1 text-text-secondary" />
           <span className="text-sm text-text-secondary font-inter font-medium wrap-break-word">

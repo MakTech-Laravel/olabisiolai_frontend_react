@@ -54,7 +54,7 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
             {analyticsLocked ? ' · Analytics locked' : ' · Analytics unlocked'}
           </p>
           {!isPremiumActive ? (
-            <Button type="button" size="sm" className="mt-2" onClick={goToPremiumPayment}>
+            <Button type="button" size="sm" className="mt-2" onClick={() => goToPremiumPayment(businessId)}>
               <Crown className="mr-1.5 size-4" aria-hidden />
               Upgrade to Premium
             </Button>

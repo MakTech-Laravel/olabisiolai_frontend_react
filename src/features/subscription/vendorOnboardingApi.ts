@@ -2,8 +2,8 @@ import { isAxiosError } from 'axios';
 
 import { request } from '@/api/request';
 import { businessProfilePath } from '@/lib/businessProfile';
+import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess';
 import type { VendorSubscriptionState } from '@/features/subscription/vendorSubscriptionApi';
-
 export type VendorOnboardingStatus = {
   has_business: boolean;
   can_access_onboarding: boolean;
@@ -46,7 +46,7 @@ export async function fetchVendorOnboardingStatus(): Promise<VendorOnboardingSta
 
 export function onboardingRedirectPath(status: VendorOnboardingStatus): string {
   if (status.subscription?.requires_payment) {
-    return '/vendor/premium-payment';
+    return buildVendorPremiumInfoPath(status.business_id);
   }
 
   if (status.business_id) {
@@ -69,7 +69,7 @@ export async function resolveVendorPostLoginPath(): Promise<string> {
   const status = await fetchVendorOnboardingStatus();
 
   if (status.subscription?.requires_payment) {
-    return '/vendor/premium-payment';
+    return buildVendorPremiumInfoPath(status.business_id);
   }
 
   return '/user/profile';

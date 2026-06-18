@@ -18,7 +18,7 @@ import {
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
-import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -188,7 +188,7 @@ export function VendorOwnerCatalogSection({
   }
 
   const items = catalogQuery.data?.items ?? []
-  const upgradePath = `${VENDOR_PREMIUM_PAYMENT_PATH}?business_id=${businessId}`
+  const upgradePath = buildVendorPremiumInfoPath(businessId)
 
   const editorSheet = (
     <VendorOwnerModalShell

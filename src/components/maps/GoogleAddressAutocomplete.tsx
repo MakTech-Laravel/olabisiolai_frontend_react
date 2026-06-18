@@ -356,9 +356,13 @@ export function GoogleAddressAutocomplete({
     recalc()
     window.addEventListener('scroll', recalc, true)
     window.addEventListener('resize', recalc)
+    window.visualViewport?.addEventListener('resize', recalc)
+    window.visualViewport?.addEventListener('scroll', recalc)
     return () => {
       window.removeEventListener('scroll', recalc, true)
       window.removeEventListener('resize', recalc)
+      window.visualViewport?.removeEventListener('resize', recalc)
+      window.visualViewport?.removeEventListener('scroll', recalc)
     }
   }, [showDropdown])
 

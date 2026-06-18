@@ -1,8 +1,14 @@
 import { showInfo, showSuccess, showWarning } from '@/lib/sweetAlert'
+import { useMessagingStore } from '@/store/messagingStore'
 import type { RealtimeNotificationPayload, RealtimeNotificationTone } from '@/types/realtimeNotification'
 
 function shouldShowDesktopToast(): boolean {
   return typeof document !== 'undefined' && document.visibilityState !== 'visible'
+}
+
+function isViewingConversation(conversationUuid: string | undefined): boolean {
+  if (!conversationUuid) return false
+  return useMessagingStore.getState().activeConversationUuid === conversationUuid
 }
 
 function toastForTone(tone: RealtimeNotificationTone | string | undefined) {
@@ -11,8 +17,12 @@ function toastForTone(tone: RealtimeNotificationTone | string | undefined) {
   return showInfo
 }
 
-export function notifyNewMessage(senderName: string, preview: string) {
-  if (!shouldShowDesktopToast()) return
+export function notifyNewMessage(
+  senderName: string,
+  preview: string,
+  conversationUuid?: string,
+) {
+  if (isViewingConversation(conversationUuid)) return
   void showInfo(`${senderName}: ${preview}`)
 }
 

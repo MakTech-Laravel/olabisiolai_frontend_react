@@ -1,15 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 
 import { BasicBoost } from '@/components/sections/vendor/boost/BasicBoost'
 import { DynamicBoostConfigurator } from '@/components/sections/vendor/boost/DynamicBoostConfigurator'
 import { VendorBoostCampaignsTable } from '@/components/sections/vendor/boost/VendorBoostCampaignsTable'
 import { fetchVendorBoostCatalog } from '@/features/boost/vendorBoostApi'
-import { useVendorSubscriptionAccess, VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { Button } from '@/components/ui/button'
 
 export default function VendorBoost() {
-  const { isPremiumActive: isPremium, isVerified, canBoost } = useVendorSubscriptionAccess()
+  const { isPremiumActive: isPremium, isVerified, canBoost, goToPremiumPayment } = useVendorSubscriptionAccess()
 
   const { data: catalog, isPending: catalogLoading } = useQuery({
     queryKey: ['vendor', 'boost', 'catalog'],
@@ -22,8 +22,8 @@ export default function VendorBoost() {
     return (
       <div className="w-full space-y-6 p-4 md:p-6">
         <BasicBoost />
-        <Button asChild className="w-full rounded-xl">
-          <Link to={VENDOR_PREMIUM_PAYMENT_PATH}>Upgrade to Premium for Boost</Link>
+        <Button type="button" className="w-full rounded-xl" onClick={() => goToPremiumPayment()}>
+          Upgrade to Premium for Boost
         </Button>
       </div>
     )

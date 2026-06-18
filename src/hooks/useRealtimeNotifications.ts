@@ -54,18 +54,18 @@ export function useRealtimeNotifications(echo: ReverbEcho | null): void {
     if (isAuthenticated && user?.id) {
       const uid = Number(user.id)
       if (Number.isFinite(uid) && uid > 0) {
+        cleanups.push(
+          svc.subscribeToUserChannel(uid, {
+            onNewMessageNotification: onPayload,
+            onAppNotification: onPayload,
+            onUserPresence: () => {},
+          }),
+        )
+
         if (isAdmin) {
           cleanups.push(
             svc.subscribeToAdminChannel(uid, {
               onAppNotification: onPayload,
-            }),
-          )
-        } else {
-          cleanups.push(
-            svc.subscribeToUserChannel(uid, {
-              onNewMessageNotification: onPayload,
-              onAppNotification: onPayload,
-              onUserPresence: () => {},
             }),
           )
         }

@@ -17,7 +17,7 @@ import {
 } from '@/components/profile/VendorOwnerFieldEditors'
 import { VendorOwnerCatalogSection } from '@/components/profile/VendorOwnerCatalogSection'
 import { OwnerEditSection } from '@/components/profile/OwnerEditSection'
-import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { FREE_PHOTO_LIMIT } from '@/constants/planLimits'
 import {
   businessPageHero,
@@ -26,6 +26,7 @@ import {
   businessPageSectionX,
   businessPageTitle,
 } from '@/lib/businessPageLayout'
+import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from '@/features/business/publicBusinessApi'
 import { cn } from '@/lib/utils'
 
 type BusinessOwnerEditViewProps = {
@@ -189,12 +190,12 @@ export function BusinessOwnerEditView({
           </div>
           <h1 className={cn(businessPageTitle, 'pr-10')}>{name}</h1>
           <p className="mt-2 text-[13.5px] text-ink lg:text-base">
-            {categoryLabel ? (
+            {categoryLabel && categoryLabel !== NO_CATEGORY_LABEL ? (
               <>
                 Category: <b className="font-semibold text-chat-accent">{categoryLabel}</b>
               </>
             ) : (
-              <span className="text-body-secondary">Category not set</span>
+              <span className="italic text-body-secondary">{NO_CATEGORY_LABEL}</span>
             )}
             {subcategoryLabel ? (
               <>
@@ -206,7 +207,9 @@ export function BusinessOwnerEditView({
           <div className="mt-2 flex items-start gap-2 text-sm text-body-secondary lg:text-[15px]">
             <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
-              {business?.location?.trim() || 'Add your business location so customers can find you.'}
+              {business?.location?.trim() && business.location !== NO_LOCATION_LABEL
+                ? business.location
+                : NO_LOCATION_LABEL}
             </span>
             <div className="edit-only shrink-0">
               <OwnerEditButton label="Edit location" variant="light">
@@ -275,7 +278,7 @@ export function BusinessOwnerEditView({
               </div>
             ) : !isPremium ? (
               <Link
-                to={`${VENDOR_PREMIUM_PAYMENT_PATH}?business_id=${businessId}`}
+                to={buildVendorPremiumInfoPath(businessId)}
                 className="edit-only grid aspect-square place-items-center rounded-[13px] border-[1.5px] border-dashed border-[#e3d6b5] bg-[#fffbf0] lg:rounded-xl"
                 aria-label="Upgrade for more photos"
               >
@@ -288,7 +291,7 @@ export function BusinessOwnerEditView({
           <p className="edit-only mt-3 text-[12.5px] text-body-secondary lg:text-sm">
             Free plan holds {FREE_PHOTO_LIMIT} photos.{' '}
             <Link
-              to={`${VENDOR_PREMIUM_PAYMENT_PATH}?business_id=${businessId}`}
+              to={buildVendorPremiumInfoPath(businessId)}
               className="font-bold text-chat-accent"
             >
               Upgrade to Premium

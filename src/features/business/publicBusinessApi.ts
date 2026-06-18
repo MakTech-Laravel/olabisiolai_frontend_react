@@ -138,6 +138,9 @@ export function resolvePublicBusinessSubcategory(
   );
 }
 
+export const NO_CATEGORY_LABEL = 'No category yet'
+export const NO_LOCATION_LABEL = 'No location yet'
+
 function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const r = rec(raw);
   if (!r) return null;
@@ -146,15 +149,18 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const name = str(r.business_name ?? r.name, `Business ${id}`);
 
   const catObj = rec(r.category);
-  const category = str(catObj?.name ?? r.category_name ?? r.category, 'General');
   const categoryId = num(catObj?.id ?? r.category_id, NaN);
   const categoryIdNorm = Number.isFinite(categoryId) && categoryId > 0 ? categoryId : null;
+  const categoryRaw = str(catObj?.name ?? r.category_name ?? r.category, '').trim();
+  const category = categoryIdNorm ? (categoryRaw || 'General') : NO_CATEGORY_LABEL;
   const categorySubcategories = normalizeSubcategories(catObj?.subcategories);
   const subcategoryRaw = str(r.subcategory, '').trim();
   const subcategory =
-    subcategoryRaw ||
-    resolveSubcategoryFromServices(categorySubcategories, parseStringList(r.services_offered)) ||
-    null;
+    categoryIdNorm && subcategoryRaw
+      ? subcategoryRaw
+      : categoryIdNorm
+        ? resolveSubcategoryFromServices(categorySubcategories, parseStringList(r.services_offered))
+        : null;
   const phoneRaw = str(r.phone, '').trim();
   const phone = phoneRaw || null;
   const whatsappRaw = str(r.whatsapp, '').trim();
@@ -169,18 +175,18 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const fullName = str(locObj?.full_name, '').trim();
   const city = str(locObj?.city ?? r.city, '');
   const state = str(locObj?.state ?? r.state, '');
-  const location =
-    streetAddress ||
-    formattedAddress ||
-    fullName ||
-    [city, state].filter(Boolean).join(', ') ||
-    str(r.location, 'N/A');
   const locationId = num(locObj?.id ?? r.location_id, 0) || null;
   const locationName = str(locObj?.name ?? locObj?.full_name ?? city, '') || null;
-  const latRaw = num(locObj?.latitude ?? r.latitude, NaN);
-  const lngRaw = num(locObj?.longitude ?? r.longitude, NaN);
+  const latRaw = num(r.latitude ?? locObj?.latitude, NaN);
+  const lngRaw = num(r.longitude ?? locObj?.longitude, NaN);
   const latitude = Number.isFinite(latRaw) ? latRaw : null;
   const longitude = Number.isFinite(lngRaw) ? lngRaw : null;
+  const location =
+    streetAddress ||
+    (locationId
+      ? formattedAddress || fullName || [city, state].filter(Boolean).join(', ') || str(r.location, '')
+      : '') ||
+    NO_LOCATION_LABEL;
 
   const summary = rec(r.reviews_summary);
   const rating = summary

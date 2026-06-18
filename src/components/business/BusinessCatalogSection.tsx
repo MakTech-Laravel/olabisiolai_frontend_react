@@ -7,7 +7,7 @@ import {
   type BusinessCatalogItem,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
-import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { cn } from '@/lib/utils'
 
@@ -45,7 +45,7 @@ export function BusinessCatalogSection({
   }, [filter, items])
 
   const upgradePath =
-    businessId !== null ? `${VENDOR_PREMIUM_PAYMENT_PATH}?business_id=${businessId}` : VENDOR_PREMIUM_PAYMENT_PATH
+    businessId !== null ? buildVendorPremiumInfoPath(businessId) : buildVendorPremiumInfoPath()
 
   if (catalogLocked && !isOwnerMode) {
     return null
