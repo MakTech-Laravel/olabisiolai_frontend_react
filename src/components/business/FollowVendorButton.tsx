@@ -4,9 +4,10 @@ import { UserPlus, UserCheck } from 'lucide-react'
 
 import { getFollowErrorMessage, toggleFollow } from '@/api/follows'
 import { useAuth } from '@/auth/useAuth'
+import { patchListingFollowStateInCache } from '@/features/follows/patchListingFollowCache'
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import { Button } from '@/components/ui/button'
-import { showError, showSuccess } from '@/lib/sweetAlert'
+import { showError } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 type FollowVendorButtonProps = {
@@ -65,12 +66,13 @@ export function FollowVendorButton({
       const result = await toggleFollow(followingUserId!)
       setIsFollowing(result.following)
       onFollowChange?.(result.following, result.followers_count)
-      showSuccess(result.following ? 'You are now following this vendor.' : 'Unfollowed successfully.')
-      await queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
-      await queryClient.invalidateQueries({ queryKey: ['business'] })
-      await queryClient.invalidateQueries({ queryKey: ['businesses'] })
-      await queryClient.invalidateQueries({ queryKey: ['filters'] })
-      await queryClient.invalidateQueries({ queryKey: ['user-following'] })
+      patchListingFollowStateInCache(queryClient, {
+        followingUserId: followingUserId!,
+        following: result.following,
+        followersCount: result.followers_count,
+      })
+      void queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
+      void queryClient.invalidateQueries({ queryKey: ['user-following'] })
     } catch (error) {
       showError(getFollowErrorMessage(error, 'Could not update follow status. Please try again.'))
     } finally {
@@ -79,10 +81,14 @@ export function FollowVendorButton({
   }
 
   const label = isFollowing ? 'Following' : 'Follow'
+  const unfollowLabel = 'Unfollow'
   const isPill = variant === 'pill'
   const resolvedVariant = isPill ? 'outline' : isFollowing && fullWidth ? 'default' : variant
 
   const isCompact = size === 'compact'
+  const ariaLabel = isFollowing
+    ? `Unfollow this business. Currently following.`
+    : 'Follow this business'
 
   return (
     <Button
@@ -90,7 +96,10 @@ export function FollowVendorButton({
       variant={resolvedVariant}
       disabled={disabled || loading || !isAuthReady || isSessionLoading || isUserLoading}
       onClick={(event) => void handleToggle(event)}
+      onPointerDown={(event) => event.stopPropagation()}
       aria-pressed={isFollowing}
+      aria-label={showLabel ? undefined : ariaLabel}
+      title={isFollowing ? 'Click to unfollow' : 'Click to follow'}
       className={cn(
         'gap-2',
         isPill &&
@@ -125,7 +134,18 @@ export function FollowVendorButton({
       {isPill && isFollowing ? (
         <UserCheck className="w-4 h-4 shrink-0" aria-hidden />
       ) : null}
-      {showLabel ? (loading ? 'Please wait…' : label) : null}
+      {showLabel ? (
+        loading ? (
+          'Please wait…'
+        ) : isPill && isFollowing ? (
+          <span className="group/follow-toggle inline-flex min-w-[4.75rem] justify-center">
+            <span className="group-hover/follow-toggle:hidden">{label}</span>
+            <span className="hidden group-hover/follow-toggle:inline">{unfollowLabel}</span>
+          </span>
+        ) : (
+          label
+        )
+      ) : null}
     </Button>
   )
 }

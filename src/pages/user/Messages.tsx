@@ -1,39 +1,14 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import { fetchUserBusinesses } from "@/api/userBusinesses";
 import { useAuth } from "@/auth/useAuth";
-import { UserShell } from "@/components/partials/user/UserShell";
+import { FrontendHeader } from "@/components/partials/frontend/FrontendHeader";
 import { MessagingLayout } from "@/features/messaging/MessagingLayout";
 import type { MessagingInboxKey } from "@/features/messaging/MessagingInboxTabs";
 import { useStartDirectConversation } from "@/hooks/useStartDirectConversation";
 import { cn } from "@/lib/utils";
-
-const LOGO_FOOTER = "/images/landing/gidira-logo-footer.svg";
-
-const footerColumns = [
-  {
-    title: "Company",
-    links: [
-      { label: "About Gidira", to: "/about" },
-      { label: "Contact Us", to: "/contact" },
-      { label: "Careers", to: "/careers" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Terms & Conditions", to: "/terms" },
-      { label: "Privacy Policy", to: "/privacy-policy" },
-      { label: "Cookies Policy", to: "/cookies-policy" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [{ label: "FAQs", to: "/faq" }],
-  },
-] as const;
 
 export default function Messages() {
   const { user, isAuthenticated } = useAuth();
@@ -73,9 +48,11 @@ export default function Messages() {
   });
 
   return (
-    <>
-      <UserShell active="messages">
-        <div className="relative min-h-[min(640px,70vh)]">
+    <div className="flex min-h-screen flex-col bg-auth-bg text-ink">
+      <FrontendHeader />
+
+      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-3 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-4 lg:px-6 lg:pb-6">
+        <div className="relative min-h-[min(640px,calc(100dvh-7rem))] flex-1">
           {starting || pendingPeer ? (
             <div
               className={cn(
@@ -95,41 +72,7 @@ export default function Messages() {
             title={pageTitle}
           />
         </div>
-      </UserShell>
-
-      <footer className="bg-footer-bar">
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-14 xl:px-12">
-          <div className="grid gap-8 md:grid-cols-[280px_1fr]">
-            <div>
-              <img src={LOGO_FOOTER} alt="Gidira" className="h-8 w-auto" />
-              <p className="mt-4 text-sm text-white">FIND BETTER | CONNECT FASTER</p>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-3">
-              {footerColumns.map((column) => (
-                <div key={column.title}>
-                  <h4 className="text-base font-semibold text-white">{column.title}</h4>
-                  <ul className="mt-4 space-y-2">
-                    {column.links.map((link) => (
-                      <li key={link.label}>
-                        <Link to={link.to} className="text-sm text-footer-muted hover:text-white">
-                          {link.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-white/20 pt-8 text-center">
-            <p className="text-sm text-footer-muted">
-              © 2026 GIDIRA. All rights reserved. Built for Nigeria&apos;s Digital Economy.
-            </p>
-          </div>
-        </div>
-      </footer>
-    </>
+      </main>
+    </div>
   );
 }

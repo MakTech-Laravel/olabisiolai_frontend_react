@@ -105,6 +105,7 @@ export default function Service() {
   const [photosOpen, setPhotosOpen] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [followersCount, setFollowersCount] = useState(0);
+  const [isFollowingVendor, setIsFollowingVendor] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [displayDescription, setDisplayDescription] = useState("");
   const [ownerPageMode, setOwnerPageMode] = useState<OwnerPageMode>("edit");
@@ -219,7 +220,12 @@ export default function Service() {
   const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
   const { mode: profileMode, capabilities } = useProfileViewMode(vendorUserId);
   const isOwnerMode = profileMode === "vendorOwner";
-  const isFollowingVendor = business?.isFollowing ?? stateData?.isFollowing ?? false;
+  const resolvedIsFollowingVendor =
+    business?.isFollowing ?? stateData?.isFollowing ?? isFollowingVendor;
+
+  useEffect(() => {
+    setIsFollowingVendor(business?.isFollowing ?? stateData?.isFollowing ?? false);
+  }, [business?.isFollowing, stateData?.isFollowing, businessId]);
 
   useEffect(() => {
     setDisplayName(name);
@@ -324,7 +330,7 @@ export default function Service() {
               memberSince={memberSince}
               responseTimeLabel={responseTimeLabel}
               followersCount={followersCount}
-              isFollowingVendor={isFollowingVendor}
+              isFollowingVendor={resolvedIsFollowingVendor}
               vendorUserId={vendorUserId}
               vendorUserUuid={vendorUserUuid}
               boostActive={boostActive}
@@ -352,7 +358,12 @@ export default function Service() {
                 setReviewPage(page);
                 reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              onFollowersChange={(count) => setFollowersCount(count)}
+              onFollowersChange={(count, following) => {
+                setFollowersCount(count);
+                if (typeof following === "boolean") {
+                  setIsFollowingVendor(following);
+                }
+              }}
               onOpenPhotos={() => setPhotosOpen(true)}
               onWriteReview={handleWriteReview}
               hideBackLink
@@ -380,7 +391,7 @@ export default function Service() {
           memberSince={memberSince}
           responseTimeLabel={responseTimeLabel}
           followersCount={followersCount}
-          isFollowingVendor={isFollowingVendor}
+          isFollowingVendor={resolvedIsFollowingVendor}
           vendorUserId={vendorUserId}
           vendorUserUuid={vendorUserUuid}
           boostActive={boostActive}
@@ -408,7 +419,12 @@ export default function Service() {
             setReviewPage(page);
             reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
-          onFollowersChange={(count) => setFollowersCount(count)}
+          onFollowersChange={(count, following) => {
+            setFollowersCount(count);
+            if (typeof following === "boolean") {
+              setIsFollowingVendor(following);
+            }
+          }}
           onOpenPhotos={() => setPhotosOpen(true)}
           onWriteReview={handleWriteReview}
         />

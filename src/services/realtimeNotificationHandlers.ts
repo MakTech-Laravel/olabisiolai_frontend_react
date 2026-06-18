@@ -72,5 +72,5 @@ function handleNewMessage(
 
   const sender = String(payload.sender_name ?? payload.title ?? 'Message')
   const preview = String(payload.preview ?? payload.message ?? '')
-  notifyNewMessage(sender, preview)
+  notifyNewMessage(sender, preview, conversationUuid || undefined)
 }

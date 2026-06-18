@@ -4,6 +4,7 @@ import { CheckCircle2, MapPin, UserMinus } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { toggleFollow } from '@/api/follows'
+import { patchListingFollowStateInCache } from '@/features/follows/patchListingFollowCache'
 import { DirectMessageButton } from '@/components/business/DirectMessageButton'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
@@ -41,11 +42,14 @@ export function FollowingBusinessCard({
     if (unfollowing) return
     setUnfollowing(true)
     try {
-      await toggleFollow(followingUserId)
-      await queryClient.invalidateQueries({ queryKey: ['user-following'] })
-      await queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
-      await queryClient.invalidateQueries({ queryKey: ['businesses'] })
-      await queryClient.invalidateQueries({ queryKey: ['filters'] })
+      const result = await toggleFollow(followingUserId)
+      patchListingFollowStateInCache(queryClient, {
+        followingUserId,
+        following: result.following,
+        followersCount: result.followers_count,
+      })
+      void queryClient.invalidateQueries({ queryKey: ['user-following'] })
+      void queryClient.invalidateQueries({ queryKey: ['follow-stats'] })
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Could not unfollow. Please try again.')
     } finally {
