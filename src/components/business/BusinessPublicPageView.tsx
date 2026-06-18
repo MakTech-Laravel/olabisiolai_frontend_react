@@ -12,8 +12,9 @@ import type { PublicBusiness } from "@/features/business/publicBusinessApi";
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
 import { Button } from "@/components/ui/button";
-import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from "@/constants/planLimits";
+import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
+import { businessProfilePath } from "@/lib/businessProfile";
 import {
   businessPageBody,
   businessPageHero,
@@ -120,7 +121,8 @@ type BusinessPublicPageViewProps = {
   pagination: { current_page: number; last_page: number; total: number };
   reviewPage: number;
   onReviewPageChange: (page: number) => void;
-  onSeeAllReviews?: () => void;
+  seeAllReviewsHref?: string;
+  showDirectMessage?: boolean;
   onFollowersChange: (count: number, following?: boolean) => void;
   onOpenPhotos: () => void;
   onWriteReview: () => void;
@@ -157,7 +159,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     heroCover,
     logoUrl,
     coverPhotos,
-    photoLimit,
     contactPhone,
     whatsappUrl,
     website,
@@ -172,7 +173,8 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     pagination,
     reviewPage,
     onReviewPageChange,
-    onSeeAllReviews,
+    seeAllReviewsHref,
+    showDirectMessage = false,
     onFollowersChange,
     onOpenPhotos,
     onWriteReview,
@@ -180,6 +182,9 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
   } = props;
 
   const ratingScore = rating > 0 ? (Number.isInteger(rating) ? String(rating) : rating.toFixed(1)) : null;
+  const resolvedSeeAllReviewsHref = seeAllReviewsHref ?? `${businessProfilePath(businessId)}/reviews`;
+  const categoryIsPlaceholder = categoryLabel === NO_CATEGORY_LABEL;
+  const locationIsPlaceholder = locationText === NO_LOCATION_LABEL;
 
   const actionsPanel = showCustomerActions ? (
     <section className="flex flex-col gap-2.5 md:gap-3">
@@ -190,7 +195,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
         className="h-auto w-full rounded-[14px] bg-brand-red px-4 py-[15px] text-[15.5px] font-semibold text-white shadow-[0_8px_18px_rgba(225,36,42,0.24)] transition-transform hover:bg-brand-red/90 active:scale-[0.99] lg:text-base"
         iconClassName="size-[19px] shrink-0"
       />
-      {capabilities.message ? (
+      {showDirectMessage ? (
         <DirectMessageButton
           businessInfoId={businessId}
           vendorUserUuid={vendorUserUuid}
@@ -348,14 +353,18 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             {locationText ? (
               <p className="mt-2 flex items-start gap-1.5 text-[13.5px] text-body-secondary lg:text-base">
                 <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                <a
-                  href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:underline"
-                >
-                  {locationText}
-                </a>
+                {locationIsPlaceholder ? (
+                  <span className="italic text-stat-muted">{locationText}</span>
+                ) : (
+                  <a
+                    href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {locationText}
+                  </a>
+                )}
               </p>
             ) : null}
             {capabilities.follow && vendorUserId ? (
@@ -384,15 +393,15 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                 {categoryLabel ? (
                   <>
                     Category:{" "}
-                    {categoryId ? (
+                    {categoryIsPlaceholder || !categoryId ? (
+                      <span className="font-semibold italic text-stat-muted">{categoryLabel}</span>
+                    ) : (
                       <Link
                         to={`/filters?category_id=${categoryId}`}
                         className="font-semibold text-chat-accent hover:underline"
                       >
                         {categoryLabel}
                       </Link>
-                    ) : (
-                      <span className="font-semibold text-chat-accent">{categoryLabel}</span>
                     )}
                   </>
                 ) : null}
@@ -456,9 +465,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             <section className={cn("pt-6", businessPageSectionX)}>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className={businessPageSectionTitle}>Photos</h2>
-                <span className="text-[13px] font-semibold text-stat-muted lg:text-sm">
-                  {coverPhotos.length} of {photoLimit}
-                </span>
               </div>
               <div className={businessPagePhotoGrid}>
                 {coverPhotos.slice(0, 5).map((src, index) => (
@@ -481,17 +487,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                   </button>
                 ) : null}
               </div>
-              {!isPremium && coverPhotos.length >= FREE_PHOTO_LIMIT ? (
-                <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-dashed border-[#cfe2fb] bg-white px-4 py-3 text-[13px] text-body-secondary lg:text-sm">
-                  <Crown className="size-5 shrink-0 text-[#9A6B1F]" aria-hidden />
-                  <span>
-                    <span className="font-semibold text-ink">
-                      {coverPhotos.length} of {FREE_PHOTO_LIMIT} photos used.
-                    </span>{" "}
-                    Premium businesses can add up to {PREMIUM_PHOTO_LIMIT}.
-                  </span>
-                </div>
-              ) : null}
             </section>
           ) : null}
 
@@ -513,15 +508,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                 ) : null}
               </h2>
               <div className="flex items-center gap-3">
-                {pagination.total > reviewsList.length || pagination.last_page > 1 ? (
-                  <button
-                    type="button"
-                    onClick={onSeeAllReviews}
-                    className="text-sm font-semibold text-chat-accent hover:underline lg:text-base"
-                  >
-                    See all reviews
-                  </button>
-                ) : null}
                 {capabilities.review ? (
                   <button
                     type="button"
@@ -535,14 +521,22 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             </div>
 
             {rating > 0 && reviewCount > 0 ? (
-              <div className="mb-4 flex items-center gap-4 rounded-2xl bg-white px-[18px] py-4 shadow-sm lg:px-6 lg:py-5">
-                <div>
-                  <div className="font-heading text-[38px] font-extrabold leading-none text-ink lg:text-5xl">{ratingScore}</div>
-                  <div className="mt-1 text-[13px] text-stat-muted lg:text-sm">
-                    {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+              <div className="mb-4 rounded-2xl bg-white px-[18px] py-4 shadow-sm lg:px-6 lg:py-5">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="font-heading text-[38px] font-extrabold leading-none text-ink lg:text-5xl">{ratingScore}</div>
+                    <div className="mt-1 text-[13px] text-stat-muted lg:text-sm">
+                      {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+                    </div>
                   </div>
+                  <StarRow rating={rating} />
                 </div>
-                <StarRow rating={rating} />
+                <Link
+                  to={resolvedSeeAllReviewsHref}
+                  className="mt-3 inline-block text-sm font-semibold text-chat-accent hover:underline lg:text-base"
+                >
+                  See all reviews
+                </Link>
               </div>
             ) : null}
 

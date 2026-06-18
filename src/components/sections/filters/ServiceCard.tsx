@@ -109,12 +109,14 @@ export default function ServiceCard({
         isBoosted && "ring-2 ring-amber-400/60",
       )}
     >
-      <div className="w-full relative">
-        <img
-          src={image}
-          alt="Business Image"
-          className="w-full h-full object-cover"
-        />
+      <div className="w-full shrink-0 xl:w-2/5">
+        <div className="relative aspect-[16/10] w-full overflow-hidden xl:aspect-auto xl:min-h-[220px] xl:h-full">
+          <img
+            src={image}
+            alt="Business Image"
+            className="absolute inset-0 size-full object-cover"
+          />
+        </div>
 
         <div className="absolute top-4 left-4 flex flex-wrap gap-2">
           {verified ? (

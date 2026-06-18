@@ -4,12 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 
 import { fetchSubscriptionStatus } from "@/features/subscription/vendorSubscriptionApi";
 import {
+  buildVendorPremiumInfoPath,
   isVendorPremiumPreviewPath,
+  VENDOR_PREMIUM_INFO_PATH,
+  VENDOR_PREMIUM_PAYMENT_PATH,
   VENDOR_PREMIUM_PREVIEW_PATHS,
 } from "@/hooks/useVendorSubscriptionAccess";
 
 const ALLOWED_PATHS = [
-  "/vendor/premium-payment",
+  VENDOR_PREMIUM_INFO_PATH,
+  VENDOR_PREMIUM_PAYMENT_PATH,
   "/vendor/subscription/pay",
   "/vendor/settings",
   ...VENDOR_PREMIUM_PREVIEW_PATHS,
@@ -35,7 +39,7 @@ export function VendorPremiumPaymentGuard({ children }: { children: React.ReactN
       return;
     }
 
-    navigate("/vendor/premium-payment", { replace: true });
+    navigate(buildVendorPremiumInfoPath(), { replace: true });
   }, [isAllowedPath, isLoading, navigate, requiresPayment]);
 
   if (isLoading) {

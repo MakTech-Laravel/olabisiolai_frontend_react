@@ -41,7 +41,7 @@ export function CurrentPlanCard({ subscription }: Props) {
         {canPayPremium ? (
           <Button
             type="button"
-            onClick={goToPremiumPayment}
+            onClick={() => goToPremiumPayment()}
             className="mt-6 w-full cursor-pointer bg-brand-red font-inter font-semibold text-white shadow-none hover:bg-brand-red/90"
           >
             Upgrade to Premium

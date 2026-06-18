@@ -6,10 +6,22 @@ import { getAccessToken } from "@/auth/token";
 import { fetchVendorOnboardingStatus, onboardingRedirectPath } from "@/features/subscription/vendorOnboardingApi";
 import { fetchSubscriptionStatus } from "@/features/subscription/vendorSubscriptionApi";
 
+export const VENDOR_PREMIUM_INFO_PATH = "/vendor/premium-info";
 export const VENDOR_PREMIUM_PAYMENT_PATH = "/vendor/premium-payment";
 
+export function buildVendorPremiumInfoPath(businessId?: number | null): string {
+  if (typeof businessId === "number" && Number.isFinite(businessId) && businessId > 0) {
+    return `${VENDOR_PREMIUM_INFO_PATH}?business_id=${businessId}`;
+  }
+  return VENDOR_PREMIUM_INFO_PATH;
+}
+
 /** Routes that show a preview + “Get Premium” CTA instead of forcing checkout. */
-export const VENDOR_PREMIUM_PREVIEW_PATHS = ["/vendor/boost", "/vendor/analytics"] as const;
+export const VENDOR_PREMIUM_PREVIEW_PATHS = [
+  "/vendor/boost",
+  "/vendor/analytics",
+  VENDOR_PREMIUM_INFO_PATH,
+] as const;
 
 export function isVendorPremiumPreviewPath(pathname: string): boolean {
   return VENDOR_PREMIUM_PREVIEW_PATHS.some(
@@ -46,9 +58,9 @@ export function useVendorSubscriptionAccess() {
   const canBoost = subscription?.can_boost === true;
   const analyticsLocked = subscription?.analytics_locked ?? !isPremiumActive;
 
-  const goToPremiumPayment = useCallback(() => {
+  const goToPremiumPayment = useCallback((businessId?: number) => {
     if (!hasToken) {
-      navigate("/login", { state: { from: VENDOR_PREMIUM_PAYMENT_PATH } });
+      navigate("/login", { state: { from: buildVendorPremiumInfoPath(businessId) } });
       return;
     }
 
@@ -60,8 +72,13 @@ export function useVendorSubscriptionAccess() {
       return;
     }
 
-    navigate(VENDOR_PREMIUM_PAYMENT_PATH);
-  }, [hasBusiness, hasToken, navigate]);
+    const resolvedBusinessId =
+      typeof businessId === "number" && Number.isFinite(businessId) && businessId > 0
+        ? businessId
+        : (onboardingQuery.data?.business_id ?? null);
+
+    navigate(buildVendorPremiumInfoPath(resolvedBusinessId));
+  }, [hasBusiness, hasToken, navigate, onboardingQuery.data?.business_id]);
 
   const goToBoost = useCallback(() => {
     navigate("/vendor/boost");

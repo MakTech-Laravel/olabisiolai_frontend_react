@@ -8,7 +8,7 @@ import {
   fetchVendorOnboardingStatus,
   onboardingRedirectPath,
 } from '@/features/subscription/vendorOnboardingApi';
-import { isVendorPremiumPreviewPath } from '@/hooks/useVendorSubscriptionAccess';
+import { isVendorPremiumPreviewPath, buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess';
 
 /**
  * Guards vendor shell routes: no business → onboarding; unpaid premium → checkout.
@@ -39,7 +39,7 @@ export function VendorAccessGuard({ children }: { children: React.ReactNode }) {
       if (isVendorPremiumPreviewPath(pathname)) {
         return;
       }
-      navigate('/vendor/premium-payment', { replace: true });
+      navigate(buildVendorPremiumInfoPath(data.business_id), { replace: true });
     }
   }, [data, hasToken, isError, isPending, navigate, pathname, subscriptionReady]);
 

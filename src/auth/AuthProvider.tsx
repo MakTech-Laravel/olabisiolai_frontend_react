@@ -131,7 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Premium checkout must render immediately after business create; do not block on /me.
-      if (url.pathname === '/vendor/premium-payment' && (userRef.current ?? getStoredAuthUser())) {
+      if (
+        (url.pathname === '/vendor/premium-payment' || url.pathname === '/vendor/premium-info') &&
+        (userRef.current ?? getStoredAuthUser())
+      ) {
         setIsUserLoading(false)
       }
     }

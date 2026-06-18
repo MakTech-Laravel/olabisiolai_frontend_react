@@ -28,7 +28,7 @@ export function BasicBoost({ previewLocation = null }: { previewLocation?: Parse
         </p>
         <button
           type="button"
-          onClick={goToPremiumPayment}
+          onClick={() => goToPremiumPayment()}
           className="cursor-pointer rounded-full bg-red-600 px-6 py-3 text-sm font-medium text-text-white hover:bg-brand-red"
         >
           Get Premium Access

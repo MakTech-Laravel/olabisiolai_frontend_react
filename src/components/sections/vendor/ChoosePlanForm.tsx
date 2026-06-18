@@ -17,6 +17,8 @@ import {
   createVendorBusiness,
   isPremiumPlanSelected,
 } from "@/features/business/vendorBusinessApi";
+import { fetchVendorOnboardingStatus } from "@/features/subscription/vendorOnboardingApi";
+import { buildVendorPremiumInfoPath } from "@/hooks/useVendorSubscriptionAccess";
 import { clearBoostCheckoutSelection, saveBoostCheckoutSelection } from "@/features/boost/boostCheckoutSession";
 import { DynamicBoostSelectionFields } from "@/components/sections/vendor/boost/DynamicBoostSelectionFields";
 import {
@@ -316,7 +318,9 @@ export default function ChoosePlanForm() {
       void queryClient.invalidateQueries({ queryKey: ["vendor", "onboarding", "status"] });
 
       if (requiresPayment) {
-        navigate("/vendor/premium-payment", { replace: true });
+        void fetchVendorOnboardingStatus().then((status) => {
+          navigate(buildVendorPremiumInfoPath(status.business_id), { replace: true });
+        });
         return;
       }
 

@@ -9,6 +9,7 @@ import {
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import { fetchBusinessReviews } from "@/features/reviews/publicReviewApi";
 import { resolveBusinessIdFromSlug } from "@/lib/encryptId";
+import { businessProfilePath } from "@/lib/businessProfile";
 
 import { BusinessPublicPageView } from "@/components/business/BusinessPublicPageView";
 import { BusinessOwnerEditView } from "@/components/profile/BusinessOwnerEditView";
@@ -140,7 +141,7 @@ export default function Service() {
 
   const { data: reviewsResult } = useQuery({
     queryKey: ["reviews", businessId, reviewPage],
-    queryFn: () => fetchBusinessReviews(businessId!, reviewPage),
+    queryFn: () => fetchBusinessReviews(businessId!, { page: reviewPage }),
     enabled: businessId !== null,
     staleTime: 5 * 60 * 1000,
     placeholderData: (prev) => prev,
@@ -236,7 +237,10 @@ export default function Service() {
   const catalogLocked = business?.catalogLocked ?? !isPremium;
   const showOwnerEdit = isOwnerMode && ownerPageMode === "edit";
   const showCustomerActions = !isOwnerMode || ownerPageMode === "preview";
+  const showDirectMessage =
+    showCustomerActions && Boolean(vendorUserUuid) && !(isOwnerMode && ownerPageMode === "edit");
   const showCatalogSection = isPremium || isOwnerMode;
+  const allReviewsPath = businessId ? `${businessProfilePath(businessId)}/reviews` : "/filters";
 
   const profileUnavailable =
     businessId === null || (businessFetched && !businessFetching && !business && !stateData);
@@ -337,6 +341,8 @@ export default function Service() {
               catalogLocked={catalogLocked}
               showCatalogSection={showCatalogSection}
               showCustomerActions={showCustomerActions}
+              showDirectMessage={showDirectMessage}
+              seeAllReviewsHref={allReviewsPath}
               capabilities={capabilities}
               reviewsRef={reviewsRef}
               reviewsList={reviewsList}
@@ -344,9 +350,6 @@ export default function Service() {
               reviewPage={reviewPage}
               onReviewPageChange={(page) => {
                 setReviewPage(page);
-                reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              onSeeAllReviews={() => {
                 reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
               onFollowersChange={(count) => setFollowersCount(count)}
@@ -394,6 +397,8 @@ export default function Service() {
           catalogLocked={catalogLocked}
           showCatalogSection={showCatalogSection}
           showCustomerActions={showCustomerActions}
+          showDirectMessage={showDirectMessage}
+          seeAllReviewsHref={allReviewsPath}
           capabilities={capabilities}
           reviewsRef={reviewsRef}
           reviewsList={reviewsList}
@@ -401,9 +406,6 @@ export default function Service() {
           reviewPage={reviewPage}
           onReviewPageChange={(page) => {
             setReviewPage(page);
-            reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-          onSeeAllReviews={() => {
             reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
           onFollowersChange={(count) => setFollowersCount(count)}

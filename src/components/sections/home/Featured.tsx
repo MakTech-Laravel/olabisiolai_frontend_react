@@ -92,10 +92,10 @@ export default function Featured() {
           )}
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="relative z-20 mt-8 text-center">
           <Link
             to="/filters"
-            className="bg-primary text-primary-foreground font-inter font-normal text-lg px-4 py-3 rounded-xl"
+            className="relative z-20 inline-flex rounded-xl bg-primary px-4 py-3 font-inter text-lg font-normal text-primary-foreground"
           >
             View All Businesses
           </Link>

@@ -80,7 +80,7 @@ export function ProfileContactLeadsBreakdown({
             </span>
             <button
               type="button"
-              onClick={goToPremiumPayment}
+              onClick={() => goToPremiumPayment(businessId)}
               className="mt-2 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-[18px] py-2.5 text-[13px] font-bold text-white"
             >
               Upgrade to Premium
