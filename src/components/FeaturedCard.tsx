@@ -207,6 +207,7 @@ export function FeaturedCard({
           />
           <DirectMessageButton
             businessInfoId={id}
+            vendorUserId={vendorUserId}
             vendorUserUuid={vendorUserUuid}
             fromPath={pathname}
             className="w-full py-2"

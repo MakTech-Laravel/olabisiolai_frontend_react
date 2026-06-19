@@ -11,6 +11,7 @@ export type OwnerProfilePatch = Partial<{
   whatsapp: string
   website: string
   street_address: string
+  location_narrative: string
   latitude?: number
   longitude?: number
   google_place_id?: string
@@ -45,18 +46,35 @@ function resolveServicesForUpdate(
 function resolveSubcategoryForUpdate(
   profile: VendorBusinessProfile,
   services: string[],
+  patch: OwnerProfilePatch,
 ): string | undefined {
-  const explicit = profile.subcategory?.trim()
-  if (explicit) {
-    return explicit
+  const categoryId = patch.category_id ?? profile.categoryId
+  const allowed =
+    categoryId === profile.categoryId ? (profile.categorySubcategories ?? []) : []
+
+  if (patch.subcategory !== undefined) {
+    const trimmed = patch.subcategory.trim()
+    if (trimmed) return trimmed
+    if (allowed.length === 0) return undefined
   }
 
-  const allowed = profile.categorySubcategories ?? []
-  if (allowed.length === 0) {
-    return undefined
-  }
+  if (allowed.length === 0) return undefined
+
+  const profileSub = profile.subcategory?.trim()
+  if (profileSub && allowed.includes(profileSub)) return profileSub
 
   return resolveSubcategoryFromServices(allowed, services) ?? allowed[0]
+}
+
+function resolveOptionalId(
+  patchValue: number | undefined,
+  profileValue: number,
+): number | undefined {
+  if (patchValue !== undefined) {
+    return patchValue > 0 ? patchValue : undefined
+  }
+
+  return profileValue > 0 ? profileValue : undefined
 }
 
 export function buildUpdatePayload(
@@ -64,12 +82,12 @@ export function buildUpdatePayload(
   patch: OwnerProfilePatch,
 ): UpdateVendorBusinessPayload {
   const services = resolveServicesForUpdate(profile, patch.services)
-  const subcategory = resolveSubcategoryForUpdate(profile, services)
+  const subcategory = resolveSubcategoryForUpdate(profile, services, patch)
+  const categoryId = resolveOptionalId(patch.category_id, profile.categoryId)
+  const locationId = resolveOptionalId(patch.location_id, profile.locationId)
 
   const payload: UpdateVendorBusinessPayload = {
-    category_id: String(patch.category_id ?? profile.categoryId),
-    subcategory: patch.subcategory ?? subcategory,
-    location_id: String(patch.location_id ?? profile.locationId),
+    business_id: profile.id,
     business_name: patch.business_name ?? profile.businessName,
     location: patch.location ?? profile.locationFullName,
     state: patch.state ?? profile.state,
@@ -80,12 +98,28 @@ export function buildUpdatePayload(
     whatsapp: (patch.whatsapp ?? profile.whatsapp)?.trim() || undefined,
     website: (patch.website ?? profile.website)?.trim() || undefined,
     full_address: (patch.street_address ?? profile.streetAddress)?.trim() || undefined,
+    street_address: (patch.street_address ?? profile.streetAddress)?.trim() || undefined,
+    location_narrative:
+      patch.location_narrative !== undefined
+        ? patch.location_narrative.trim() || undefined
+        : profile.locationNarrative?.trim() || undefined,
     latitude: patch.latitude ?? profile.latitude ?? undefined,
     longitude: patch.longitude ?? profile.longitude ?? undefined,
     google_place_id: patch.google_place_id ?? profile.googlePlaceId ?? undefined,
     services,
     social_accounts: patch.social_accounts ?? profile.socialAccounts,
     business_hours: patch.business_hours ?? profile.businessHours,
+  }
+
+  if (categoryId !== undefined) {
+    payload.category_id = String(categoryId)
+    payload.subcategory = subcategory
+  } else if (subcategory) {
+    payload.subcategory = subcategory
+  }
+
+  if (locationId !== undefined) {
+    payload.location_id = String(locationId)
   }
 
   if (patch.keep_cover_paths !== undefined || patch.cover_photos !== undefined) {

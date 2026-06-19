@@ -7,11 +7,6 @@ import { MobileDrawer } from '@/components/layout/MobileDrawer'
 import { ChatErrorBoundary } from '@/components/ui/ChatErrorBoundary'
 import { Button } from '@/components/ui/button'
 import { useConversations } from '@/hooks/useConversations'
-import {
-  filterConversationsByInbox,
-  MessagingInboxTabs,
-  type MessagingInboxKey,
-} from '@/features/messaging/MessagingInboxTabs'
 import { ConversationView } from '@/features/messaging/ConversationView'
 import { NewConversationModal } from '@/features/messaging/NewConversationModal'
 import { useMessagingStore } from '@/store/messagingStore'
@@ -23,6 +18,7 @@ import { getMessages } from '@/api/messages'
 import type { MessagesPage } from '@/features/messaging/types'
 import { useMessagingPresenceLifecycle } from '@/hooks/useMessagingPresenceLifecycle'
 import { hasPendingDirectMessageState } from '@/lib/directMessage'
+import { canInitiateDirectConversation } from '@/lib/messagingInitiation'
 
 export type MessagingLayoutProps = {
   selfUser: AuthUser | null
@@ -31,15 +27,16 @@ export type MessagingLayoutProps = {
    * so `/messages` stays shareable and refresh-safe.
    */
   conversationQueryParam?: string
-  /** Lock the inbox to personal or a single business (hides multi-inbox tabs). */
-  inboxScope?: MessagingInboxKey
+  /**
+   * @deprecated Personal inbox only — business pages are not messaging identities.
+   */
+  inboxScope?: 'all'
   title?: string
 }
 
 export function MessagingLayout({
   selfUser,
   conversationQueryParam,
-  inboxScope,
   title = 'Messages',
 }: MessagingLayoutProps) {
   const selfId = selfUser ? Number(selfUser.id) : 0
@@ -60,12 +57,7 @@ export function MessagingLayout({
   const { data: conversations } = useConversations()
   useMessagingPresenceLifecycle(Boolean(selfId))
   const firstConversationUuid = conversations?.[0]?.uuid ?? null
-  const [activeInbox, setActiveInbox] = React.useState<MessagingInboxKey>(inboxScope ?? 'all')
-  const resolvedInbox = inboxScope ?? activeInbox
-  const filteredConversations = React.useMemo(
-    () => filterConversationsByInbox(conversations ?? [], resolvedInbox),
-    [conversations, resolvedInbox],
-  )
+  const filteredConversations = conversations ?? []
 
   const prefetchMessages = React.useCallback(
     (uuid: string) => {
@@ -162,29 +154,25 @@ export function MessagingLayout({
     [prefetchMessages, setActive, setDrawer, conversationQueryParam, setQueryConversation],
   )
 
+  const canStartNewConversation = canInitiateDirectConversation(selfUser)
+
   const sidebar = (
     <div className="flex h-full min-h-[calc(100vh-5rem)] flex-col gap-2 p-2 lg:p-4">
       <div className="flex shrink-0 items-center justify-between gap-2 px-2">
         <h1 className="font-heading text-xl font-black tracking-tight text-ink sm:text-2xl">
           {title}
         </h1>
-        <Button
-          type="button"
-          size="sm"
-          className="rounded-full bg-chat-accent text-text-white"
-          onClick={() => setModal(true)}
-        >
-          New
-        </Button>
+        {canStartNewConversation ? (
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-full bg-chat-accent text-text-white"
+            onClick={() => setModal(true)}
+          >
+            New
+          </Button>
+        ) : null}
       </div>
-      {!inboxScope ? (
-        <MessagingInboxTabs
-          conversations={conversations ?? []}
-          activeInbox={activeInbox}
-          onChange={setActiveInbox}
-          className="px-2"
-        />
-      ) : null}
       <ConversationList
         activeUuid={activeUuid}
         selfUserId={selfId}

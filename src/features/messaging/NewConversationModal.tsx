@@ -60,7 +60,8 @@ export function NewConversationModal({
       onClose()
       resetModalState(setQuery, setDebounced, setSelected)
     },
-    onError: () => showError('Could not start conversation'),
+    onError: (err) =>
+      showError(err instanceof Error ? err.message : 'Could not start conversation'),
   })
 
   if (!open) return null

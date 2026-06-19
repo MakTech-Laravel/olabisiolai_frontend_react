@@ -204,6 +204,7 @@ export default function ServiceCard({
 
         <DirectMessageButton
           businessInfoId={id}
+          vendorUserId={vendorUserId}
           vendorUserUuid={vendorUserUuid}
           fromPath={pathname}
           className="lg:w-50 w-full lg:p-3 p-1"

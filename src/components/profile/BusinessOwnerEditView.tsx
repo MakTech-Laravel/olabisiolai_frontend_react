@@ -165,7 +165,7 @@ export function BusinessOwnerEditView({
           ) : null}
           <div className="edit-only absolute right-4 top-7 z-10 lg:right-5 lg:top-8">
             <OwnerEditButton label="Edit cover" variant="dark">
-              <VendorOwnerGalleryEditButton label="Cover photos" onProfileUpdated={onProfileUpdated} />
+              <VendorOwnerGalleryEditButton businessId={businessId} label="Cover photos" onProfileUpdated={onProfileUpdated} />
             </OwnerEditButton>
           </div>
         </div>
@@ -174,6 +174,7 @@ export function BusinessOwnerEditView({
           <div className="edit-only absolute right-3.5 top-3.5 z-10 lg:right-4 lg:top-4">
             <OwnerEditButton label="Edit details" variant="light">
               <VendorOwnerDetailsEditButton
+                businessId={businessId}
                 onProfileUpdated={onProfileUpdated}
                 onNameSaved={onDisplayNameChange}
                 onDescriptionSaved={onDisplayDescriptionChange}
@@ -184,7 +185,7 @@ export function BusinessOwnerEditView({
             <AspectCover src={logoUrl} className="size-16 rounded-[18px] shadow-sm lg:size-20 lg:rounded-2xl" />
             <div className="edit-only absolute -bottom-2 -right-2">
               <OwnerEditButton label="Edit logo" variant="dark" className="[&>button]:size-7">
-                <VendorOwnerLogoEditButton label="Business logo" onProfileUpdated={onProfileUpdated} />
+                <VendorOwnerLogoEditButton businessId={businessId} label="Business logo" onProfileUpdated={onProfileUpdated} />
               </OwnerEditButton>
             </div>
           </div>
@@ -213,7 +214,7 @@ export function BusinessOwnerEditView({
             </span>
             <div className="edit-only shrink-0">
               <OwnerEditButton label="Edit location" variant="light">
-                <VendorOwnerLocationEditButton onProfileUpdated={onProfileUpdated} />
+                <VendorOwnerLocationEditButton businessId={businessId} onProfileUpdated={onProfileUpdated} />
               </OwnerEditButton>
             </div>
           </div>
@@ -264,6 +265,7 @@ export function BusinessOwnerEditView({
         }
       >
         <VendorOwnerPhotoGrid
+          businessId={businessId}
           coverPhotos={coverPhotos}
           photoLimit={photoLimit}
           onProfileUpdated={onProfileUpdated}
@@ -271,6 +273,7 @@ export function BusinessOwnerEditView({
             !atPhotoCap ? (
               <div className="edit-only aspect-square rounded-[13px] border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] lg:rounded-xl">
                 <VendorOwnerGalleryEditButton
+                  businessId={businessId}
                   label="Add photo"
                   className="flex size-full items-center justify-center [&>button]:size-10 [&>button]:rounded-full [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-chat-accent [&>button]:shadow-none"
                   onProfileUpdated={onProfileUpdated}
@@ -308,7 +311,7 @@ export function BusinessOwnerEditView({
           headerRight={
             <div className="edit-only">
               <OwnerEditButton label="Edit hours" variant="light">
-                <VendorOwnerHoursEditButton onProfileUpdated={onProfileUpdated} />
+                <VendorOwnerHoursEditButton businessId={businessId} onProfileUpdated={onProfileUpdated} />
               </OwnerEditButton>
             </div>
           }
@@ -329,7 +332,7 @@ export function BusinessOwnerEditView({
           headerRight={
             <div className="edit-only">
               <OwnerEditButton label="Edit contact" variant="light">
-                <VendorOwnerContactEditButton onProfileUpdated={onProfileUpdated} />
+                <VendorOwnerContactEditButton businessId={businessId} onProfileUpdated={onProfileUpdated} />
               </OwnerEditButton>
             </div>
           }

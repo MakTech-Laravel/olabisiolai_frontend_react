@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 import { fetchUserBusinesses } from '@/api/userBusinesses'
-import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
+import { userHasBusinessPages } from '@/features/profile/profileViewMode'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 import { CreateBusinessPageButton } from '@/components/profile/CreateBusinessPageButton'
@@ -87,8 +87,6 @@ function HubRow({ icon, label, description, to, onClick, external, destructive }
 
 export default function SettingsHub() {
   const { user, logout } = useAuth()
-  const activeMode = resolveActiveProfileMode(user)
-  const isVendorMode = activeMode === 'vendor'
 
   const businessesQuery = useQuery({
     queryKey: ['user', 'businesses', 'settings-hub'],
@@ -97,7 +95,7 @@ export default function SettingsHub() {
     retry: false,
   })
 
-  const hasBusinessPage = (businessesQuery.data?.length ?? 0) > 0
+  const hasBusinessPage = (businessesQuery.data?.length ?? 0) > 0 || userHasBusinessPages(user)
 
   return (
     <div className="container mx-auto min-h-screen text-ink">
@@ -127,7 +125,7 @@ export default function SettingsHub() {
               description="Leave feedback for a business you used"
               to="/reviews"
             />
-            {isVendorMode ? (
+            {hasBusinessPage ? (
               <HubRow
                 icon={<MessageSquareQuote className="size-4" />}
                 label="Reviews Received"

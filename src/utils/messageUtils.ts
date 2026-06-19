@@ -9,6 +9,7 @@ import { formatReadAt } from '@/utils/formatters'
 type ApiSender = {
   id: number
   name: string
+  display_name?: string
   avatar_url?: string | null
 }
 
@@ -23,9 +24,10 @@ export function mapApiSender(sender: ApiSender | null | undefined): MessagingUse
     }
   }
   const avatarRaw = sender.avatar_url?.trim()
+  const label = sender.display_name?.trim() || sender.name?.trim() || 'Unknown'
   return {
     id: sender.id,
-    name: sender.name,
+    name: label,
     avatar: avatarRaw ? resolveMediaUrl(avatarRaw, '') || null : null,
     status: 'offline',
     last_seen_at: null,
@@ -209,17 +211,35 @@ export function normalizeConversation(raw: Record<string, unknown>): Conversatio
           ? Number(businessIdRaw) || null
           : null
 
+    const ownedRaw = peerRaw.owned_businesses
+    const owned_businesses = Array.isArray(ownedRaw)
+      ? ownedRaw.map((item) => {
+          const row = item as Record<string, unknown>
+          return {
+            id: Number(row.id ?? 0),
+            business_name: String(row.business_name ?? ''),
+            logo_url: (row.logo_url as string | null | undefined) ?? null,
+            category_name: (row.category_name as string | null | undefined) ?? null,
+            location: (row.location as string | null | undefined) ?? null,
+          }
+        })
+      : []
+
     peer = {
       user_id: Number(peerRaw.user_id ?? 0),
       id: Number(peerRaw.id ?? peerRaw.user_id ?? 0),
       uuid: peerRaw.uuid != null ? String(peerRaw.uuid) : undefined,
       role: peerRaw.role != null ? String(peerRaw.role) : undefined,
-      name: String(peerRaw.name ?? peerRaw.display_name ?? ''),
+      personal_name: peerRaw.personal_name != null ? String(peerRaw.personal_name) : undefined,
+      name: String(peerRaw.personal_name ?? peerRaw.name ?? peerRaw.display_name ?? ''),
       display_name:
         peerRaw.display_name != null ? String(peerRaw.display_name) : undefined,
+      business_name:
+        peerRaw.business_name != null ? String(peerRaw.business_name) : null,
       business_info_id: businessInfoId,
       avatar_url: (peerRaw.avatar_url as string | null | undefined) ?? null,
       is_verified: peerRaw.is_verified === true,
+      owned_businesses,
       presence: (peerRaw.presence as ParticipantPresence | null | undefined) ?? null,
     }
   }

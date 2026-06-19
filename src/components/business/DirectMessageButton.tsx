@@ -8,11 +8,17 @@ import { QUERY_KEYS } from "@/constants/queryKeys";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { startDirectConversationWithVendor } from "@/features/messaging/startDirectConversation";
 import { directMessageTo } from "@/lib/directMessage";
+import {
+  B2B_MESSAGING_DISABLED_REASON,
+  canMessageBusinessListing,
+} from "@/lib/messagingInitiation";
 import { showError } from "@/lib/sweetAlert";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/auth/useAuth";
 
 type DirectMessageButtonProps = {
   businessInfoId: number;
+  vendorUserId?: number | null;
   vendorUserUuid?: string | null;
   fromPath: string;
   className?: string;
@@ -28,6 +34,7 @@ type DirectMessageButtonProps = {
  */
 export function DirectMessageButton({
   businessInfoId,
+  vendorUserId,
   vendorUserUuid,
   fromPath,
   className,
@@ -39,13 +46,20 @@ export function DirectMessageButton({
 }: DirectMessageButtonProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { requireAuthNavigate, isAuthReady, isAuthenticated } =
     useRequireAuthNavigate();
   const [loading, setLoading] = useState(false);
 
+  const blockedForVendorAccount = Boolean(user) && !canMessageBusinessListing(user, vendorUserId);
+  const isDisabled = disabled || blockedForVendorAccount;
+  const resolvedDisabledReason = blockedForVendorAccount
+    ? B2B_MESSAGING_DISABLED_REASON
+    : disabledReason;
+
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (disabled || loading) return;
+    if (isDisabled || loading) return;
     if (!isAuthReady) return;
 
     if (!isAuthenticated) {
@@ -94,12 +108,12 @@ export function DirectMessageButton({
   return (
     <button
       type="button"
-      disabled={disabled || loading}
-      title={disabled ? disabledReason : undefined}
+      disabled={isDisabled || loading}
+      title={isDisabled ? resolvedDisabledReason : undefined}
       onClick={handleClick}
       className={cn(
         "border border-primary text-primary rounded-lg flex items-center justify-center font-semibold hover:bg-primary/10 transition-colors text-sm",
-        disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
+        isDisabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
         className,
       )}
     >

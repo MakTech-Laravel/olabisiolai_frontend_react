@@ -8,6 +8,7 @@ import {
 import { parseSocialAccounts, type SocialAccount } from '@/features/business/socialAccounts';
 import { parseCatalogItems, type BusinessCatalogItem } from '@/features/catalog/businessCatalogApi';
 import { normalizeSubcategories } from '@/features/categories/categoryParsers';
+import { formatBusinessLocationFromParts } from '@/features/maps/formatBusinessLocation';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 export type PublicBusiness = {
@@ -181,7 +182,11 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const lngRaw = num(r.longitude ?? locObj?.longitude, NaN);
   const latitude = Number.isFinite(latRaw) ? latRaw : null;
   const longitude = Number.isFinite(lngRaw) ? lngRaw : null;
+  const locationNarrative = str(r.location_narrative ?? r.locationNarrative, '').trim();
+  const locationDisplayRaw = str(r.location_display ?? r.locationDisplay, '').trim();
   const location =
+    locationDisplayRaw ||
+    formatBusinessLocationFromParts({ city, state, fullName }, locationNarrative) ||
     streetAddress ||
     (locationId
       ? formattedAddress || fullName || [city, state].filter(Boolean).join(', ') || str(r.location, '')

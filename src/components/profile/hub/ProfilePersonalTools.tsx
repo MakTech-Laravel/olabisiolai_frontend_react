@@ -13,7 +13,7 @@ const tools = [
   {
     label: 'Messages',
     description: 'Your personal conversations',
-    to: '/user/messages?scope=personal',
+    to: '/user/messages',
     icon: MessageSquare,
   },
   {

@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Pencil,
   Rocket,
-  Settings,
   Share2,
   Trash2,
 } from 'lucide-react'
@@ -18,6 +17,7 @@ import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePa
 import { ProfileManageReviewsSection } from '@/components/profile/hub/ProfileManageReviewsSection'
 import { ProfileContactLeadsBreakdown } from '@/components/profile/hub/ProfileContactLeadsBreakdown'
 import { ProfileInsightsPanel } from '@/components/profile/hub/ProfileInsightsPanel'
+import { VendorFollowersSection } from '@/components/profile/hub/VendorFollowersSection'
 import {
   ProfileManageBackBar,
   profileHubChipClass,
@@ -247,6 +247,9 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
               followersCount={business.followersCount}
               isPremiumActive={isPremiumActive}
             />
+            <div className="px-[18px] pb-2">
+              <VendorFollowersSection followersCount={business.followersCount ?? 0} />
+            </div>
             <ProfileContactLeadsBreakdown businessId={business.id} isPremiumActive={isPremiumActive} />
 
             <div className="px-[18px] pb-6 pt-2">
@@ -327,7 +330,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   icon={<MessageSquare className="size-5" strokeWidth={2} />}
                   title="Messages"
                   subtitle="Customer enquiries for this business"
-                  to={`/user/messages?business_id=${business.id}`}
+                  to={`/vendor/leads?business_id=${business.id}`}
                   onNavigate={onClose}
                 />
                 <ManageToolRow
@@ -337,14 +340,14 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
                 />
-                <ManageToolRow
+                {/* <ManageToolRow
                   iconClass="bg-auth-bg text-body-secondary"
                   icon={<Settings className="size-5" strokeWidth={2} />}
                   title="Business settings"
                   subtitle="Hours, contact, category"
                   to={`/vendor/settings?business_id=${business.id}`}
                   onNavigate={onClose}
-                />
+                /> */}
               </div>
 
               <Link

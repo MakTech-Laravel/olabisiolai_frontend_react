@@ -4,20 +4,20 @@ import { Loader2, Star } from 'lucide-react'
 
 import { fetchUserReviews } from '@/api/userReviews'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
-import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
+import { userHasBusinessPages } from '@/features/profile/profileViewMode'
 import { useAuth } from '@/auth/useAuth'
 
 export default function MyReviews() {
   const { user } = useAuth()
-  const activeMode = resolveActiveProfileMode(user)
 
   const reviewsQuery = useQuery({
     queryKey: ['user-reviews'],
     queryFn: () => fetchUserReviews(1),
-    enabled: activeMode === 'customer',
+    enabled: Boolean(user?.id),
   })
 
   const reviews = reviewsQuery.data?.reviews ?? []
+  const ownsBusiness = userHasBusinessPages(user)
 
   return (
     <div className="min-h-screen bg-auth-bg text-ink">
@@ -29,20 +29,9 @@ export default function MyReviews() {
         </Link>
 
         <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">My Reviews</h1>
-        <p className="mt-1 text-sm text-body-secondary">Reviews you have written for businesses on Gidira.</p>
+        <p className="mt-1 text-sm text-body-secondary">Reviews you have written as yourself on Gidira.</p>
 
-        {activeMode === 'vendor' ? (
-          <div className="mt-6 rounded-2xl bg-card p-6 shadow-sm">
-            <p className="text-sm text-body-secondary">
-              Customer reviews you wrote are listed here when you are in customer mode. To manage reviews on your
-              business, open{' '}
-              <Link to="/vendor/reviews" className="font-semibold text-brand hover:underline">
-                Reviews Received
-              </Link>
-              .
-            </p>
-          </div>
-        ) : reviewsQuery.isLoading ? (
+        {reviewsQuery.isLoading ? (
           <div className="mt-10 flex justify-center">
             <Loader2 className="size-8 animate-spin text-brand" aria-label="Loading reviews" />
           </div>
@@ -76,6 +65,16 @@ export default function MyReviews() {
             ))}
           </ul>
         )}
+
+        {ownsBusiness ? (
+          <p className="mt-6 text-sm text-body-secondary">
+            To manage reviews on your business listings, open{' '}
+            <Link to="/vendor/reviews" className="font-semibold text-brand hover:underline">
+              Reviews Received
+            </Link>
+            .
+          </p>
+        ) : null}
       </main>
     </div>
   )

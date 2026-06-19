@@ -9,6 +9,7 @@ import {
 } from "@/features/business/businessHours";
 import { parseSocialAccounts, type SocialAccount } from "@/features/business/socialAccounts";
 import { normalizeSubcategories } from "@/features/categories/categoryParsers";
+import { formatBusinessLocationFromParts } from "@/features/maps/formatBusinessLocation";
 import { resolveMediaUrl, resolveMediaUrls } from "@/lib/mediaUrl";
 
 type RawRecord = Record<string, unknown>;
@@ -27,6 +28,8 @@ export type VendorBusinessProfile = {
   locationLabel: string;
   locationFullName: string;
   streetAddress: string;
+  locationNarrative: string;
+  locationDisplay: string;
   latitude: number | null;
   longitude: number | null;
   googlePlaceId: string | null;
@@ -129,6 +132,10 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     locationLabel: locationLabel || locationFullName,
     locationFullName,
     streetAddress: pickString(item, ["street_address", "full_address"], ""),
+    locationNarrative: pickString(item, ["location_narrative", "locationNarrative"], ""),
+    locationDisplay:
+      pickString(item, ["location_display", "locationDisplay"], "") ||
+      formatBusinessLocationFromParts({ city, state, lga, fullName: locationFullName }, pickString(item, ["location_narrative", "locationNarrative"], "")),
     latitude: asNumber(item.latitude ?? item.lat),
     longitude: asNumber(item.longitude ?? item.lng),
     googlePlaceId: pickString(item, ["google_place_id", "googlePlaceId"], "") || null,
@@ -174,8 +181,23 @@ export class VendorBusinessNotFoundError extends Error {
 }
 
 export async function fetchVendorBusinessProfile(): Promise<VendorBusinessProfile> {
+  return loadVendorBusinessProfile();
+}
+
+export async function fetchVendorBusinessProfileForId(
+  businessId: number,
+): Promise<VendorBusinessProfile> {
+  if (!Number.isFinite(businessId) || businessId <= 0) {
+    throw new Error("A valid business id is required.");
+  }
+  return loadVendorBusinessProfile(businessId);
+}
+
+async function loadVendorBusinessProfile(businessId?: number): Promise<VendorBusinessProfile> {
   try {
-    const res = await request.get("/vendor/business/show");
+    const params =
+      businessId != null && businessId > 0 ? { business_id: businessId } : undefined;
+    const res = await request.get("/vendor/business/show", { params });
     const root = asRecord(res.data);
 
     if (!root) {

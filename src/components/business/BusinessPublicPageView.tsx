@@ -198,6 +198,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
       {showDirectMessage ? (
         <DirectMessageButton
           businessInfoId={businessId}
+          vendorUserId={vendorUserId}
           vendorUserUuid={vendorUserUuid}
           fromPath={pathname}
           className="h-auto w-full rounded-[14px] border-0 bg-chat-accent px-4 py-[15px] text-[15.5px] font-semibold text-white shadow-[0_8px_18px_rgba(28,134,232,0.24)] transition-transform hover:bg-chat-accent/90 active:scale-[0.99] lg:text-base"
@@ -268,7 +269,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
       {trustPanel}
       {hoursPanel ? (
         <div>
-          <h2 className={cn(businessPageSectionTitle, "mb-3 hidden lg:block")}>Business hours</h2>
+          <h2 className={cn(businessPageSectionTitle, "mb-3 hidden lg:block")}>Business hours test</h2>
           {hoursPanel}
         </div>
       ) : null}
