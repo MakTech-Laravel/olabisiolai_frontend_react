@@ -1,8 +1,10 @@
 import { request } from '@/api/request'
+import type { AuthUser } from '@/auth/types'
 import {
   parseVendorBusinessProfile,
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
+import { extractUserFromAuthPayload } from '@/api/laravelResponse'
 
 type RawRecord = Record<string, unknown>
 
@@ -50,7 +52,12 @@ function parseListItem(raw: unknown): UserBusinessListItem | null {
   }
 }
 
-export async function createUserBusiness(businessName?: string): Promise<UserBusinessListItem> {
+export type CreateUserBusinessResult = {
+  business: UserBusinessListItem
+  user: AuthUser | null
+}
+
+export async function createUserBusiness(businessName?: string): Promise<CreateUserBusinessResult> {
   const res = await request.post('/user/businesses', {
     ...(businessName?.trim() ? { business_name: businessName.trim() } : {}),
   })
@@ -67,7 +74,13 @@ export async function createUserBusiness(businessName?: string): Promise<UserBus
     throw new Error('Business page was created but the response was invalid.')
   }
 
-  return business
+  const userPayload = data?.user
+  const user =
+    userPayload && typeof userPayload === 'object'
+      ? (extractUserFromAuthPayload(userPayload) as AuthUser | null)
+      : null
+
+  return { business, user }
 }
 
 export async function deleteUserBusiness(businessId: number): Promise<void> {

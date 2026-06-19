@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  fetchVendorBusinessProfile,
+  fetchVendorBusinessProfileForId,
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { updateVendorBusiness, getVendorBusinessUpdateError } from '@/features/business/vendorBusinessApi'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import { showError, showSuccess } from '@/lib/sweetAlert'
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils'
 type OwnerEditableField = 'business_name' | 'business_description'
 
 type VendorOwnerInlineEditButtonProps = {
+  businessId?: number
   field: OwnerEditableField
   label: string
   currentValue: string
@@ -25,6 +27,7 @@ type VendorOwnerInlineEditButtonProps = {
 }
 
 export function VendorOwnerInlineEditButton({
+  businessId,
   field,
   label,
   currentValue,
@@ -44,14 +47,19 @@ export function VendorOwnerInlineEditButton({
   }, [currentValue, open])
 
   async function handleOpen() {
+    if (!businessId || businessId <= 0) {
+      showError('Could not determine which business profile to edit.')
+      return
+    }
+
     setOpen(true)
     setLoading(true)
     try {
-      const loaded = await fetchVendorBusinessProfile()
+      const loaded = await fetchVendorBusinessProfileForId(businessId)
       setProfile(loaded)
       setValue(field === 'business_name' ? loaded.businessName : loaded.description)
-    } catch {
-      showError('Could not load your business profile for editing.')
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, 'Could not load your business profile for editing.'))
       setOpen(false)
     } finally {
       setLoading(false)

@@ -34,6 +34,7 @@ import {
 } from '@/features/business/socialAccounts'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageOwnerPhotoGrid } from '@/lib/businessPageLayout'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
@@ -85,8 +86,8 @@ function useOwnerProfileEditor(businessId?: number, onProfileUpdated?: () => voi
     try {
       const loaded = await fetchVendorBusinessProfileForId(businessId)
       setProfile(loaded)
-    } catch {
-      showError('Could not load your business profile for editing.')
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, 'Could not load your business profile for editing.'))
       setOpen(false)
     } finally {
       setLoading(false)

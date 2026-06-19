@@ -197,7 +197,7 @@ async function loadVendorBusinessProfile(businessId?: number): Promise<VendorBus
   try {
     const params =
       businessId != null && businessId > 0 ? { business_id: businessId } : undefined;
-    const res = await request.get("/vendor/business/show", { params });
+    const res = await request.get("/user/businesses/show", { params });
     const root = asRecord(res.data);
 
     if (!root) {

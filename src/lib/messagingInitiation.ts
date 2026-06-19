@@ -1,10 +1,13 @@
 import type { AuthUser } from '@/auth/types'
 import { hasAnyRole } from '@/auth/roles'
+import { userHasBusinessPages } from '@/features/profile/profileViewMode'
 
-/** Personal accounts may start new direct threads. Legacy vendor-role accounts are reply-only. */
+/** Personal accounts without a business page may start new direct threads. */
 export function canInitiateDirectConversation(user: AuthUser | null): boolean {
   if (!user) return false
   if (hasAnyRole(user, 'admin')) return true
+  if (hasAnyRole(user, 'vendor')) return false
+  if (userHasBusinessPages(user)) return false
   return user.role === 'user'
 }
 

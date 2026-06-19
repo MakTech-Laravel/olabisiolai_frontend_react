@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import { VENDOR_CANNOT_INITIATE_REASON } from '@/lib/messagingInitiation'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { showError } from '@/lib/sweetAlert'
 
 import { createConversation, searchMessageRecipients, type MessageRecipient } from '@/api/conversations'
@@ -61,7 +63,7 @@ export function NewConversationModal({
       resetModalState(setQuery, setDebounced, setSelected)
     },
     onError: (err) =>
-      showError(err instanceof Error ? err.message : 'Could not start conversation'),
+      showError(getLaravelErrorMessage(err, VENDOR_CANNOT_INITIATE_REASON)),
   })
 
   if (!open) return null

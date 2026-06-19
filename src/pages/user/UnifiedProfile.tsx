@@ -33,7 +33,7 @@ function profileHandle(user: { email?: string | null; name?: string | null }, lo
 }
 
 export default function UnifiedProfile() {
-  const { user } = useAuth()
+  const { user, setUser, refreshSession } = useAuth()
   const queryClient = useQueryClient()
   const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Guest'
 
@@ -142,7 +142,9 @@ export default function UnifiedProfile() {
 
     setIsAddingBusiness(true)
     try {
-      const created = await createUserBusiness()
+      const { business: created, user: updatedUser } = await createUserBusiness()
+      if (updatedUser) setUser(updatedUser)
+      await refreshSession()
       await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
       await persistActiveBusiness(created.id)
       setManageBusiness(created)

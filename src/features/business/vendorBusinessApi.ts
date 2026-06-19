@@ -330,7 +330,7 @@ export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload)
   // Production PHP/nginx often fail to parse multipart when method-spoofed to PUT.
   // JSON PUT works reliably for profile edits without new images.
   if (!hasFileUploads) {
-    const res = await request.put<VendorBusinessUpdateEnvelope>("/vendor/business/update", buildUpdateVendorBusinessJsonBody(payload));
+    const res = await request.put<VendorBusinessUpdateEnvelope>("/user/businesses/update", buildUpdateVendorBusinessJsonBody(payload));
     assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
     return res.data;
   }
@@ -338,7 +338,7 @@ export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload)
   const formData = new FormData();
   appendUpdateVendorBusinessFormData(formData, payload);
   // Use native POST route (no _method=PUT) so PHP parses multipart fields and files.
-  const res = await request.post<VendorBusinessUpdateEnvelope>("/vendor/business/update", formData);
+  const res = await request.post<VendorBusinessUpdateEnvelope>("/user/businesses/update", formData);
   assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
   return res.data;
 }
