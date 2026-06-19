@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Loader2, X } from 'lucide-react'
 
-import { confirmTwoFactor } from '@/api/vendorTwoFactor'
+import { confirmTwoFactor as confirmVendorTwoFactor } from '@/api/vendorTwoFactor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
@@ -13,9 +13,17 @@ type Props = {
   secret: string
   onClose: () => void
   onConfirmed: (recoveryCodes: string[]) => void
+  confirmCode?: (code: string) => Promise<{ recovery_codes: string[] }>
 }
 
-export function TwoFactorSetupModal({ open, qrCode, secret, onClose, onConfirmed }: Props) {
+export function TwoFactorSetupModal({
+  open,
+  qrCode,
+  secret,
+  onClose,
+  onConfirmed,
+  confirmCode = confirmVendorTwoFactor,
+}: Props) {
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,7 +38,7 @@ export function TwoFactorSetupModal({ open, qrCode, secret, onClose, onConfirmed
 
     setSubmitting(true)
     try {
-      const result = await confirmTwoFactor(trimmed)
+      const result = await confirmCode(trimmed)
       onConfirmed(result.recovery_codes)
       setCode('')
     } catch (error) {

@@ -340,14 +340,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
                 />
-                {/* <ManageToolRow
-                  iconClass="bg-auth-bg text-body-secondary"
-                  icon={<Settings className="size-5" strokeWidth={2} />}
-                  title="Business settings"
-                  subtitle="Hours, contact, category"
-                  to={`/vendor/settings?business_id=${business.id}`}
-                  onNavigate={onClose}
-                /> */}
               </div>
 
               <Link

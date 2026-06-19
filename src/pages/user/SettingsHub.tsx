@@ -139,7 +139,7 @@ export default function SettingsHub() {
             <HubRow
               icon={<UserCog className="size-4" />}
               label="Account Settings"
-              description="Password, notifications, verification"
+              description="Password, 2FA, notifications, verification"
               to="/user/settings/account"
             />
             {!hasBusinessPage ? (

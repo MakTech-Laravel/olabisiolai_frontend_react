@@ -7,7 +7,6 @@ import { fetchUserSettings } from '@/api/userSettings'
 import { fetchUserReviews } from '@/api/userReviews'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
-import { UserSidebar } from '@/components/partials/user/UserSidebar'
 import { ProfileAccountSwitcherSheet } from '@/components/profile/hub/ProfileAccountSwitcherSheet'
 import { ProfileBusinessSection } from '@/components/profile/hub/ProfileBusinessSection'
 import {
@@ -168,11 +167,7 @@ export default function UnifiedProfile() {
         <FrontendHeader />
       </div>
 
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col lg:flex-row lg:gap-6 lg:px-8 lg:pb-10">
-        <div className="hidden shrink-0 lg:block lg:w-64">
-          <UserSidebar active="overview" mobileOpen={false} />
-        </div>
-
+      <div className="mx-auto w-full max-w-[1400px] lg:px-8 lg:pb-10">
         <main className="mx-auto w-full min-w-0 max-w-[430px] flex-1 pb-8 lg:max-w-none">
           <div className="lg:grid lg:grid-cols-[minmax(300px,360px)_1fr] lg:items-start lg:gap-8 lg:pt-6">
             <div className="lg:sticky lg:top-24 lg:self-start">

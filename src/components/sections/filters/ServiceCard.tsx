@@ -147,8 +147,26 @@ export default function ServiceCard({
           <h3 className="text-lg font-inter font-semibold text-text-primary">
             <BusinessProfileLink businessId={id} businessName={name} />
           </h3>
-          {vendorUserId ? (
-            <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
+        </div>
+        <p className="text-primary text-sm font-inter font-medium mb-2">
+          {category}
+        </p>
+        {vendorUserId ? (
+          <div
+            className="mb-2 flex items-center justify-between gap-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              {localFollowersCount > 0 ? (
+                <>
+                  {localFollowersCount.toLocaleString()}{" "}
+                  {localFollowersCount === 1 ? "follower" : "followers"}
+                </>
+              ) : (
+                "Follow this business"
+              )}
+            </p>
+            <div className="relative z-10 shrink-0">
               <FollowVendorButton
                 followingUserId={vendorUserId}
                 initialFollowing={following}
@@ -167,12 +185,8 @@ export default function ServiceCard({
                 }}
               />
             </div>
-          ) : null}
-        </div>
-        <p className="text-primary text-sm font-inter font-medium mb-2">
-          {category}
-        </p>
-        {localFollowersCount > 0 ? (
+          </div>
+        ) : localFollowersCount > 0 ? (
           <p className="mb-2 text-xs font-medium text-muted-foreground">
             {localFollowersCount.toLocaleString()} {localFollowersCount === 1 ? "follower" : "followers"}
           </p>

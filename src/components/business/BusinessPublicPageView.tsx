@@ -269,7 +269,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
       {trustPanel}
       {hoursPanel ? (
         <div>
-          <h2 className={cn(businessPageSectionTitle, "mb-3 hidden lg:block")}>Business hours test</h2>
+          <h2 className={cn(businessPageSectionTitle, "mb-3 hidden lg:block")}>Business hours</h2>
           {hoursPanel}
         </div>
       ) : null}
@@ -428,6 +428,18 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                 <span className="font-normal text-stat-muted">
                   · {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
                 </span>
+              ) : null}
+              {capabilities.review ? (
+                <>
+                  <span className="text-stat-muted">·</span>
+                  <button
+                    type="button"
+                    onClick={onWriteReview}
+                    className="font-semibold text-chat-accent hover:underline"
+                  >
+                    Write a review
+                  </button>
+                </>
               ) : null}
               {verified ? (
                 <>

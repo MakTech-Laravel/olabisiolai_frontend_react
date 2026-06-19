@@ -16,7 +16,7 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
     follow: true,
     message: true,
     save: false,
-    review: false,
+    review: true,
     report: false,
     ownerTools: false,
   },
