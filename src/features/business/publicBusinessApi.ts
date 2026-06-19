@@ -147,7 +147,8 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   if (!r) return null;
 
   const id = num(r.id ?? r.business_id, idx + 1);
-  const name = str(r.business_name ?? r.name, `Business ${id}`);
+  const nameRaw = str(r.business_name ?? r.name, '').trim();
+  const name = nameRaw || `Business ${id}`;
 
   const catObj = rec(r.category);
   const categoryId = num(catObj?.id ?? r.category_id, NaN);
