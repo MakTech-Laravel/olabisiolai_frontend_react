@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
@@ -9,22 +9,21 @@ import {
   MessageSquare,
   Pencil,
   Rocket,
+  Settings,
   Share2,
   Trash2,
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
+import { ProfileManageReviewsSection } from '@/components/profile/hub/ProfileManageReviewsSection'
 import { ProfileContactLeadsBreakdown } from '@/components/profile/hub/ProfileContactLeadsBreakdown'
 import { ProfileInsightsPanel } from '@/components/profile/hub/ProfileInsightsPanel'
-import { VendorFollowersSection } from '@/components/profile/hub/VendorFollowersSection'
 import {
   ProfileManageBackBar,
   profileHubChipClass,
 } from '@/components/profile/hub/ProfileIdentitySection'
 import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } from '@/components/profile/hub/profileHubUtils'
-import { NotificationCountBadge } from '@/components/notifications/NotificationCountBadge'
 import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
-import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
 import { VENDOR_PREMIUM_INFO_PATH } from '@/hooks/useVendorSubscriptionAccess'
 import { businessProfilePath } from '@/lib/businessProfile'
@@ -101,14 +100,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isDeleting, setIsDeleting] = useState(false)
-  const [followersOpen, setFollowersOpen] = useState(false)
-  const messageUnreadCount = useUnreadCount()
-
-  useEffect(() => {
-    if (!open) {
-      setFollowersOpen(false)
-    }
-  }, [open])
   const isPremiumActive = business?.isPremiumActive === true
   const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
 
@@ -215,28 +206,18 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                 {business.locationLabel ? ` · ${business.locationLabel}` : ''}
               </p>
               <div className="mt-3 flex gap-6">
-                <button
-                  type="button"
-                  onClick={() => setFollowersOpen(true)}
-                  className="text-left transition-opacity hover:opacity-80"
-                  aria-label="View followers"
-                >
-                  <b className="font-heading text-[17px] font-bold text-ink underline-offset-2 hover:underline">
+                <p className="text-left">
+                  <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.followersCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">followers</span>
-                </button>
-                <Link
-                  to={`/vendor/reviews?business_id=${business.id}&from=profile`}
-                  onClick={onClose}
-                  className="text-left transition-opacity hover:opacity-80"
-                  aria-label="View reviews"
-                >
-                  <b className="font-heading text-[17px] font-bold text-ink underline-offset-2 hover:underline">
+                </p>
+                <p className="text-left">
+                  <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.reviewsCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews</span>
-                </Link>
+                </p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {isPremiumActive ? (
@@ -266,15 +247,15 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
               followersCount={business.followersCount}
               isPremiumActive={isPremiumActive}
             />
-            <VendorFollowersSection
-              followersCount={business.followersCount ?? 0}
-              open={followersOpen}
-              onOpenChange={setFollowersOpen}
-              showTrigger={false}
-            />
             <ProfileContactLeadsBreakdown businessId={business.id} isPremiumActive={isPremiumActive} />
 
             <div className="px-[18px] pb-6 pt-2">
+              <ProfileManageReviewsSection
+                businessId={business.id}
+                reviewsCount={business.reviewsCount ?? 0}
+                onNavigate={onClose}
+              />
+
               <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05)]">
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
@@ -346,13 +327,8 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   icon={<MessageSquare className="size-5" strokeWidth={2} />}
                   title="Messages"
                   subtitle="Customer enquiries for this business"
-                  to={`/vendor/leads?business_id=${business.id}`}
+                  to={`/user/messages?business_id=${business.id}`}
                   onNavigate={onClose}
-                  trailing={
-                    messageUnreadCount > 0 ? (
-                      <NotificationCountBadge count={messageUnreadCount} />
-                    ) : undefined
-                  }
                 />
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
@@ -360,6 +336,14 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   title="Share page"
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
+                />
+                <ManageToolRow
+                  iconClass="bg-auth-bg text-body-secondary"
+                  icon={<Settings className="size-5" strokeWidth={2} />}
+                  title="Business settings"
+                  subtitle="Hours, contact, category"
+                  to={`/vendor/settings?business_id=${business.id}`}
+                  onNavigate={onClose}
                 />
               </div>
 

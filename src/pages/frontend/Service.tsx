@@ -28,35 +28,6 @@ import {
 const FALLBACK_COVER = "/images/service/hero.jpg";
 const FALLBACK_LOGO = "/images/service/avatar.jpg";
 
-function BusinessProfilePageSkeleton() {
-  return (
-    <div className="bg-bg-section font-sans text-ink">
-      <div className="container mx-auto w-full animate-pulse pb-16 pt-4 lg:pb-20 lg:pt-8">
-        <div className="mx-4 mb-4 h-5 w-16 rounded bg-border-light" />
-        <div className="lg:flex lg:items-start lg:gap-10 xl:gap-12">
-          <div className="min-w-0 flex-1">
-            <div className="mx-4 h-[208px] rounded-[22px] bg-border-light sm:h-[400px] lg:rounded-2xl xl:h-[540px]" />
-            <div className="mx-4 mt-4 rounded-[22px] bg-[#EAF2FD] px-[18px] py-5 lg:rounded-2xl lg:px-6 lg:py-6">
-              <div className="mb-3 size-16 rounded-[18px] bg-border-light/80 lg:size-20" />
-              <div className="h-8 w-2/3 max-w-sm rounded bg-border-light/80" />
-              <div className="mt-3 h-4 w-1/2 max-w-xs rounded bg-border-light/70" />
-              <div className="mt-4 h-4 w-3/4 max-w-md rounded bg-border-light/60" />
-            </div>
-            <div className="mx-4 mt-6 space-y-3">
-              <div className="h-7 w-32 rounded bg-border-light" />
-              <div className="h-16 rounded-2xl bg-border-light/70" />
-            </div>
-          </div>
-          <aside className="hidden w-full shrink-0 space-y-6 lg:block lg:max-w-[22rem] xl:max-w-md">
-            <div className="h-44 rounded-3xl bg-border-light" />
-            <div className="h-36 rounded-2xl bg-border-light/80" />
-          </aside>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface StateBusinessData {
   id: number;
   name: string;
@@ -244,11 +215,7 @@ export default function Service() {
   const publicLogoUrl = business?.logoUrl ?? stateData?.logoUrl ?? null;
   const website = business?.website ?? stateData?.website ?? null;
 
-  const hasBusinessSeed = Boolean(business) || stateData !== null;
-  const profileLoading =
-    businessId !== null && !hasBusinessSeed && (!businessFetched || businessFetching);
-
-  const heroCover = coverPhotos[0] ?? (hasBusinessSeed ? FALLBACK_COVER : "");
+  const heroCover = coverPhotos[0] ?? FALLBACK_COVER;
   const vendorUserUuid = business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
   const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
   const { mode: profileMode, capabilities } = useProfileViewMode(vendorUserId);
@@ -307,10 +274,6 @@ export default function Service() {
         </div>
       </div>
     );
-  }
-
-  if (profileLoading) {
-    return <BusinessProfilePageSkeleton />;
   }
 
   return (
@@ -417,7 +380,6 @@ export default function Service() {
           businessFetched={businessFetched}
           name={displayName || name}
           categoryLabel={categoryLabel}
-          categoryId={categoryId}
           subcategoryLabel={subcategoryLabel}
           description={description}
           locationText={locationText}

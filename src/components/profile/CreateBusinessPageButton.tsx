@@ -53,9 +53,7 @@ export function CreateBusinessPageButton({
     setLoading(true)
     try {
       if (businessCount > 0) {
-        const { user: updatedUser } = await createUserBusiness()
-        if (updatedUser) setUser(updatedUser)
-        await refreshSession()
+        await createUserBusiness()
         showSuccess('Your new business page is ready.')
       } else {
         const result = await switchToVendorMode()

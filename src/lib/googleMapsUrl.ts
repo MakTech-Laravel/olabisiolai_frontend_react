@@ -1,43 +1,24 @@
-function isUsableAddressLabel(label: string): boolean {
-  const trimmed = label.trim()
-  return Boolean(trimmed) && trimmed !== 'N/A' && !/^no location yet$/i.test(trimmed)
-}
-
-function resolveMapsDestination(
-  latitude: number | null | undefined,
-  longitude: number | null | undefined,
-  addressLabel: string,
-): string {
-  const lat = latitude ?? null
-  const lng = longitude ?? null
-  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
-    return `${lat},${lng}`
-  }
-
-  const label = addressLabel.trim()
-  if (isUsableAddressLabel(label)) {
-    return encodeURIComponent(label)
-  }
-
-  return encodeURIComponent('Nigeria')
-}
-
-/** Opens Google Maps using saved coordinates when available, else address text. */
+/** Opens Google Maps search/directions for a business address or coordinates. */
 export function buildGoogleMapsSearchUrl(
   latitude: number | null | undefined,
   longitude: number | null | undefined,
   addressLabel: string,
 ): string {
-  const destination = resolveMapsDestination(latitude, longitude, addressLabel)
-  return `https://www.google.com/maps/search/?api=1&query=${destination}`
-}
+  const label = addressLabel.trim()
+  const isPlaceholder =
+    !label ||
+    label === 'N/A' ||
+    /^no location yet$/i.test(label)
 
-/** Opens Google Maps directions to the saved coordinates or address text. */
-export function buildGoogleMapsDirectionsUrl(
-  latitude: number | null | undefined,
-  longitude: number | null | undefined,
-  addressLabel: string,
-): string {
-  const destination = resolveMapsDestination(latitude, longitude, addressLabel)
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`
+  if (!isPlaceholder) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`
+  }
+
+  const lat = latitude ?? null
+  const lng = longitude ?? null
+  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Nigeria')}`
 }

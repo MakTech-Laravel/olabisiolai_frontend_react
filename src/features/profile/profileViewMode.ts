@@ -2,6 +2,8 @@ import type { AuthUser } from '@/auth/types'
 
 export type ProfileViewMode = 'public' | 'customer' | 'vendorOwner' | 'vendorToVendor'
 
+export type ActiveProfileMode = 'customer' | 'vendor'
+
 export type ProfileModeCapabilities = {
   follow: boolean
   message: boolean
@@ -16,7 +18,7 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
     follow: true,
     message: true,
     save: false,
-    review: true,
+    review: false,
     report: false,
     ownerTools: false,
   },
@@ -29,8 +31,8 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
     ownerTools: false,
   },
   vendorToVendor: {
-    follow: false,
-    message: false,
+    follow: true,
+    message: true,
     save: false,
     review: false,
     report: true,
@@ -50,24 +52,18 @@ export function getProfileModeCapabilities(mode: ProfileViewMode): ProfileModeCa
   return CAPABILITIES[mode]
 }
 
-/** @deprecated Social actions no longer depend on profile mode. Use userHasBusinessPages for management UI. */
-export function resolveActiveProfileMode(user: AuthUser | null): 'customer' | 'vendor' {
+export function resolveActiveProfileMode(user: AuthUser | null): ActiveProfileMode {
   if (!user) return 'customer'
-  return userHasBusinessPages(user) ? 'vendor' : 'customer'
-}
-
-export function userHasBusinessPages(user: AuthUser | null): boolean {
-  if (!user) return false
 
   const settings = user.settings
   if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
-    const activeBusinessId = Number((settings as Record<string, unknown>).active_business_id ?? 0)
-    if (Number.isFinite(activeBusinessId) && activeBusinessId > 0) {
-      return true
+    const active = (settings as Record<string, unknown>).active_profile_mode
+    if (active === 'customer' || active === 'vendor') {
+      return active
     }
   }
 
-  return user.role === 'vendor'
+  return user.role === 'vendor' ? 'vendor' : 'customer'
 }
 
 export function resolveProfileViewMode(
@@ -82,10 +78,9 @@ export function resolveProfileViewMode(
     return 'vendorOwner'
   }
 
-  // Everyone browses listings as a personal user — business pages are not social identities.
-  return 'customer'
+  return resolveActiveProfileMode(viewer) === 'vendor' ? 'vendorToVendor' : 'customer'
 }
 
 export function isVendorProfileMode(mode: ProfileViewMode): boolean {
-  return mode === 'vendorOwner'
+  return mode === 'vendorOwner' || mode === 'vendorToVendor'
 }

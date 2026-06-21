@@ -43,7 +43,7 @@ export default function Following() {
   const lastPage = pagination?.last_page ?? 1;
 
   return (
-    <UserShell>
+    <UserShell active="following">
       <section className="min-h-0 flex-1 bg-chat-surface p-3 sm:p-6 lg:min-h-screen lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">

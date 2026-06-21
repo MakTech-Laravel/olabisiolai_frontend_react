@@ -1,6 +1,6 @@
 import { Menu, MessageCircle } from 'lucide-react'
 
-import { MessagingPeerLink } from '@/components/messaging/MessagingPeerLink'
+import { BusinessProfileLink } from '@/components/business/BusinessProfileLink'
 import { OnlineStatus } from '@/components/chat/OnlineStatus'
 import { Avatar } from '@/components/ui/Avatar'
 import type { Conversation } from '@/types/conversation'
@@ -8,7 +8,6 @@ import { conversationPeerAvatar, getConversationTitle } from '@/utils/messageUti
 import { formatLastSeen } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { messagingUserFromParticipant } from '@/types/conversation'
-import { peerDisplayName } from '@/lib/messagingPeer'
 import type { UserStatus } from '@/types/user'
 
 function normalizeUserStatus(value: string | undefined): UserStatus {
@@ -28,12 +27,16 @@ export function ChatHeader({
   onOpenSidebar,
 }: ChatHeaderProps) {
   const title = getConversationTitle(conversation, selfUserId)
-  const peer = conversation.peer ?? null
-  const peerParticipant =
+  const peerBusinessId =
+    conversation.peer?.business_info_id != null &&
+      conversation.peer.business_info_id > 0
+      ? conversation.peer.business_info_id
+      : null
+  const peer =
     conversation.type === 'direct'
       ? conversation.participants.find((p) => p.user_id !== selfUserId)
       : undefined
-  const mu = messagingUserFromParticipant(peerParticipant)
+  const mu = messagingUserFromParticipant(peer)
   const avatarUrl = conversationPeerAvatar(conversation, selfUserId) ?? mu?.avatar ?? null
   const status = normalizeUserStatus(
     conversation.peer?.presence?.status ?? mu?.status ?? 'offline',
@@ -57,27 +60,31 @@ export function ChatHeader({
         <div className="relative">
           <Avatar
             src={avatarUrl}
-            name={peer ? peerDisplayName(peer) : title}
+            name={title}
             className="size-9 shrink-0 sm:size-10"
           />
           <OnlineStatus status={status} size="md" />
         </div>
         <div className="min-w-0">
           <h2 className="truncate font-heading text-sm font-extrabold tracking-tight text-ink sm:text-base">
-            {conversation.type === 'direct' && peer ? (
-              <MessagingPeerLink peer={peer} className="font-heading text-sm font-extrabold tracking-tight sm:text-base" />
+            {peerBusinessId !== null ? (
+              <BusinessProfileLink
+                businessId={peerBusinessId}
+                businessName={title}
+                className="font-heading text-sm font-extrabold tracking-tight sm:text-base"
+              />
             ) : (
               title
             )}
           </h2>
-          <div className="mt-0.5 flex min-w-0 items-center gap-2">
+          <div className="mt-0.5 flex items-center gap-2">
             <span
               className={cn(
-                'size-2 shrink-0 rounded-full',
+                'size-2 rounded-full',
                 status === 'online' ? 'bg-chat-online-dot' : 'bg-muted-foreground/40',
               )}
             />
-            <span className="truncate text-xs font-semibold text-chat-online-text">
+            <span className="text-xs font-semibold text-chat-online-text">
               {status === 'online'
                 ? 'Online'
                 : lastSeenAt

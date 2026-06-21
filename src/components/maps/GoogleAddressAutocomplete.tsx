@@ -1,14 +1,11 @@
 import { importLibrary } from '@googlemaps/js-api-loader'
-import { Loader2, MapPin, Navigation, X } from 'lucide-react'
+import { Loader2, MapPin, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
-import { areaLabelFromPick } from '@/features/maps/formatBusinessLocation'
-import { captureCurrentLocationPick } from '@/features/maps/reverseGeocodeCoordinates'
 import { parsePlaceToLgaPick } from '@/features/maps/parsePlaceToLgaPick'
 import { ensureGoogleMapsConfigured } from '@/lib/googleMapsInit'
-import { alert } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 const NG_BIAS_CENTER: google.maps.LatLngLiteral = { lat: 9.082, lng: 8.6753 }
@@ -87,8 +84,6 @@ type GoogleAddressAutocompleteProps = {
   disabled?: boolean
   placeholder?: string
   className?: string
-  enableCurrentLocationFallback?: boolean
-  confirmGeolocationPick?: boolean
 }
 
 export function GoogleAddressAutocomplete({
@@ -99,8 +94,6 @@ export function GoogleAddressAutocomplete({
   disabled = false,
   placeholder = 'Start typing your street address…',
   className,
-  enableCurrentLocationFallback = true,
-  confirmGeolocationPick = true,
 }: GoogleAddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -116,8 +109,6 @@ export function GoogleAddressAutocomplete({
   const [searchError, setSearchError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [searching, setSearching] = useState(false)
-  const [capturingLocation, setCapturingLocation] = useState(false)
-  const [addressNotFound, setAddressNotFound] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [dropdownRect, setDropdownRect] = useState({ top: 0, left: 0, width: 0 })
@@ -260,20 +251,6 @@ export function GoogleAddressAutocomplete({
     return pickFromGeocoderResult(result, { lat: loc.lat(), lng: loc.lng() })
   }, [])
 
-  const applyPick = useCallback(
-    (pick: LgaMapPickResult, label?: string) => {
-      const resolvedLabel = label?.trim() || pick.formattedAddress?.trim() || areaLabelFromPick(pick)
-      onValueChange(resolvedLabel)
-      onPick(pick)
-      setSuggestions([])
-      setShowDropdown(false)
-      setActiveIdx(-1)
-      setAddressNotFound(false)
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
-    },
-    [onPick, onValueChange],
-  )
-
   const handleSelectSuggestion = useCallback(
     async (suggestion: Suggestion) => {
       setSearching(true)
@@ -287,44 +264,20 @@ export function GoogleAddressAutocomplete({
         const label =
           pick.formattedAddress ??
           `${suggestion.mainText}${suggestion.secondaryText ? `, ${suggestion.secondaryText}` : ''}`
-        applyPick(pick, label)
+        onValueChange(label)
+        onPick(pick)
+        setSuggestions([])
+        setShowDropdown(false)
+        setActiveIdx(-1)
+        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
       } catch (error) {
         setSearchError(error instanceof Error ? error.message : 'Could not load address details.')
       } finally {
         setSearching(false)
       }
     },
-    [applyPick, resolveSuggestion],
+    [onPick, onValueChange, resolveSuggestion],
   )
-
-  const handleUseCurrentLocation = useCallback(async () => {
-    if (disabled || status !== 'ready' || capturingLocation) return
-
-    setCapturingLocation(true)
-    setSearchError(null)
-    try {
-      const pick = await captureCurrentLocationPick()
-      const areaLabel = areaLabelFromPick(pick)
-
-      if (confirmGeolocationPick) {
-        const confirmed = await alert.confirm({
-          title: 'Is this your business location?',
-          text: areaLabel,
-          confirmText: 'Yes, save this',
-          cancelText: 'No, try again',
-        })
-        if (!confirmed) return
-      }
-
-      applyPick(pick, areaLabel)
-    } catch (error) {
-      setSearchError(
-        error instanceof Error ? error.message : 'Could not capture your current location.',
-      )
-    } finally {
-      setCapturingLocation(false)
-    }
-  }, [applyPick, capturingLocation, confirmGeolocationPick, disabled, status])
 
   useEffect(() => {
     if (status !== 'ready' || disabled) return
@@ -340,7 +293,6 @@ export function GoogleAddressAutocomplete({
       setSearching(false)
       setActiveIdx(-1)
       setSearchError(null)
-      setAddressNotFound(false)
       return
     }
 
@@ -382,7 +334,6 @@ export function GoogleAddressAutocomplete({
       setSuggestions(mapped)
       setShowDropdown(true)
       setActiveIdx(mapped.length > 0 ? 0 : -1)
-      setAddressNotFound(mapped.length === 0 && query.length >= 2)
       setSearching(false)
     }, 180)
 
@@ -490,10 +441,10 @@ export function GoogleAddressAutocomplete({
           aria-controls="google-address-autocomplete-listbox"
           role="combobox"
         />
-        {(searching || status === 'loading' || capturingLocation) && (
+        {(searching || status === 'loading') && (
           <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
-        {!searching && !capturingLocation && value.trim() && status === 'ready' ? (
+        {!searching && value.trim() && status === 'ready' ? (
           <button
             type="button"
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted"
@@ -539,22 +490,7 @@ export function GoogleAddressAutocomplete({
               {searchError ? (
                 <p className="px-3 py-2 text-xs text-brand">{searchError}</p>
               ) : suggestions.length === 0 && !searching ? (
-                <div className="px-3 py-3">
-                  <p className="text-xs text-muted-foreground">
-                    Address not found — use your current location instead.
-                  </p>
-                  {enableCurrentLocationFallback ? (
-                    <button
-                      type="button"
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-chat-accent hover:underline"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => void handleUseCurrentLocation()}
-                    >
-                      <Navigation className="size-3.5" aria-hidden />
-                      Use my current location
-                    </button>
-                  ) : null}
-                </div>
+                <p className="px-3 py-2 text-xs text-muted-foreground">No addresses found.</p>
               ) : (
                 suggestions.map((suggestion, index) => (
                   <button
@@ -580,29 +516,6 @@ export function GoogleAddressAutocomplete({
             document.body,
           )
         : null}
-
-      {enableCurrentLocationFallback && (addressNotFound || !value.trim()) ? (
-        <div className="rounded-md border border-dashed border-border-light bg-surface-soft/60 px-3 py-2.5">
-          {addressNotFound ? (
-            <p className="text-xs text-muted-foreground">
-              Address not found — use your current location instead.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              No street name? Use GPS to set your area, then add a short description below.
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={disabled || status !== 'ready' || capturingLocation}
-            onClick={() => void handleUseCurrentLocation()}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-chat-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-chat-accent/90 disabled:opacity-50"
-          >
-            <Navigation className="size-3.5" aria-hidden />
-            {capturingLocation ? 'Getting location…' : 'Use my current location'}
-          </button>
-        </div>
-      ) : null}
 
       <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
         <span>Powered by</span>

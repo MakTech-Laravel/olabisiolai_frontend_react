@@ -12,7 +12,6 @@ import {
   X,
 } from "lucide-react";
 import { NigeriaLocationMapModal } from "@/components/maps/NigeriaLocationMapModal";
-import { AppNotificationBell } from "@/components/notifications/AppNotificationBell";
 import { GlobalBusinessSearch } from "@/components/search/GlobalBusinessSearch";
 import { useEffect, useState } from "react";
 
@@ -112,62 +111,59 @@ function HeaderToolbar({
       ) : null}
 
       {isAuthenticated ? (
-        <>
-          <AppNotificationBell viewAllHref="/user/activity" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {isVendor ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-10 gap-1.5 px-2 text-sm font-medium text-ink-heading"
-                >
-                  <CircleUserRound className="size-6" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "h-10 w-10 overflow-hidden rounded-full p-0",
-                    isLightHeader
-                      ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
-                      : "border-border-gray bg-white text-ink-heading",
-                  )}
-                  aria-label="My account"
-                >
-                  <HeaderAvatar src={avatarSrc} alt="Account" />
-                </Button>
-              )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-48">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to={profilePath} className="flex items-center gap-2">
-                  <User className="size-4" aria-hidden />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to={dashboardPath} className="flex items-center gap-2">
-                  <Settings className="size-4" aria-hidden />
-                  Dashboard
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => {
-                  void logout();
-                }}
-                className="text-brand-red focus:text-brand-red"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            {isVendor ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-10 gap-1.5 px-2 text-sm font-medium text-ink-heading"
               >
-                <LogOut className="size-4" aria-hidden />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
+                <CircleUserRound className="size-6" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "h-10 w-10 overflow-hidden rounded-full p-0",
+                  isLightHeader
+                    ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
+                    : "border-border-gray bg-white text-ink-heading",
+                )}
+                aria-label="My account"
+              >
+                <HeaderAvatar src={avatarSrc} alt="Account" />
+              </Button>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to={profilePath} className="flex items-center gap-2">
+                <User className="size-4" aria-hidden />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={dashboardPath} className="flex items-center gap-2">
+                <Settings className="size-4" aria-hidden />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                void logout();
+              }}
+              className="text-brand-red focus:text-brand-red"
+            >
+              <LogOut className="size-4" aria-hidden />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : (
         <Button
           asChild

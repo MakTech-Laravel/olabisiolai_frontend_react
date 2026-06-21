@@ -17,17 +17,10 @@ import {
 import { Link } from "react-router-dom"
 
 import { changeUserPassword } from "@/api/userPassword"
-import {
-  confirmUserTwoFactor,
-  disableUserTwoFactor,
-  enableUserTwoFactor,
-  fetchUserTwoFactorStatus,
-} from "@/api/userTwoFactor"
 import { fetchUserSettings, patchUserSettings, type UserSettingsPayload } from "@/api/userSettings"
 import { useAuth } from "@/auth/useAuth"
 import { AccountVerificationSection } from "@/components/settings/AccountVerificationSection"
 import { EmailVerificationSection } from "@/components/settings/EmailVerificationSection"
-import { TwoFactorSetupModal } from "@/components/sections/vendor/settings/TwoFactorSetupModal"
 import { UserShell } from "@/components/partials/user/UserShell"
 import { HeaderAvatar } from "@/components/ui/HeaderAvatar"
 import { Button } from "@/components/ui/button"
@@ -35,7 +28,6 @@ import { Input } from "@/components/ui/input"
 import { isUserAccountVerified } from "@/lib/accountVerification"
 import { getLaravelErrorMessage } from "@/lib/laravelApiError"
 import { resolveMediaUrl } from "@/lib/mediaUrl"
-import { Swal } from "@/lib/sweetAlert"
 import { cn } from "@/lib/utils"
 
 const LOGO_FOOTER = "/images/landing/gidira-logo-footer.svg"
@@ -210,28 +202,10 @@ export default function AccountSettings() {
   const [avatarCacheKey, setAvatarCacheKey] = React.useState(0)
   const profileImageInputRef = React.useRef<HTMLInputElement>(null)
 
-  const [twoFactorEnabled, setTwoFactorEnabled] = React.useState(false)
-  const [twoFactorBusy, setTwoFactorBusy] = React.useState(false)
-  const [twoFactorModalOpen, setTwoFactorModalOpen] = React.useState(false)
-  const [twoFactorQr, setTwoFactorQr] = React.useState("")
-  const [twoFactorSecret, setTwoFactorSecret] = React.useState("")
-
   const settingsQuery = useQuery({
     queryKey: ["user-settings"],
     queryFn: fetchUserSettings,
   })
-
-  const twoFactorQuery = useQuery({
-    queryKey: ["user-two-factor"],
-    queryFn: fetchUserTwoFactorStatus,
-    retry: false,
-  })
-
-  React.useEffect(() => {
-    if (twoFactorQuery.data) {
-      setTwoFactorEnabled(Boolean(twoFactorQuery.data.enabled))
-    }
-  }, [twoFactorQuery.data])
 
   React.useEffect(() => {
     const data = settingsQuery.data
@@ -410,68 +384,6 @@ export default function AccountSettings() {
     uploadProfileImageMutation.isPending
   const accountVerified = isUserAccountVerified(user)
 
-  async function handleTwoFactorToggle(enabled: boolean) {
-    if (twoFactorBusy) return
-
-    if (enabled) {
-      setTwoFactorBusy(true)
-      try {
-        const result = await enableUserTwoFactor()
-        setTwoFactorQr(result.qr_code)
-        setTwoFactorSecret(result.secret)
-        setTwoFactorModalOpen(true)
-      } catch (err) {
-        setBanner({ type: "error", text: getLaravelErrorMessage(err, "Could not start two-factor setup.") })
-      } finally {
-        setTwoFactorBusy(false)
-      }
-      return
-    }
-
-    const { value: password, isConfirmed } = await Swal.fire({
-      title: "Disable two-factor authentication?",
-      text: "Enter your account password to confirm.",
-      input: "password",
-      inputPlaceholder: "Password",
-      inputAttributes: { autocapitalize: "off", autocorrect: "off" },
-      showCancelButton: true,
-      confirmButtonText: "Disable 2FA",
-      confirmButtonColor: "#E42338",
-    })
-
-    if (!isConfirmed || !password) return
-
-    setTwoFactorBusy(true)
-    try {
-      await disableUserTwoFactor(password)
-      setTwoFactorEnabled(false)
-      void queryClient.invalidateQueries({ queryKey: ["user-two-factor"] })
-      setBanner({ type: "ok", text: "Two-factor authentication disabled." })
-    } catch (err) {
-      setBanner({
-        type: "error",
-        text: getLaravelErrorMessage(err, "Could not disable two-factor authentication."),
-      })
-    } finally {
-      setTwoFactorBusy(false)
-    }
-  }
-
-  async function handleTwoFactorConfirmed(recoveryCodes: string[]) {
-    setTwoFactorModalOpen(false)
-    setTwoFactorEnabled(true)
-    setTwoFactorQr("")
-    setTwoFactorSecret("")
-    void queryClient.invalidateQueries({ queryKey: ["user-two-factor"] })
-
-    await Swal.fire({
-      title: "Two-factor enabled",
-      html: `<p class="text-sm mb-3">Store these recovery codes in a safe place. Each can be used once if you lose your device.</p><pre class="text-left text-xs bg-slate-100 p-3 rounded-lg overflow-auto max-h-48">${recoveryCodes.join("\n")}</pre>`,
-      confirmButtonText: "I have saved my codes",
-    })
-    setBanner({ type: "ok", text: "Two-factor authentication is now enabled." })
-  }
-
   function onProfileImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -492,7 +404,7 @@ export default function AccountSettings() {
 
   return (
     <>
-      <UserShell>
+      <UserShell active="settings">
         <section className="min-h-0 flex-1 bg-chat-surface p-3 sm:p-6 lg:p-8">
           <Link
             to="/user/settings"
@@ -710,20 +622,6 @@ export default function AccountSettings() {
                 Forgot your password? Sign out and use{" "}
                 <span className="font-medium text-ink">Forget password</span> on the login page.
               </p>
-              <div className="mt-5 border-t border-chat-border-subtle pt-5">
-                <ToggleRow
-                  title="Two-factor authentication"
-                  description={
-                    twoFactorEnabled
-                      ? "Authenticator app is active on this account."
-                      : "Add an extra layer of security with a TOTP authenticator app."
-                  }
-                  enabled={twoFactorEnabled}
-                  onToggle={(v) => void handleTwoFactorToggle(v)}
-                  disabled={busy || twoFactorQuery.isLoading || twoFactorBusy}
-                  icon={<ShieldCheck className="size-4" />}
-                />
-              </div>
             </div>
           </section>
 
@@ -797,19 +695,6 @@ export default function AccountSettings() {
           </div>
         </section>
       </UserShell>
-
-      <TwoFactorSetupModal
-        open={twoFactorModalOpen}
-        qrCode={twoFactorQr}
-        secret={twoFactorSecret}
-        confirmCode={confirmUserTwoFactor}
-        onClose={() => {
-          setTwoFactorModalOpen(false)
-          setTwoFactorQr("")
-          setTwoFactorSecret("")
-        }}
-        onConfirmed={(codes) => void handleTwoFactorConfirmed(codes)}
-      />
 
       <footer className="bg-footer-bar">
         <div className="mx-auto w-full max-w-[1400px] px-4 py-14 xl:px-12">

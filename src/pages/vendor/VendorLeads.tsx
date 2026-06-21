@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { NewConversationModal } from "@/features/messaging/NewConversationModal";
+import { QUERY_KEYS } from "@/constants/queryKeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showError } from "@/lib/sweetAlert";
 
@@ -58,6 +60,7 @@ export default function VendorLeads() {
   const [openLeadDetails, setOpenLeadDetails] = useState<Lead | null>(null);
   const [chatSearch, setChatSearch] = useState("");
   const [messageDraft, setMessageDraft] = useState("");
+  const [newConversationOpen, setNewConversationOpen] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const { files, addFiles, removeFile, clearFiles } = useAttachmentUpload();
 
@@ -302,7 +305,9 @@ export default function VendorLeads() {
               }}
               searchQuery={chatSearch}
               onSearchChange={setChatSearch}
-              onNewConversation={undefined}
+              onNewConversation={
+                channelFilter === "admin" ? undefined : () => setNewConversationOpen(true)
+              }
             />
             <WhatsAppChatInterface
               selectedLead={selectedLead}
@@ -327,6 +332,19 @@ export default function VendorLeads() {
         <LeadDetailsModal
           openLead={openLeadDetails}
           onClose={() => setOpenLeadDetails(null)}
+        />
+
+        <NewConversationModal
+          open={newConversationOpen}
+          onClose={() => setNewConversationOpen(false)}
+          onCreated={(uuid) => {
+            setChannelFilter("whatsapp");
+            setSelectedLeadId(uuid);
+            setMessageDraft("");
+            clearFiles();
+            void queryClient.invalidateQueries({ queryKey: ["vendor-conversations"] });
+            void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.messages(uuid) });
+          }}
         />
       </div>
     </div>

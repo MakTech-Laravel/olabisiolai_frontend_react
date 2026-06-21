@@ -53,19 +53,8 @@ function newMessageActivityCopy(d: Record<string, unknown>): { title: string; me
   return { title: titleOut, message: messageOut }
 }
 
-function newFollowerActivityCopy(d: Record<string, unknown>): { title: string; message: string } {
-  const followerName = String(d.follower_name ?? d.title ?? '').trim() || 'Someone'
-  const businessName = String(d.business_name ?? '').trim() || 'your business'
-
-  return {
-    title: followerName,
-    message: `started following "${businessName}".`,
-  }
-}
-
 const VENDOR_ROUTES: Record<string, string> = {
   new_message: '/vendor/leads',
-  new_follower: '/user/profile',
   verification_approved: '/vendor/verification',
   verification_flagged: '/vendor/verification',
   verification_revoked: '/vendor/verification',
@@ -76,7 +65,6 @@ const VENDOR_ROUTES: Record<string, string> = {
 
 const USER_ROUTES: Record<string, string> = {
   new_message: '/user/messages',
-  new_follower: '/user/profile',
   verification_approved: '/user/settings/account',
   verification_flagged: '/user/settings/account',
   payment_completed: '/user/dashboard',
@@ -123,21 +111,6 @@ export function toNotificationDisplay(item: StoredNotification): NotificationDis
     }
   }
 
-  if (type === 'new_follower') {
-    const { title, message } = newFollowerActivityCopy(d as Record<string, unknown>)
-    return {
-      id: item.id,
-      type,
-      title,
-      message,
-      tone: (d.tone as RealtimeNotificationTone) ?? 'info',
-      href,
-      isRead: item.read_at != null,
-      createdAt: item.created_at,
-      raw: item,
-    }
-  }
-
   return {
     id: item.id,
     type,
@@ -161,21 +134,6 @@ export function toUserNotificationDisplay(item: StoredNotification): Notificatio
 
   if (type === 'new_message') {
     const { title, message } = newMessageActivityCopy(d as Record<string, unknown>)
-    return {
-      id: item.id,
-      type,
-      title,
-      message,
-      tone: (d.tone as RealtimeNotificationTone) ?? 'info',
-      href,
-      isRead: item.read_at != null,
-      createdAt: item.created_at,
-      raw: item,
-    }
-  }
-
-  if (type === 'new_follower') {
-    const { title, message } = newFollowerActivityCopy(d as Record<string, unknown>)
     return {
       id: item.id,
       type,

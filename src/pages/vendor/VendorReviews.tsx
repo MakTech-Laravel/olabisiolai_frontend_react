@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Loader2, MessageSquare, Send, Star, Store } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchUserBusinesses } from "@/api/userBusinesses";
@@ -90,31 +90,6 @@ async function sendReviewReply(reviewId: number, replyText: string): Promise<boo
   }
 }
 
-const PROFILE_HUB_PATH = "/user/profile";
-
-function resolveReviewsBackHref(searchParams: URLSearchParams): string {
-  const from = searchParams.get("from")?.trim().toLowerCase();
-  if (from === "dashboard") {
-    return "/vendor/dashboard";
-  }
-  return PROFILE_HUB_PATH;
-}
-
-function ReviewsPageBackLink({ label = "Back to profile" }: { label?: string }) {
-  const [searchParams] = useSearchParams();
-  const backHref = resolveReviewsBackHref(searchParams);
-
-  return (
-    <Link
-      to={backHref}
-      className="inline-flex items-center gap-1.5 text-sm font-semibold text-chat-accent hover:underline"
-    >
-      <ChevronLeft className="size-4 shrink-0" aria-hidden />
-      {label}
-    </Link>
-  );
-}
-
 function VendorReviewsBusinessList({
   onSelectBusiness,
 }: {
@@ -200,14 +175,7 @@ function VendorReviewsBusinessList({
   );
 }
 
-function VendorReviewsDetail({
-  businessId,
-  businessCount,
-}: {
-  businessId: number;
-  businessCount: number;
-}) {
-  const navigate = useNavigate();
+function VendorReviewsDetail({ businessId }: { businessId: number }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -295,11 +263,6 @@ function VendorReviewsDetail({
   });
 
   function goBackToList() {
-    if (businessCount <= 1) {
-      navigate(resolveReviewsBackHref(searchParams));
-      return;
-    }
-
     const next = new URLSearchParams(searchParams);
     next.delete("business_id");
     setSearchParams(next, { replace: true });
@@ -321,18 +284,14 @@ function VendorReviewsDetail({
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <ReviewsPageBackLink />
-        {businessCount > 1 ? (
-          <button
-            type="button"
-            onClick={goBackToList}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-body-secondary hover:text-ink hover:underline"
-          >
-            Switch business
-          </button>
-        ) : null}
-      </div>
+      <button
+        type="button"
+        onClick={goBackToList}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-chat-accent hover:underline"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        All businesses
+      </button>
 
       <Card>
         <CardContent className="space-y-4 p-4 md:p-5">
@@ -469,14 +428,8 @@ export default function VendorReviews() {
     setSearchParams(next, { replace: true });
   }
 
-  const businessCount = businessesQuery.data?.length ?? 0;
-
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-3">
-        <ReviewsPageBackLink />
-      </div>
-
       <header className="mb-4">
         <h1 className="font-inter text-2xl font-semibold">Reviews Received</h1>
         <p className="text-sm text-muted-foreground">
@@ -485,7 +438,7 @@ export default function VendorReviews() {
       </header>
 
       {selectedBusinessId ? (
-        <VendorReviewsDetail businessId={selectedBusinessId} businessCount={businessCount} />
+        <VendorReviewsDetail businessId={selectedBusinessId} />
       ) : (
         <VendorReviewsBusinessList onSelectBusiness={selectBusiness} />
       )}

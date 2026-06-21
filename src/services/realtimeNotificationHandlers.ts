@@ -6,7 +6,6 @@ import {
   updateConversationInCache,
 } from '@/features/messaging/conversationCache'
 import { notifyNewMessage, notifyRealtime } from '@/services/notificationService'
-import { showInfo } from '@/lib/sweetAlert'
 import type { RealtimeNotificationPayload } from '@/types/realtimeNotification'
 
 export type RealtimeNotificationHandlerContext = {
@@ -23,15 +22,6 @@ export function handleRealtimeNotification(
 
   if (type === 'new_message') {
     handleNewMessage(payload, ctx)
-    void ctx.queryClient.invalidateQueries({ queryKey: ['notifications'] })
-    void ctx.queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notificationsUnread })
-    return
-  }
-
-  if (type === 'new_follower') {
-    const follower = String(payload.follower_name ?? payload.title ?? 'Someone')
-    const business = String(payload.business_name ?? 'your business')
-    void showInfo(`${follower} started following "${business}".`)
     void ctx.queryClient.invalidateQueries({ queryKey: ['notifications'] })
     void ctx.queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notificationsUnread })
     return

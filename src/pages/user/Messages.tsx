@@ -1,12 +1,45 @@
+import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+
+import { fetchUserBusinesses } from "@/api/userBusinesses";
 import { useAuth } from "@/auth/useAuth";
 import { FrontendHeader } from "@/components/partials/frontend/FrontendHeader";
 import { MessagingLayout } from "@/features/messaging/MessagingLayout";
+import type { MessagingInboxKey } from "@/features/messaging/MessagingInboxTabs";
 import { useStartDirectConversation } from "@/hooks/useStartDirectConversation";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
 
 export default function Messages() {
   const { user, isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
+  const businessIdParam = Number(searchParams.get("business_id") ?? "");
+  const scope = searchParams.get("scope");
+  const inboxScope: MessagingInboxKey | undefined =
+    Number.isFinite(businessIdParam) && businessIdParam > 0
+      ? (`business:${businessIdParam}` as const)
+      : scope === "personal"
+        ? "personal"
+        : undefined;
+
+  const businessesQuery = useQuery({
+    queryKey: ["user", "businesses", "messages-title"],
+    queryFn: fetchUserBusinesses,
+    enabled: Boolean(inboxScope?.startsWith("business:")),
+    staleTime: 60_000,
+  });
+
+  const businessTitle =
+    inboxScope?.startsWith("business:") && Number.isFinite(businessIdParam)
+      ? businessesQuery.data?.find((business) => business.id === businessIdParam)?.businessName
+      : null;
+
+  const pageTitle =
+    inboxScope === "personal"
+      ? "Your messages"
+      : businessTitle
+        ? `${businessTitle} messages`
+        : "Messages";
 
   const { starting, pendingPeer } = useStartDirectConversation({
     isAuthenticated,
@@ -35,7 +68,8 @@ export default function Messages() {
           <MessagingLayout
             selfUser={user}
             conversationQueryParam="c"
-            title="Messages"
+            inboxScope={inboxScope}
+            title={pageTitle}
           />
         </div>
       </main>

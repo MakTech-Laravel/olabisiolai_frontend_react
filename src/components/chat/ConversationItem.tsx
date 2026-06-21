@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { MessagingPeerLink } from '@/components/messaging/MessagingPeerLink'
+import { BusinessProfileLink } from '@/components/business/BusinessProfileLink'
 import { OnlineStatus } from '@/components/chat/OnlineStatus'
 import { Avatar } from '@/components/ui/Avatar'
 import { UnreadCountBadge } from '@/components/chat/UnreadCountBadge'
@@ -9,7 +9,6 @@ import { conversationPeerAvatar, getConversationPreviewText, getConversationPrev
 import { formatRelative } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { messagingUserFromParticipant } from '@/types/conversation'
-import { peerDisplayName } from '@/lib/messagingPeer'
 import type { TypingUser } from '@/types/message'
 
 interface ConversationItemProps {
@@ -28,12 +27,16 @@ export const ConversationItem = React.memo(function ConversationItem({
   onClick,
 }: ConversationItemProps) {
   const title = getConversationTitle(conversation, selfUserId)
-  const peer = conversation.peer ?? null
-  const peerParticipant =
+  const peerBusinessId =
+    conversation.peer?.business_info_id != null &&
+      conversation.peer.business_info_id > 0
+      ? conversation.peer.business_info_id
+      : null
+  const peer =
     conversation.type === 'direct'
       ? conversation.participants.find((p) => p.user_id !== selfUserId)
       : undefined
-  const mu = messagingUserFromParticipant(peerParticipant)
+  const mu = messagingUserFromParticipant(peer)
   const avatarUrl = conversationPeerAvatar(conversation, selfUserId) ?? mu?.avatar ?? null
   const typing = typingUsers.filter((t) => t.is_typing)
   const previewText = getConversationPreviewText(conversation)
@@ -45,8 +48,6 @@ export const ConversationItem = React.memo(function ConversationItem({
         : previewText
 
   const timeSrc = getConversationPreviewTime(conversation)
-  const listTitle =
-    conversation.type === 'direct' && peer ? peerDisplayName(peer) : title
 
   return (
     <button
@@ -60,7 +61,7 @@ export const ConversationItem = React.memo(function ConversationItem({
       )}
     >
       <div className="relative shrink-0">
-        <Avatar src={avatarUrl} name={listTitle} className="size-12 rounded-xl" />
+        <Avatar src={avatarUrl} name={title} className="size-12 rounded-xl" />
         {mu?.status === 'online' ? (
           <OnlineStatus status="online" size="lg" />
         ) : null}
@@ -68,8 +69,12 @@ export const ConversationItem = React.memo(function ConversationItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-base font-bold text-ink">
-            {conversation.type === 'direct' && peer ? (
-              <MessagingPeerLink peer={peer} className="truncate text-base font-bold text-ink" />
+            {peerBusinessId !== null ? (
+              <BusinessProfileLink
+                businessId={peerBusinessId}
+                businessName={title}
+                className="truncate text-base font-bold text-ink"
+              />
             ) : (
               title
             )}

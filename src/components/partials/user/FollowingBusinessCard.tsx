@@ -98,7 +98,6 @@ export function FollowingBusinessCard({
         <div className="space-y-2 pt-1">
           <DirectMessageButton
             businessInfoId={businessInfoId}
-            vendorUserId={followingUserId}
             vendorUserUuid={vendorUserUuid}
             fromPath={pathname}
             messagesPath="/user/messages"

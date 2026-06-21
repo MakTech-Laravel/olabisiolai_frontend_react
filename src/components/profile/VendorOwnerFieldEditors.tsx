@@ -7,7 +7,6 @@ import { LocationCascadeSelects } from '@/components/locations/LocationCascadeSe
 import { GoogleAddressAutocomplete } from '@/components/maps/GoogleAddressAutocomplete'
 import { env } from '@/config/env'
 import { matchVendorLocationFromGoogle } from '@/features/locations/matchVendorLocationFromGoogle'
-import { formatBusinessLocationDisplay } from '@/features/maps/formatBusinessLocation'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
 import { VendorOwnerModalShell } from '@/components/profile/VendorOwnerModalShell'
 import { Input } from '@/components/ui/input'
@@ -16,7 +15,7 @@ import type { BusinessHourEntry } from '@/features/business/businessHours'
 import { useVendorBusinessFormOptions } from '@/features/categories/useVendorBusinessFormOptions'
 import { updateVendorBusiness, getVendorBusinessUpdateError } from '@/features/business/vendorBusinessApi'
 import {
-  fetchVendorBusinessProfileForId,
+  fetchVendorBusinessProfile,
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
 import {
@@ -34,12 +33,10 @@ import {
 } from '@/features/business/socialAccounts'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageOwnerPhotoGrid } from '@/lib/businessPageLayout'
-import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 type OwnerEditButtonProps = {
-  businessId?: number
   label?: string
   className?: string
   onProfileUpdated?: () => void
@@ -69,25 +66,20 @@ function OwnerEditTrigger({
   )
 }
 
-function useOwnerProfileEditor(businessId?: number, onProfileUpdated?: () => void) {
+function useOwnerProfileEditor(onProfileUpdated?: () => void) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<VendorBusinessProfile | null>(null)
 
   async function openEditor() {
-    if (!businessId || businessId <= 0) {
-      showError('Could not determine which business profile to edit.')
-      return
-    }
-
     setOpen(true)
     setLoading(true)
     try {
-      const loaded = await fetchVendorBusinessProfileForId(businessId)
+      const loaded = await fetchVendorBusinessProfile()
       setProfile(loaded)
-    } catch (error) {
-      showError(getLaravelErrorMessage(error, 'Could not load your business profile for editing.'))
+    } catch {
+      showError('Could not load your business profile for editing.')
       setOpen(false)
     } finally {
       setLoading(false)
@@ -104,7 +96,6 @@ function useOwnerProfileEditor(businessId?: number, onProfileUpdated?: () => voi
       setOpen(false)
       onProfileUpdated?.()
       await queryClient.invalidateQueries({ queryKey: ['business'] })
-      await queryClient.invalidateQueries({ queryKey: ['business', businessId ?? profile.id] })
       await queryClient.invalidateQueries({ queryKey: ['vendor', 'business'] })
       return true
     } catch (error) {
@@ -119,7 +110,6 @@ function useOwnerProfileEditor(businessId?: number, onProfileUpdated?: () => voi
 }
 
 export function VendorOwnerLocationEditButton({
-  businessId,
   label = 'Location',
   className,
   onProfileUpdated,
@@ -129,12 +119,11 @@ export function VendorOwnerLocationEditButton({
     () => parseVendorLocationOptions(formOptions?.locations),
     [formOptions?.locations],
   )
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [state, setState] = useState('')
   const [city, setCity] = useState('')
   const [locationId, setLocationId] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
-  const [locationNarrative, setLocationNarrative] = useState('')
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null)
@@ -146,7 +135,6 @@ export function VendorOwnerLocationEditButton({
     setCity(selected?.city || profile.city || '')
     setLocationId(selected?.id || String(profile.locationId || ''))
     setStreetAddress(profile.streetAddress || '')
-    setLocationNarrative(profile.locationNarrative || '')
     setLatitude(profile.latitude ?? null)
     setLongitude(profile.longitude ?? null)
     setGooglePlaceId(profile.googlePlaceId ?? null)
@@ -179,12 +167,6 @@ export function VendorOwnerLocationEditButton({
     [parsedLocations, state, city],
   )
   const selectedEntry = parsedLocations.find((entry) => entry.id === locationId) ?? null
-  const previewArea =
-    [selectedEntry?.city ?? city, selectedEntry?.state ?? state].filter(Boolean).join(', ') ||
-    selectedEntry?.label ||
-    profile?.locationLabel ||
-    ''
-  const locationPreview = formatBusinessLocationDisplay(previewArea, locationNarrative)
 
   return (
     <>
@@ -207,7 +189,6 @@ export function VendorOwnerLocationEditButton({
               city: selectedEntry?.city ?? city,
               lga: selectedEntry?.lga ?? profile?.lga ?? '',
               street_address: streetAddress.trim(),
-              location_narrative: locationNarrative.trim(),
               latitude: latitude ?? undefined,
               longitude: longitude ?? undefined,
               google_place_id: googlePlaceId ?? undefined,
@@ -228,30 +209,9 @@ export function VendorOwnerLocationEditButton({
             placeholder="e.g. 7 Adeola Odeku Street, Victoria Island"
           />
           <p className="mt-2 text-[12px] text-body-secondary">
-            Type to search — Google suggestions appear as you type. If your address is not listed,
-            use your current location, then add a short description customers will recognize.
+            Type to search — Google suggestions appear as you type. State, city, and LGA below are filled
+            automatically when possible.
           </p>
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink">
-            Location description <span className="font-normal text-body-secondary">(optional)</span>
-          </label>
-          <Input
-            value={locationNarrative}
-            onChange={(event) => setLocationNarrative(event.target.value)}
-            disabled={loading || formOptionsLoading}
-            placeholder='e.g. Inside Tejuosho Market, Block B'
-            maxLength={255}
-          />
-          <p className="mt-1.5 text-[12px] text-body-secondary">
-            Help customers find you with a familiar landmark, e.g. &quot;Opposite Shoprite Sangotedo&quot;.
-          </p>
-          {locationPreview ? (
-            <p className="mt-2 text-[12px] text-ink">
-              <span className="font-medium">Customers will see:</span>{' '}
-              {locationPreview}
-            </p>
-          ) : null}
         </div>
         <LocationCascadeSelects
           state={state}
@@ -279,14 +239,13 @@ export function VendorOwnerLocationEditButton({
 }
 
 export function VendorOwnerCategoryEditButton({
-  businessId,
   label = 'Category',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
   const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
   const categories = formOptions?.categories ?? []
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [categoryId, setCategoryId] = useState('')
   const [subcategory, setSubcategory] = useState('')
 
@@ -382,7 +341,6 @@ type VendorOwnerDetailsEditButtonProps = OwnerEditButtonProps & {
 }
 
 export function VendorOwnerDetailsEditButton({
-  businessId,
   label = 'details',
   className,
   onProfileUpdated,
@@ -391,7 +349,7 @@ export function VendorOwnerDetailsEditButton({
 }: VendorOwnerDetailsEditButtonProps) {
   const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
   const categories = formOptions?.categories ?? []
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [businessName, setBusinessName] = useState('')
   const [businessDescription, setBusinessDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -517,13 +475,12 @@ export function VendorOwnerDetailsEditButton({
 }
 
 export function VendorOwnerContactEditButton({
-  businessId,
   label = 'Contact details',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
   const CONTACT_SOCIAL_PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'tiktok', 'linkedin', 'x']
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [phone, setPhone] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [website, setWebsite] = useState('')
@@ -623,12 +580,11 @@ export function VendorOwnerContactEditButton({
 }
 
 export function VendorOwnerServicesEditButton({
-  businessId,
   label = 'Products/Services',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [servicesText, setServicesText] = useState('')
 
   useEffect(() => {
@@ -670,12 +626,11 @@ export function VendorOwnerServicesEditButton({
 }
 
 export function VendorOwnerHoursEditButton({
-  businessId,
   label = 'Business hours',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [hours, setHours] = useState<BusinessHourEntry[]>([])
 
   useEffect(() => {
@@ -727,13 +682,12 @@ function GalleryThumb({
 }
 
 export function VendorOwnerGalleryEditButton({
-  businessId,
   label = 'Photos',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
   const { photoLimit } = useVendorSubscriptionAccess()
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const inputRef = useRef<HTMLInputElement>(null)
   const [keepPaths, setKeepPaths] = useState<string[]>([])
   const [existingUrls, setExistingUrls] = useState<string[]>([])
@@ -857,12 +811,11 @@ export function VendorOwnerGalleryEditButton({
 }
 
 export function VendorOwnerLogoEditButton({
-  businessId,
   label = 'Business logo',
   className,
   onProfileUpdated,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(businessId, onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const inputRef = useRef<HTMLInputElement>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -953,12 +906,10 @@ export function VendorOwnerLogoEditButton({
 }
 
 export function VendorOwnerPhotoGrid({
-  businessId,
   coverPhotos,
   onProfileUpdated,
   addSlot,
 }: {
-  businessId: number
   coverPhotos: string[]
   photoLimit: number
   onProfileUpdated?: () => void
@@ -974,7 +925,7 @@ export function VendorOwnerPhotoGrid({
 
     setRemovingIndex(index)
     try {
-      const profile = await fetchVendorBusinessProfileForId(businessId)
+      const profile = await fetchVendorBusinessProfile()
       const keepPaths = profile.coverPhotoPaths.filter((_, i) => i !== index)
       if (keepPaths.length < 1) {
         showError('Please keep at least one gallery photo.')

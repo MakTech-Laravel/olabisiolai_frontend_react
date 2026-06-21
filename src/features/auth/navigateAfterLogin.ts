@@ -1,7 +1,7 @@
 import type { NavigateFunction } from "react-router-dom";
 
 import {
-  shouldHonorLoginReturn,
+  isUnsafePostLoginPath,
   type LoginReturnTarget,
 } from "@/features/auth/loginReturn";
 
@@ -9,7 +9,7 @@ export function navigateAfterLogin(
   navigate: NavigateFunction,
   returnTo: LoginReturnTarget | undefined,
 ): boolean {
-  if (!shouldHonorLoginReturn(returnTo) || !returnTo?.pathname) {
+  if (!returnTo?.pathname || isUnsafePostLoginPath(returnTo.pathname)) {
     return false;
   }
 

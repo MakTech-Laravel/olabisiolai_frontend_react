@@ -2,7 +2,6 @@ export type RealtimeNotificationTone = 'info' | 'success' | 'warning' | 'error'
 
 export type RealtimeNotificationType =
   | 'new_message'
-  | 'new_follower'
   | 'verification_approved'
   | 'verification_flagged'
   | 'verification_submitted'
@@ -22,8 +21,4 @@ export type RealtimeNotificationPayload = {
   preview?: string
   unread_count?: number
   from_platform_admin?: boolean
-  follower_id?: number
-  follower_name?: string
-  business_info_id?: number
-  business_name?: string
 }

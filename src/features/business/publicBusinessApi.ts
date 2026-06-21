@@ -8,7 +8,6 @@ import {
 import { parseSocialAccounts, type SocialAccount } from '@/features/business/socialAccounts';
 import { parseCatalogItems, type BusinessCatalogItem } from '@/features/catalog/businessCatalogApi';
 import { normalizeSubcategories } from '@/features/categories/categoryParsers';
-import { resolvePublicBusinessLocationLabel } from '@/features/maps/formatBusinessLocation';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 export type PublicBusiness = {
@@ -147,8 +146,7 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   if (!r) return null;
 
   const id = num(r.id ?? r.business_id, idx + 1);
-  const nameRaw = str(r.business_name ?? r.name, '').trim();
-  const name = nameRaw || `Business ${id}`;
+  const name = str(r.business_name ?? r.name, `Business ${id}`);
 
   const catObj = rec(r.category);
   const categoryId = num(catObj?.id ?? r.category_id, NaN);
@@ -183,17 +181,8 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const lngRaw = num(r.longitude ?? locObj?.longitude, NaN);
   const latitude = Number.isFinite(latRaw) ? latRaw : null;
   const longitude = Number.isFinite(lngRaw) ? lngRaw : null;
-  const locationNarrative = str(r.location_narrative ?? r.locationNarrative, '').trim();
-  const locationDisplayRaw = str(r.location_display ?? r.locationDisplay, '').trim();
   const location =
-    resolvePublicBusinessLocationLabel({
-      streetAddress,
-      locationDisplay: locationDisplayRaw,
-      city,
-      state,
-      fullName,
-      locationNarrative,
-    }) ||
+    streetAddress ||
     (locationId
       ? formattedAddress || fullName || [city, state].filter(Boolean).join(', ') || str(r.location, '')
       : '') ||

@@ -13,7 +13,7 @@ import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
 import { Button } from "@/components/ui/button";
 import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
-import { buildGoogleMapsDirectionsUrl } from "@/lib/googleMapsUrl";
+import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import { businessProfilePath } from "@/lib/businessProfile";
 import {
   businessPageBody,
@@ -198,7 +198,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
       {showDirectMessage ? (
         <DirectMessageButton
           businessInfoId={businessId}
-          vendorUserId={vendorUserId}
           vendorUserUuid={vendorUserUuid}
           fromPath={pathname}
           className="h-auto w-full rounded-[14px] border-0 bg-chat-accent px-4 py-[15px] text-[15.5px] font-semibold text-white shadow-[0_8px_18px_rgba(28,134,232,0.24)] transition-transform hover:bg-chat-accent/90 active:scale-[0.99] lg:text-base"
@@ -352,17 +351,16 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             </div>
             <h1 className={businessPageTitle}>{name}</h1>
             {locationText ? (
-              <p className="mt-2 flex items-start gap-1.5 text-[13.5px] lg:text-base">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-chat-accent" aria-hidden />
+              <p className="mt-2 flex items-start gap-1.5 text-[13.5px] text-body-secondary lg:text-base">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {locationIsPlaceholder ? (
                   <span className="italic text-stat-muted">{locationText}</span>
                 ) : (
                   <a
-                    href={buildGoogleMapsDirectionsUrl(latitude, longitude, locationText)}
+                    href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-chat-accent underline-offset-2 hover:underline"
-                    aria-label={`Get directions to ${locationText}`}
+                    className="hover:underline"
                   >
                     {locationText}
                   </a>
@@ -429,18 +427,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                 <span className="font-normal text-stat-muted">
                   · {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
                 </span>
-              ) : null}
-              {capabilities.review ? (
-                <>
-                  <span className="text-stat-muted">·</span>
-                  <button
-                    type="button"
-                    onClick={onWriteReview}
-                    className="font-semibold text-chat-accent hover:underline"
-                  >
-                    Write a review
-                  </button>
-                </>
               ) : null}
               {verified ? (
                 <>

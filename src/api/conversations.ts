@@ -31,21 +31,8 @@ export async function getConversation(uuid: string): Promise<Conversation> {
 
 function conversationApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as ApiResponse<unknown> | Record<string, unknown> | undefined
-    if (data && typeof data === 'object') {
-      if (typeof data.message === 'string' && data.message.trim() !== '') {
-        return data.message
-      }
-      const errors = data.errors as Record<string, string[]> | null | undefined
-      if (errors && typeof errors === 'object') {
-        for (const key of Object.keys(errors)) {
-          const first = errors[key]?.[0]
-          if (typeof first === 'string' && first.trim() !== '') {
-            return first
-          }
-        }
-      }
-    }
+    const data = error.response?.data as ApiResponse<unknown> | undefined
+    if (data?.message) return data.message
     if (error.response?.status === 403) {
       return 'Please verify your email before sending messages.'
     }
