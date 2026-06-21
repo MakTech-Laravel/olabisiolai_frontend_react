@@ -2,6 +2,13 @@ import type { ConversationPeer, FollowerOwnedBusiness } from '@/types/messagingP
 
 export type { FollowerOwnedBusiness }
 
+/** Listing / thread title from the API (business name when messaging a vendor). */
+export function peerDisplayName(peer: ConversationPeer | null | undefined): string {
+  if (!peer) return 'Member'
+  return peer.display_name?.trim() || peer.name?.trim() || peer.personal_name?.trim() || 'Member'
+}
+
+/** Registered personal name (profile panel, vendor inbox). */
 export function peerPersonalName(peer: ConversationPeer | null | undefined): string {
   if (!peer) return 'Member'
   return peer.personal_name?.trim() || peer.display_name?.trim() || peer.name?.trim() || 'Member'

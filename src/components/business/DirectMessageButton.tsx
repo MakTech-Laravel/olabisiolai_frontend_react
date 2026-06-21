@@ -9,7 +9,6 @@ import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { startDirectConversationWithVendor } from "@/features/messaging/startDirectConversation";
 import { directMessageTo } from "@/lib/directMessage";
 import {
-  B2B_MESSAGING_DISABLED_REASON,
   canMessageBusinessListing,
 } from "@/lib/messagingInitiation";
 import { showError } from "@/lib/sweetAlert";
@@ -51,11 +50,9 @@ export function DirectMessageButton({
     useRequireAuthNavigate();
   const [loading, setLoading] = useState(false);
 
-  const blockedForVendorAccount = Boolean(user) && !canMessageBusinessListing(user, vendorUserId);
-  const isDisabled = disabled || blockedForVendorAccount;
-  const resolvedDisabledReason = blockedForVendorAccount
-    ? B2B_MESSAGING_DISABLED_REASON
-    : disabledReason;
+  const blockedForOwnBusiness = Boolean(user) && !canMessageBusinessListing(user, vendorUserId);
+  const isDisabled = disabled || blockedForOwnBusiness;
+  const resolvedDisabledReason = blockedForOwnBusiness ? disabledReason : disabledReason;
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();

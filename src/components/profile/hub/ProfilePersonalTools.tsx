@@ -1,28 +1,42 @@
-import { ChevronRight, Heart, MessageSquare, Settings, Star } from 'lucide-react'
+import { Bell, ChevronRight, Heart, MessageSquare, Settings, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { NotificationCountBadge } from '@/components/notifications/NotificationCountBadge'
+import { useUnreadNotificationCount } from '@/hooks/useNotifications'
+import { useUnreadCount } from '@/hooks/useUnreadCount'
 import { ProfileHubSection } from './ProfileHubSection'
 
 const tools = [
   {
+    key: 'following',
     label: 'Following',
     description: 'Every business you follow & save',
     to: '/user/following',
     icon: Heart,
   },
   {
+    key: 'messages',
     label: 'Messages',
     description: 'Your personal conversations',
     to: '/user/messages',
     icon: MessageSquare,
   },
   {
+    key: 'notifications',
+    label: 'Notifications',
+    description: 'Follows, messages and account updates',
+    to: '/user/activity',
+    icon: Bell,
+  },
+  {
+    key: 'reviews',
     label: 'Reviews written',
     description: 'See reviews you left',
     to: '/user/reviews',
     icon: Star,
   },
   {
+    key: 'settings',
     label: 'Settings & activity',
     description: 'Account, privacy, help',
     to: '/user/settings',
@@ -35,15 +49,25 @@ type ProfilePersonalToolsProps = {
 }
 
 export function ProfilePersonalTools({ reviewsCount }: ProfilePersonalToolsProps) {
+  const messageUnreadCount = useUnreadCount()
+  const { data: notificationUnreadCount = 0 } = useUnreadNotificationCount()
+
   return (
     <ProfileHubSection title="Your activity">
       <div className="divide-y divide-border-light overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05),0_1px_1px_rgba(16,22,32,0.04)]">
         {tools.map((tool) => {
           const Icon = tool.icon
           const description =
-            tool.label === 'Reviews written' && reviewsCount != null
+            tool.key === 'reviews' && reviewsCount != null
               ? `${reviewsCount} review${reviewsCount === 1 ? '' : 's'}`
               : tool.description
+
+          const badgeCount =
+            tool.key === 'messages'
+              ? messageUnreadCount
+              : tool.key === 'notifications'
+                ? notificationUnreadCount
+                : 0
 
           return (
             <Link
@@ -51,8 +75,13 @@ export function ProfilePersonalTools({ reviewsCount }: ProfilePersonalToolsProps
               to={tool.to}
               className="flex w-full items-center gap-3.5 px-4 py-[15px] text-left transition-colors active:bg-auth-bg lg:hover:bg-auth-bg"
             >
-              <span className="flex size-[38px] shrink-0 items-center justify-center rounded-[11px] bg-[#EAF2FD] text-chat-accent">
+              <span className="relative flex size-[38px] shrink-0 items-center justify-center rounded-[11px] bg-[#EAF2FD] text-chat-accent">
                 <Icon className="size-[19px]" strokeWidth={2} aria-hidden />
+                {badgeCount > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5">
+                    <NotificationCountBadge count={badgeCount} />
+                  </span>
+                ) : null}
               </span>
               <span className="min-w-0 flex-1">
                 <b className="block text-[15px] font-semibold text-ink">{tool.label}</b>

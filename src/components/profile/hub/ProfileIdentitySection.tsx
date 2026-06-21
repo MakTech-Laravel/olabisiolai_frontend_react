@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Camera, ChevronLeft, Loader2, Pencil, User } from 'lucide-react'
 
+import { AppNotificationBell } from '@/components/notifications/AppNotificationBell'
 import { HeaderAvatar } from '@/components/ui/HeaderAvatar'
 import { cn } from '@/lib/utils'
 
@@ -17,14 +18,20 @@ export function ProfileHubHeader({ onOpenSwitcher }: ProfileHubHeaderProps) {
         <Link to="/" className="inline-flex shrink-0 items-center">
           <img src={LOGO_HEADER} alt="Gidira" className="h-8 w-auto" decoding="async" />
         </Link>
-        <button
-          type="button"
-          onClick={onOpenSwitcher}
-          className="inline-flex size-[42px] items-center justify-center rounded-xl bg-brand text-white shadow-[0_4px_10px_rgba(225,36,42,0.28)] transition-opacity hover:opacity-90"
-          aria-label="Switch account"
-        >
-          <User className="size-[22px]" strokeWidth={2} aria-hidden />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <AppNotificationBell
+            viewAllHref="/user/activity"
+            triggerClassName="h-[42px] w-[42px] rounded-xl hover:bg-auth-bg"
+          />
+          <button
+            type="button"
+            onClick={onOpenSwitcher}
+            className="inline-flex size-[42px] items-center justify-center rounded-xl bg-brand text-white shadow-[0_4px_10px_rgba(225,36,42,0.28)] transition-opacity hover:opacity-90"
+            aria-label="Switch account"
+          >
+            <User className="size-[22px]" strokeWidth={2} aria-hidden />
+          </button>
+        </div>
       </div>
     </header>
   )

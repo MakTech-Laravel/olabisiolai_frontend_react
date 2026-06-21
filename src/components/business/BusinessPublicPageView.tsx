@@ -13,7 +13,7 @@ import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
 import { Button } from "@/components/ui/button";
 import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
-import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
+import { buildGoogleMapsDirectionsUrl } from "@/lib/googleMapsUrl";
 import { businessProfilePath } from "@/lib/businessProfile";
 import {
   businessPageBody,
@@ -352,16 +352,17 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             </div>
             <h1 className={businessPageTitle}>{name}</h1>
             {locationText ? (
-              <p className="mt-2 flex items-start gap-1.5 text-[13.5px] text-body-secondary lg:text-base">
-                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p className="mt-2 flex items-start gap-1.5 text-[13.5px] lg:text-base">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-chat-accent" aria-hidden />
                 {locationIsPlaceholder ? (
                   <span className="italic text-stat-muted">{locationText}</span>
                 ) : (
                   <a
-                    href={buildGoogleMapsSearchUrl(latitude, longitude, locationText)}
+                    href={buildGoogleMapsDirectionsUrl(latitude, longitude, locationText)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline"
+                    className="font-medium text-chat-accent underline-offset-2 hover:underline"
+                    aria-label={`Get directions to ${locationText}`}
                   >
                     {locationText}
                   </a>

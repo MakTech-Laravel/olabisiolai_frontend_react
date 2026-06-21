@@ -8,7 +8,7 @@ import { conversationPeerAvatar, getConversationTitle } from '@/utils/messageUti
 import { formatLastSeen } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { messagingUserFromParticipant } from '@/types/conversation'
-import { peerPersonalName } from '@/lib/messagingPeer'
+import { peerDisplayName } from '@/lib/messagingPeer'
 import type { UserStatus } from '@/types/user'
 
 function normalizeUserStatus(value: string | undefined): UserStatus {
@@ -40,9 +40,6 @@ export function ChatHeader({
   )
   const lastSeenAt =
     conversation.peer?.presence?.last_seen_at ?? mu?.last_seen_at ?? null
-  const subtitle =
-    peer?.business_name?.trim() ||
-    (peer?.role === 'vendor' ? 'Business owner' : null)
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-chat-border bg-chat-surface-header px-4 backdrop-blur-sm sm:h-20 sm:px-6 md:px-8">
@@ -60,7 +57,7 @@ export function ChatHeader({
         <div className="relative">
           <Avatar
             src={avatarUrl}
-            name={peer ? peerPersonalName(peer) : title}
+            name={peer ? peerDisplayName(peer) : title}
             className="size-9 shrink-0 sm:size-10"
           />
           <OnlineStatus status={status} size="md" />
@@ -81,7 +78,6 @@ export function ChatHeader({
               )}
             />
             <span className="truncate text-xs font-semibold text-chat-online-text">
-              {subtitle ? `${subtitle} · ` : ''}
               {status === 'online'
                 ? 'Online'
                 : lastSeenAt

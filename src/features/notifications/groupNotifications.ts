@@ -36,6 +36,16 @@ function buildMessageHref(conversationUuid: string | null, fallbackHref: string)
   return base
 }
 
+function followerGroupKey(item: NotificationDisplay): string {
+  const d = item.raw.data ?? {}
+  const followerId = d.follower_id
+  if (typeof followerId === 'number' && followerId > 0) {
+    return `new_follower:user:${followerId}`
+  }
+  const name = String(d.follower_name ?? item.title ?? 'unknown')
+  return `new_follower:name:${name}`
+}
+
 /**
  * Collapse multiple `new_message` alerts from the same sender into one row with a count badge.
  */
@@ -43,9 +53,47 @@ export function groupNotificationsForDisplay(
   items: NotificationDisplay[],
 ): GroupedNotificationDisplay[] {
   const messageGroups = new Map<string, GroupedNotificationDisplay>()
+  const followerGroups = new Map<string, GroupedNotificationDisplay>()
   const other: GroupedNotificationDisplay[] = []
 
   for (const item of items) {
+    if (item.type === 'new_follower') {
+      const key = followerGroupKey(item)
+      const d = item.raw.data ?? {}
+      const followerId =
+        typeof d.follower_id === 'number' ? d.follower_id : Number(d.follower_id) || null
+
+      const existing = followerGroups.get(key)
+      if (existing === undefined) {
+        followerGroups.set(key, {
+          ...item,
+          groupKey: key,
+          unreadCount: item.isRead ? 0 : 1,
+          messageCount: 1,
+          notificationIds: [item.id],
+          conversationUuid: null,
+          senderId: followerId,
+          isGrouped: true,
+        })
+        continue
+      }
+
+      existing.messageCount += 1
+      if (!item.isRead) {
+        existing.unreadCount += 1
+        existing.isRead = false
+      }
+      existing.notificationIds.push(item.id)
+
+      if (isNewer(item.createdAt, existing.createdAt)) {
+        existing.id = item.id
+        existing.message = item.message
+        existing.createdAt = item.createdAt
+        existing.raw = item.raw
+      }
+      continue
+    }
+
     if (item.type !== 'new_message') {
       other.push({
         ...item,
@@ -102,7 +150,7 @@ export function groupNotificationsForDisplay(
     }
   }
 
-  const grouped = [...messageGroups.values(), ...other]
+  const grouped = [...messageGroups.values(), ...followerGroups.values(), ...other]
 
   grouped.sort((a, b) => {
     const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0

@@ -8,7 +8,7 @@ import {
 import { parseSocialAccounts, type SocialAccount } from '@/features/business/socialAccounts';
 import { parseCatalogItems, type BusinessCatalogItem } from '@/features/catalog/businessCatalogApi';
 import { normalizeSubcategories } from '@/features/categories/categoryParsers';
-import { formatBusinessLocationFromParts } from '@/features/maps/formatBusinessLocation';
+import { resolvePublicBusinessLocationLabel } from '@/features/maps/formatBusinessLocation';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 export type PublicBusiness = {
@@ -186,9 +186,14 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const locationNarrative = str(r.location_narrative ?? r.locationNarrative, '').trim();
   const locationDisplayRaw = str(r.location_display ?? r.locationDisplay, '').trim();
   const location =
-    locationDisplayRaw ||
-    formatBusinessLocationFromParts({ city, state, fullName }, locationNarrative) ||
-    streetAddress ||
+    resolvePublicBusinessLocationLabel({
+      streetAddress,
+      locationDisplay: locationDisplayRaw,
+      city,
+      state,
+      fullName,
+      locationNarrative,
+    }) ||
     (locationId
       ? formattedAddress || fullName || [city, state].filter(Boolean).join(', ') || str(r.location, '')
       : '') ||

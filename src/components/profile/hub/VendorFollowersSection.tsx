@@ -14,6 +14,9 @@ import { cn } from '@/lib/utils'
 type VendorFollowersSectionProps = {
   followersCount?: number
   className?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  showTrigger?: boolean
 }
 
 function FollowerRow({
@@ -48,8 +51,16 @@ function FollowerRow({
   )
 }
 
-export function VendorFollowersSection({ followersCount = 0, className }: VendorFollowersSectionProps) {
-  const [open, setOpen] = useState(false)
+export function VendorFollowersSection({
+  followersCount = 0,
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = true,
+}: VendorFollowersSectionProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<VendorFollower | null>(null)
 
@@ -66,25 +77,27 @@ export function VendorFollowersSection({ followersCount = 0, className }: Vendor
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          'flex w-full items-center gap-3.5 rounded-2xl bg-white px-4 py-[15px] text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-colors hover:bg-surface-soft',
-          className,
-        )}
-      >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#FDEEEE] text-brand">
-          <Users className="size-5" strokeWidth={2} aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <b className="block text-[15px] font-semibold text-ink">Followers</b>
-          <small className="block text-[12.5px] text-chat-meta">
-            {total.toLocaleString()} {total === 1 ? 'person follows' : 'people follow'} your business
-          </small>
-        </span>
-        <ChevronRight className="size-[18px] shrink-0 text-[#c3cad4]" strokeWidth={2} aria-hidden />
-      </button>
+      {showTrigger ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            'flex w-full items-center gap-3.5 rounded-2xl bg-white px-4 py-[15px] text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-colors hover:bg-surface-soft',
+            className,
+          )}
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#FDEEEE] text-brand">
+            <Users className="size-5" strokeWidth={2} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <b className="block text-[15px] font-semibold text-ink">Followers</b>
+            <small className="block text-[12.5px] text-chat-meta">
+              {total.toLocaleString()} {total === 1 ? 'person follows' : 'people follow'} your business
+            </small>
+          </span>
+          <ChevronRight className="size-[18px] shrink-0 text-[#c3cad4]" strokeWidth={2} aria-hidden />
+        </button>
+      ) : null}
 
       <ProfileHubSlidePanel open={open} onClose={() => setOpen(false)}>
         <ProfileManageBackBar onBack={() => setOpen(false)} />

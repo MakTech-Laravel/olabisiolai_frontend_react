@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 
 import { MessagingPeerProfilePanel } from '@/components/messaging/PersonProfilePanel'
-import { peerPersonalName } from '@/lib/messagingPeer'
+import { peerDisplayName } from '@/lib/messagingPeer'
 import { cn } from '@/lib/utils'
 import type { ConversationPeer } from '@/types/messagingPeer'
 
@@ -13,7 +13,7 @@ type MessagingPeerLinkProps = {
 
 export function MessagingPeerLink({ peer, className, children }: MessagingPeerLinkProps) {
   const [open, setOpen] = useState(false)
-  const label = peer ? peerPersonalName(peer) : 'Member'
+  const label = peer ? peerDisplayName(peer) : 'Member'
 
   if (!peer) {
     return <span className={className}>{children ?? label}</span>

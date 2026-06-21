@@ -9,7 +9,7 @@ import { conversationPeerAvatar, getConversationPreviewText, getConversationPrev
 import { formatRelative } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 import { messagingUserFromParticipant } from '@/types/conversation'
-import { peerPersonalName } from '@/lib/messagingPeer'
+import { peerDisplayName } from '@/lib/messagingPeer'
 import type { TypingUser } from '@/types/message'
 
 interface ConversationItemProps {
@@ -46,7 +46,7 @@ export const ConversationItem = React.memo(function ConversationItem({
 
   const timeSrc = getConversationPreviewTime(conversation)
   const listTitle =
-    conversation.type === 'direct' && peer ? peerPersonalName(peer) : title
+    conversation.type === 'direct' && peer ? peerDisplayName(peer) : title
 
   return (
     <button
@@ -84,9 +84,7 @@ export const ConversationItem = React.memo(function ConversationItem({
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-xs text-chat-meta">
-            {peer?.business_name ? `${peer.business_name} · ${preview}` : preview}
-          </p>
+          <p className="truncate text-xs text-chat-meta">{preview}</p>
           {conversation.unread_count > 0 ? (
             <UnreadCountBadge>
               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
