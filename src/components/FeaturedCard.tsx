@@ -146,7 +146,7 @@ export function FeaturedCard({
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-6">
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-1 flex flex-wrap flex-col items-start justify-between gap-2 2xl:flex-row 2xl:items-center">
           <h3 className="text-lg font-inter font-semibold text-text-primary">
             <BusinessProfileLink businessId={id} businessName={name} />
           </h3>
