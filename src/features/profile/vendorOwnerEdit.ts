@@ -59,17 +59,34 @@ function resolveSubcategoryForUpdate(
   return resolveSubcategoryFromServices(allowed, services) ?? allowed[0]
 }
 
+function resolvePositiveId(
+  patchValue: number | undefined,
+  profileValue: number,
+): string | undefined {
+  if (patchValue !== undefined && Number.isFinite(patchValue) && patchValue > 0) {
+    return String(patchValue);
+  }
+
+  if (Number.isFinite(profileValue) && profileValue > 0) {
+    return String(profileValue);
+  }
+
+  return undefined;
+}
+
 export function buildUpdatePayload(
   profile: VendorBusinessProfile,
   patch: OwnerProfilePatch,
 ): UpdateVendorBusinessPayload {
   const services = resolveServicesForUpdate(profile, patch.services)
   const subcategory = resolveSubcategoryForUpdate(profile, services)
+  const categoryId = resolvePositiveId(patch.category_id, profile.categoryId)
+  const locationId = resolvePositiveId(patch.location_id, profile.locationId)
 
   const payload: UpdateVendorBusinessPayload = {
-    category_id: String(patch.category_id ?? profile.categoryId),
+    ...(categoryId ? { category_id: categoryId } : {}),
+    ...(locationId ? { location_id: locationId } : {}),
     subcategory: patch.subcategory ?? subcategory,
-    location_id: String(patch.location_id ?? profile.locationId),
     business_name: patch.business_name ?? profile.businessName,
     location: patch.location ?? profile.locationFullName,
     state: patch.state ?? profile.state,

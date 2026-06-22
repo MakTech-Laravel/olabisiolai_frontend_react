@@ -118,9 +118,9 @@ export function businessCreateRequiresPayment(response: CreateVendorBusinessResp
 }
 
 export type UpdateVendorBusinessPayload = {
-  category_id: string;
+   category_id?: string;
   subcategory?: string;
-  location_id: string;
+  location_id?: string;
   business_name: string;
   location: string;
   state: string;
@@ -142,19 +142,38 @@ export type UpdateVendorBusinessPayload = {
   business_hours?: BusinessHourEntry[];
 };
 
+function appendPositiveId(formData: FormData, key: string, value: string | undefined): void {
+  if (typeof value !== "string" || !value.trim()) {
+    return;
+  }
+
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    formData.append(key, String(parsed));
+  }
+}
+
 function buildUpdateVendorBusinessJsonBody(
   payload: UpdateVendorBusinessPayload,
 ): Record<string, unknown> {
   const services = payload.services.map((service) => service.trim()).filter(Boolean);
 
   const body: Record<string, unknown> = {
-    category_id: Number(payload.category_id),
-    location_id: Number(payload.location_id),
     business_name: payload.business_name.trim(),
     business_description: payload.business_description.trim(),
     services,
     phone: payload.phone.trim(),
   };
+
+  const categoryId = Number(payload.category_id);
+  if (Number.isFinite(categoryId) && categoryId > 0) {
+    body.category_id = categoryId;
+  }
+
+  const locationId = Number(payload.location_id);
+  if (Number.isFinite(locationId) && locationId > 0) {
+    body.location_id = locationId;
+  }
 
   body.subcategory = payload.subcategory?.trim() ?? "";
   if (payload.whatsapp?.trim()) {
@@ -193,9 +212,9 @@ function appendUpdateVendorBusinessFormData(
   formData: FormData,
   payload: UpdateVendorBusinessPayload,
 ): void {
-  formData.append("category_id", payload.category_id);
   formData.append("subcategory", payload.subcategory?.trim() ?? "");
-  formData.append("location_id", payload.location_id.trim());
+  appendPositiveId(formData, "category_id", payload.category_id);
+  appendPositiveId(formData, "location_id", payload.location_id);
   formData.append("business_name", payload.business_name.trim());
   formData.append("location", payload.location.trim());
   formData.append("state", payload.state.trim());
