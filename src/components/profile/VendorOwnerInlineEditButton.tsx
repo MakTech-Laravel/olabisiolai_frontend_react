@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Pencil, X } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { VendorOwnerModalShell } from '@/components/profile/VendorOwnerModalShell'
 import {
   fetchVendorBusinessProfile,
   type VendorBusinessProfile,
@@ -100,62 +100,31 @@ export function VendorOwnerInlineEditButton({
         <Pencil className="size-4" aria-hidden />
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="owner-inline-edit-title"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 cursor-default"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
+      <VendorOwnerModalShell
+        title={`Edit ${label.toLowerCase()}`}
+        open={open}
+        loading={loading}
+        onClose={() => setOpen(false)}
+        onSave={() => void handleSave()}
+        saveDisabled={!profile || loading}
+      >
+        {field === 'business_name' ? (
+          <Input
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            disabled={loading}
+            autoFocus
           />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-card p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 id="owner-inline-edit-title" className="text-lg font-semibold text-ink">
-                Edit {label.toLowerCase()}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="inline-flex size-9 items-center justify-center rounded-full hover:bg-surface-soft"
-                aria-label="Close"
-              >
-                <X className="size-5" aria-hidden />
-              </button>
-            </div>
-
-            {field === 'business_name' ? (
-              <Input
-                value={value}
-                onChange={(event) => setValue(event.target.value)}
-                disabled={loading}
-                autoFocus
-              />
-            ) : (
-              <Textarea
-                value={value}
-                rows={5}
-                onChange={(event) => setValue(event.target.value)}
-                disabled={loading}
-                autoFocus
-              />
-            )}
-
-            <div className="mt-5 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={() => void handleSave()} disabled={loading || !profile}>
-                {loading ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+        ) : (
+          <Textarea
+            value={value}
+            rows={5}
+            onChange={(event) => setValue(event.target.value)}
+            disabled={loading}
+            autoFocus
+          />
+        )}
+      </VendorOwnerModalShell>
     </>
   )
 }

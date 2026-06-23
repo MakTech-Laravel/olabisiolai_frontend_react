@@ -412,6 +412,11 @@ export function VendorOwnerDetailsEditButton({
         saveDisabled={!businessName.trim() || !categoryId}
       >
         <div className="space-y-4">
+          {!categoryId ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Select a category below to enable saving.
+            </p>
+          ) : null}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-ink">Business name</label>
             <Input

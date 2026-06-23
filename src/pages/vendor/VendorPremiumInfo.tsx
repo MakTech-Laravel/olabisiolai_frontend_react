@@ -1,8 +1,9 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Crown } from 'lucide-react'
 
+import { FREE_PHOTO_LIMIT, PREMIUM_ANNUAL_PRICE, PREMIUM_PHOTO_LIMIT } from '@/constants/planLimits'
+import { formatNaira } from '@/lib/currency'
 import { VENDOR_PREMIUM_PAYMENT_PATH } from '@/hooks/useVendorSubscriptionAccess'
-import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from '@/constants/planLimits'
 import { Button } from '@/components/ui/button'
 
 const premiumFeatures = [
@@ -25,11 +26,16 @@ export default function VendorPremiumInfo() {
   return (
     <div className="min-h-dvh bg-bg-section px-4 py-10">
       <div className="mx-auto max-w-lg">
-        <div className="rounded-[24px] bg-white p-6 shadow-sm">
+        <div className="relative rounded-[24px] bg-white p-6 shadow-sm">
+          <p className="absolute right-6 top-6 text-right font-heading text-base font-extrabold text-[#9A6B1F]">
+            {formatNaira(PREMIUM_ANNUAL_PRICE, { freeLabel: false })}
+            <span className="block text-sm font-semibold text-body-secondary">/year</span>
+          </p>
+
           <div className="mb-4 inline-flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC]">
             <Crown className="size-6 text-[#9A6B1F]" aria-hidden />
           </div>
-          <h1 className="font-heading text-2xl font-extrabold text-ink">Gidira Premium</h1>
+          <h1 className="pr-28 font-heading text-2xl font-extrabold text-ink">Gidira Premium</h1>
           <p className="mt-2 text-sm leading-relaxed text-body-secondary">
             Unlock insights, more photos, and premium visibility before you proceed to payment.
           </p>
