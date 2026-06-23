@@ -317,6 +317,24 @@
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 
+  body.owner-modal-open {
+    padding-bottom: 0 !important;
+  }
+
+  body.owner-modal-open nav[aria-label='App navigation'] {
+    display: none;
+  }
+
+  .owner-modal-footer {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (max-width: 639px) {
+    body.owner-modal-open .owner-modal-footer {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   @media (min-width: 1024px) {
     body.app-bottom-nav-active {
       padding-bottom: 0;

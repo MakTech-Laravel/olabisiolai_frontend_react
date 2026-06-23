@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -29,17 +30,19 @@ export function VendorOwnerModalShell({
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    document.body.classList.add('owner-modal-open')
 
     return () => {
       document.body.style.overflow = previousOverflow
+      document.body.classList.remove('owner-modal-open')
     }
   }, [open])
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-stretch justify-center bg-black/50 p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="owner-modal-title"
@@ -50,10 +53,10 @@ export function VendorOwnerModalShell({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[min(88dvh,calc(100dvh-env(safe-area-inset-bottom)))] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-card shadow-xl sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="relative z-10 flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-card shadow-xl sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
         <div className="mx-auto mb-1 mt-2 h-1 w-10 shrink-0 rounded-full bg-border-light sm:hidden" aria-hidden />
 
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border-light px-5 py-3 sm:py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border-light px-5 py-3 sm:rounded-t-2xl sm:py-4">
           <h2 id="owner-modal-title" className="text-lg font-semibold text-ink">
             {title}
           </h2>
@@ -71,12 +74,12 @@ export function VendorOwnerModalShell({
           {children}
         </div>
 
-        <div className="shrink-0 border-t border-border-light bg-card px-5 py-3 shadow-[0_-6px_16px_rgba(16,22,32,0.08)] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:py-4 sm:pb-4">
+        <div className="owner-modal-footer shrink-0 border-t border-border-light bg-card px-5 py-3 shadow-[0_-6px_16px_rgba(16,22,32,0.08)] sm:py-4">
           <div className="flex gap-2 sm:justify-end">
             <Button
               type="button"
               variant="outline"
-              className="h-8 md w-full sm:w-auto"
+              className="h-11 flex-1 sm:h-10 sm:flex-none sm:w-auto"
               onClick={onClose}
               disabled={loading}
             >
@@ -84,7 +87,7 @@ export function VendorOwnerModalShell({
             </Button>
             <Button
               type="button"
-              className="h-8 md w-full sm:w-auto"
+              className="h-11 flex-1 sm:h-10 sm:flex-none sm:w-auto"
               onClick={onSave}
               disabled={loading || saveDisabled}
             >
@@ -93,6 +96,7 @@ export function VendorOwnerModalShell({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

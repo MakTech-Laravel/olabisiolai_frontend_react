@@ -163,7 +163,7 @@ export function BusinessOwnerEditView({
               Boosted
             </span>
           ) : null}
-          <div className="edit-only absolute right-4 top-7 z-10 lg:right-5 lg:top-8">
+          <div className="edit-only absolute right-4 top-7 z-20 lg:right-5 lg:top-8">
             <OwnerEditButton label="Edit cover" variant="dark">
               <VendorOwnerGalleryEditButton label="Cover photos" onProfileUpdated={onProfileUpdated} />
             </OwnerEditButton>
@@ -171,7 +171,7 @@ export function BusinessOwnerEditView({
         </div>
 
         <div className={cn('relative mt-4 lg:mt-0', businessPageIdentityCard)}>
-          <div className="edit-only absolute right-3.5 top-3.5 z-10 lg:right-4 lg:top-4">
+          <div className="edit-only absolute right-3.5 top-3.5 z-20 lg:right-4 lg:top-4">
             <OwnerEditButton label="Edit details" variant="light">
               <VendorOwnerDetailsEditButton
                 onProfileUpdated={onProfileUpdated}
@@ -182,7 +182,7 @@ export function BusinessOwnerEditView({
           </div>
           <div className="relative mb-3 size-16 lg:size-20">
             <AspectCover src={logoUrl} className="size-16 rounded-[18px] shadow-sm lg:size-20 lg:rounded-2xl" />
-            <div className="edit-only absolute -bottom-2 -right-2">
+            <div className="edit-only absolute -bottom-2 -right-2 z-20">
               <OwnerEditButton label="Edit logo" variant="dark" className="[&>button]:size-7">
                 <VendorOwnerLogoEditButton label="Business logo" onProfileUpdated={onProfileUpdated} />
               </OwnerEditButton>
