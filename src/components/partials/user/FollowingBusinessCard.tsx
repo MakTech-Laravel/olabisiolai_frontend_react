@@ -67,14 +67,14 @@ export function FollowingBusinessCard({
           type="button"
           onClick={handleUnfollow}
           disabled={unfollowing}
-          className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-brand shadow-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-brand shadow-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           aria-label="Unfollow"
         >
           <UserMinus className="size-4" aria-hidden />
           {unfollowing ? 'Removing…' : 'Following'}
         </button>
         {verified ? (
-          <div className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-footer-bar px-3 py-1 text-[11px] font-semibold text-ice">
+          <div className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-footer-bar px-3 py-1 text-[11px] font-semibold text-ice">
             <CheckCircle2 className="size-3.5" aria-hidden />
             VERIFIED
           </div>
