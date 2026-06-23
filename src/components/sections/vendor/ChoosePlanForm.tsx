@@ -26,6 +26,10 @@ import {
   DYNAMIC_BOOST_TIER_KEY,
   type DynamicBoostDuration,
 } from "@/features/boost/dynamicBoostConfig";
+import {
+  BUSINESS_OVERVIEW_MAX_LENGTH,
+  clampBusinessOverview,
+} from "@/constants/businessOverview";
 import { LocationCascadeSelects } from "@/components/locations/LocationCascadeSelects";
 import {
   cloneBusinessHours,
@@ -430,7 +434,7 @@ export default function ChoosePlanForm() {
       city: showLocationSection ? city : "",
       lga,
       full_address: showLocationSection ? String(formData.get("fullAddress") ?? "") : "",
-      business_description: String(formData.get("description") ?? ""),
+      business_description: clampBusinessOverview(String(formData.get("description") ?? "")),
       services: normalizedServices,
       phone: phone.trim(),
       whatsapp: String(formData.get("whatsapp") ?? ""),
@@ -640,13 +644,17 @@ export default function ChoosePlanForm() {
             </Label>
             <Textarea
               name="description"
-              placeholder="Describe your business, experience, and what makes you stand out..."
-              rows={5}
-              className="min-h-[120px] resize-y border-border-light bg-secondary/80 text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
+              placeholder="Describe your business in up to 150 characters..."
+              rows={4}
+              maxLength={BUSINESS_OVERVIEW_MAX_LENGTH}
+              className="min-h-[100px] resize-y border-border-light bg-secondary/80 text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
               required
               aria-invalid={Boolean(fieldErrors.business_description)}
               aria-describedby={fieldErrors.business_description ? "err-business_description" : undefined}
             />
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              Max {BUSINESS_OVERVIEW_MAX_LENGTH} characters
+            </p>
             <FieldErrorText id="err-business_description" message={fieldErrors.business_description} />
           </div>
         </CardContent>

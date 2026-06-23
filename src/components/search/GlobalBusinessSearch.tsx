@@ -8,6 +8,8 @@ import { Search } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { BUSINESS_SEARCH_MAX_LENGTH } from "@/constants/businessOverview";
+
 const PLACEHOLDER =
   "Search by business name, category, or location...";
 
@@ -28,12 +30,12 @@ export function GlobalBusinessSearch({
 
   useEffect(() => {
     if (pathname === "/filters") {
-      setQuery(urlSearch);
+      setQuery(urlSearch.slice(0, BUSINESS_SEARCH_MAX_LENGTH));
     }
   }, [pathname, urlSearch]);
 
   const applySearch = (raw: string) => {
-    const term = raw.trim();
+    const term = raw.trim().slice(0, BUSINESS_SEARCH_MAX_LENGTH);
 
     if (pathname === "/filters") {
       const next = new URLSearchParams(searchParams);
@@ -73,8 +75,9 @@ export function GlobalBusinessSearch({
             type="search"
             name="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value.slice(0, BUSINESS_SEARCH_MAX_LENGTH))}
             placeholder={PLACEHOLDER}
+            maxLength={BUSINESS_SEARCH_MAX_LENGTH}
             className="min-w-0 text-sm text-text-primary placeholder:text-xs placeholder:text-muted-foreground sm:text-base sm:placeholder:text-sm"
             aria-label="Search businesses"
           />
@@ -111,11 +114,12 @@ export function GlobalBusinessSearch({
           type="search"
           name="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.target.value.slice(0, BUSINESS_SEARCH_MAX_LENGTH))}
           placeholder={PLACEHOLDER}
+          maxLength={BUSINESS_SEARCH_MAX_LENGTH}
           aria-label="Search businesses"
           className={cn(
-            "h-10 w-full min-w-0 rounded-xl border border-border-light bg-card pl-9 pr-12 text-sm text-foreground sm:h-11 sm:pl-10 sm:pr-14 sm:text-base",
+            "h-10 w-full min-w-0 truncate rounded-xl border border-border-light bg-card pl-9 pr-12 text-sm text-foreground sm:h-11 sm:pl-10 sm:pr-14 sm:text-base",
             "outline-none ring-0 transition focus:border-brand/50",
             "placeholder:text-xs sm:placeholder:text-sm",
           )}

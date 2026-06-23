@@ -23,6 +23,7 @@ import {
   totalCoverCount,
   type VendorProfileDraft,
 } from "@/features/business/vendorProfileDraft";
+import { businessOverviewLengthError } from "@/constants/businessOverview";
 import { parseVendorLocationOptions } from "@/features/locations/vendorLocationOptions";
 import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
@@ -218,6 +219,8 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       if (!draft.categoryId) throw new Error("Please select a category.");
       if (!draft.locationId) throw new Error("Please select a location.");
       if (!draft.description.trim()) throw new Error("Business description is required.");
+      const overviewError = businessOverviewLengthError(draft.description);
+      if (overviewError) throw new Error(overviewError);
       if (!draft.phone.trim()) throw new Error("Phone number is required.");
       if (services.length === 0) throw new Error("Please add at least one service.");
 

@@ -18,6 +18,7 @@ import {
 import { VendorOwnerCatalogSection } from '@/components/profile/VendorOwnerCatalogSection'
 import { OwnerEditSection } from '@/components/profile/OwnerEditSection'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
+import { displayBusinessOverview } from '@/constants/businessOverview'
 import { FREE_PHOTO_LIMIT } from '@/constants/planLimits'
 import {
   businessPageHero,
@@ -130,7 +131,7 @@ export function BusinessOwnerEditView({
   onProfileUpdated,
 }: BusinessOwnerEditViewProps) {
   const name = displayName || businessName
-  const about = displayDescription || business?.description || ''
+  const about = displayBusinessOverview(displayDescription || business?.description || '')
   const atPhotoCap = coverPhotos.length >= photoLimit
   const managePath = `/user/profile`
 
@@ -217,8 +218,8 @@ export function BusinessOwnerEditView({
               </OwnerEditButton>
             </div>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-body-secondary lg:text-base">
-            {about || 'Add a short description about your business.'}
+          <p className="mt-3 line-clamp-4 break-words text-sm leading-relaxed text-body-secondary lg:text-base">
+            {about || 'Add a short description about your business (max 150 characters).'}
           </p>
         </div>
 

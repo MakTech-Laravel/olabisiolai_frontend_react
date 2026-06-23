@@ -26,6 +26,11 @@ import {
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import {
+  BUSINESS_OVERVIEW_MAX_LENGTH,
+  businessOverviewLengthError,
+  clampBusinessOverview,
+} from '@/constants/businessOverview'
+import {
   normalizeSocialInput,
   socialPlatformLabel,
   type SocialAccount,
@@ -395,6 +400,11 @@ export function VendorOwnerDetailsEditButton({
             return
           }
           const trimmedDescription = businessDescription.trim()
+          const overviewError = businessOverviewLengthError(businessDescription)
+          if (overviewError) {
+            showError(overviewError)
+            return
+          }
           const saved = await saveProfile(
             {
               business_name: trimmedName,
@@ -468,10 +478,14 @@ export function VendorOwnerDetailsEditButton({
             <Textarea
               value={businessDescription}
               disabled={loading || formOptionsLoading}
-              onChange={(event) => setBusinessDescription(event.target.value)}
-              placeholder="Short description about your business"
+              onChange={(event) => setBusinessDescription(clampBusinessOverview(event.target.value))}
+              placeholder="Short description about your business (max 150 characters)"
               rows={4}
+              maxLength={BUSINESS_OVERVIEW_MAX_LENGTH}
             />
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              {businessDescription.length}/{BUSINESS_OVERVIEW_MAX_LENGTH}
+            </p>
           </div>
         </div>
       </VendorOwnerModalShell>

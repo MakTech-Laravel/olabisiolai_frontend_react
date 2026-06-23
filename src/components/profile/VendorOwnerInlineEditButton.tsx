@@ -13,6 +13,7 @@ import { updateVendorBusiness, getVendorBusinessUpdateError } from '@/features/b
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
+import { BUSINESS_OVERVIEW_MAX_LENGTH, clampBusinessOverview } from '@/constants/businessOverview'
 
 type OwnerEditableField = 'business_name' | 'business_description'
 
@@ -66,6 +67,10 @@ export function VendorOwnerInlineEditButton({
       showError(`${label} cannot be empty.`)
       return
     }
+    if (field === 'business_description' && trimmed.length > BUSINESS_OVERVIEW_MAX_LENGTH) {
+      showError(`Overview must be ${BUSINESS_OVERVIEW_MAX_LENGTH} characters or fewer.`)
+      return
+    }
 
     setLoading(true)
     try {
@@ -116,13 +121,19 @@ export function VendorOwnerInlineEditButton({
             autoFocus
           />
         ) : (
-          <Textarea
-            value={value}
-            rows={5}
-            onChange={(event) => setValue(event.target.value)}
-            disabled={loading}
-            autoFocus
-          />
+          <div>
+            <Textarea
+              value={value}
+              rows={4}
+              onChange={(event) => setValue(clampBusinessOverview(event.target.value))}
+              disabled={loading}
+              maxLength={BUSINESS_OVERVIEW_MAX_LENGTH}
+              autoFocus
+            />
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              {value.length}/{BUSINESS_OVERVIEW_MAX_LENGTH}
+            </p>
+          </div>
         )}
       </VendorOwnerModalShell>
     </>

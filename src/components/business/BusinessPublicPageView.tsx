@@ -13,6 +13,7 @@ import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
 import { Button } from "@/components/ui/button";
 import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
+import { displayBusinessOverview } from "@/constants/businessOverview";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import { businessProfilePath } from "@/lib/businessProfile";
 import {
@@ -447,7 +448,9 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
 
           <section className={cn("pt-6", businessPageSectionX)}>
             <h2 className={businessPageSectionTitle}>Overview</h2>
-            <p className={cn("mt-2", businessPageBody)}>{description || "No description available."}</p>
+            <p className={cn("mt-2 break-words", businessPageBody)}>
+              {displayBusinessOverview(description) || "No description available."}
+            </p>
           </section>
 
           {showCatalogSection ? (

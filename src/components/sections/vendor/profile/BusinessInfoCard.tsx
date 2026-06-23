@@ -10,6 +10,10 @@ import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 import { VendorProfileLocationSection } from "@/components/sections/vendor/profile/VendorProfileLocationSection";
+import {
+  BUSINESS_OVERVIEW_MAX_LENGTH,
+  clampBusinessOverview,
+} from "@/constants/businessOverview";
 
 function Label({ children }: { children: string }) {
   return (
@@ -167,10 +171,16 @@ export function BusinessInfoCard() {
           <Textarea
             value={description}
             readOnly={!isEditing}
-            onChange={(e) => setDraftField("description", e.target.value)}
+            onChange={(e) => setDraftField("description", clampBusinessOverview(e.target.value))}
             rows={5}
+            maxLength={isEditing ? BUSINESS_OVERVIEW_MAX_LENGTH : undefined}
             className="min-h-[120px] max-h-56 resize-none border-border-light bg-background text-sm leading-relaxed shadow-sm focus-visible:ring-2 focus-visible:ring-sky-500/25"
           />
+          {isEditing ? (
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              {description.length}/{BUSINESS_OVERVIEW_MAX_LENGTH}
+            </p>
+          ) : null}
           {isEditing && fieldErrors.business_description ? (
             <p className="mt-1 text-xs text-destructive">{fieldErrors.business_description}</p>
           ) : null}

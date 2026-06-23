@@ -9,6 +9,7 @@ import {
   appendSocialAccountsToFormData,
   type SocialAccount,
 } from "@/features/business/socialAccounts";
+import { clampBusinessOverview } from "@/constants/businessOverview";
 
 export type CreateVendorBusinessPayload = {
   subscription_plan?: "free" | "premium";
@@ -69,7 +70,7 @@ export async function createVendorBusiness(
   formData.append("state", payload.state.trim());
   formData.append("city", payload.city.trim());
   formData.append("lga", payload.lga.trim());
-  formData.append("business_description", payload.business_description.trim());
+  formData.append("business_description", clampBusinessOverview(payload.business_description).trim());
   formData.append("phone", payload.phone.trim());
 
   appendIfTruthy(formData, "whatsapp", payload.whatsapp);
@@ -160,7 +161,7 @@ function buildUpdateVendorBusinessJsonBody(
 
   const body: Record<string, unknown> = {
     business_name: payload.business_name.trim(),
-    business_description: payload.business_description.trim(),
+    business_description: clampBusinessOverview(payload.business_description).trim(),
     services,
     phone: payload.phone.trim(),
   };
@@ -220,7 +221,7 @@ function appendUpdateVendorBusinessFormData(
   formData.append("state", payload.state.trim());
   formData.append("city", payload.city.trim());
   formData.append("lga", payload.lga.trim());
-  formData.append("business_description", payload.business_description.trim());
+  formData.append("business_description", clampBusinessOverview(payload.business_description).trim());
   formData.append("phone", payload.phone.trim());
 
   appendIfTruthy(formData, "whatsapp", payload.whatsapp);
