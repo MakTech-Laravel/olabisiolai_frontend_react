@@ -16,7 +16,7 @@ const EchoContext = React.createContext<EchoContextValue | null>(null)
 let warnedMissingReverbEnv = false
 
 export function EchoProvider({ children }: { children: React.ReactNode }) {
-  const { accessToken, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [echo, setEcho] = React.useState<ReverbEcho | null>(() => getEcho())
   /** Avoid POST /presence/offline for guests — that route requires auth and triggers a 401 → /login redirect. */
   const wasAuthenticatedRef = React.useRef(isAuthenticated)
@@ -53,9 +53,9 @@ export function EchoProvider({ children }: { children: React.ReactNode }) {
       return
     }
     wasAuthenticatedRef.current = true
-    const instance = createEcho(accessToken)
+    const instance = createEcho()
     setEcho(instance)
-  }, [isAuthenticated, accessToken])
+  }, [isAuthenticated])
 
   useRealtimeNotifications(echo)
 

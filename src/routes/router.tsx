@@ -10,6 +10,7 @@ import { adminRoutes } from "@/routes/adminRoutes";
 
 const Unauthorized = lazy(() => import("@/pages/frontend/Unauthorized"));
 const NotFound = lazy(() => import("@/pages/frontend/NotFound"));
+const WebSocketTest = lazy(() => import("@/pages/dev/WebSocketTest"));
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
     children: [
       publicRoutes,
       authRoutes,
+      { path: "/ws-test", element: suspensePage(WebSocketTest) },
       { path: "/unauthorized", element: suspensePage(Unauthorized) },
       { path: "/dashboard", element: <Navigate to="/user/dashboard" replace /> },
       userRoutes,
