@@ -7,32 +7,18 @@ import { createPortal } from 'react-dom'
 import { parsePlaceToLgaPick } from '@/features/maps/parsePlaceToLgaPick'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
 import { ensureGoogleMapsConfigured } from '@/lib/googleMapsInit'
-
-const NG_BIAS_CENTER: google.maps.LatLngLiteral = { lat: 9.082, lng: 8.6753 }
-const NG_BIAS_RADIUS_METERS = 900_000
-const NG_BOUNDS: google.maps.LatLngBoundsLiteral = {
-  north: 13.892,
-  south: 4.272,
-  east: 14.677,
-  west: 2.692,
-}
+import {
+  fetchPlaceSuggestions,
+  NG_BIAS_CENTER,
+  resetPlaceAutocompleteSession,
+  type PlaceSuggestion,
+} from '@/lib/googlePlacesAutocomplete'
 
 type Props = {
   apiKey: string | undefined
   onPick: (pick: LgaMapPickResult) => void
   /** When true, draws sample pins around the selected point to validate clustering (replace with API vendor coords later). */
   showDemoVendorCluster?: boolean
-}
-
-type SuggestionSource = 'new' | 'legacy'
-
-type Suggestion = {
-  key: string
-  placeId: string
-  mainText: string
-  secondaryText: string
-  source: SuggestionSource
-  prediction: google.maps.places.PlacePrediction | null
 }
 
 function extractComponent(
@@ -107,19 +93,15 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
   const selectedMarkerRef = useRef<google.maps.Marker | null>(null)
   const selectedInfoRef = useRef<google.maps.InfoWindow | null>(null)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null)
-  const legacyServiceRef = useRef<google.maps.places.AutocompleteService | null>(null)
   const debounceRef = useRef<number | null>(null)
   const requestSeqRef = useRef(0)
-  /** Sticky once the new Places API fails so we don't keep re-trying it on every keystroke. */
-  const forceLegacyRef = useRef(false)
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
 
   const [inputValue, setInputValue] = useState('')
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -228,17 +210,6 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
         const clusterer = new MarkerClusterer({ map, markers: [] })
         clustererRef.current = clusterer
 
-        try {
-          sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
-        } catch {
-          sessionTokenRef.current = null
-        }
-        try {
-          legacyServiceRef.current = new google.maps.places.AutocompleteService()
-        } catch {
-          legacyServiceRef.current = null
-        }
-
         const onMapPick = async (latLng: google.maps.LatLng) => {
           const location = { lat: latLng.lat(), lng: latLng.lng() }
           try {
@@ -281,89 +252,9 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
       selectedInfoRef.current = null
       mapRef.current = null
       geocoderRef.current = null
-      sessionTokenRef.current = null
-      legacyServiceRef.current = null
       mapHost.innerHTML = ''
     }
   }, [apiKey, applyPick])
-
-  const fetchWithNewApi = useCallback(async (query: string): Promise<Suggestion[]> => {
-    const placesLib = (await importLibrary('places')) as google.maps.PlacesLibrary
-    const AutocompleteSuggestion = placesLib.AutocompleteSuggestion
-    if (!AutocompleteSuggestion) throw new Error('AutocompleteSuggestion not available')
-    if (!sessionTokenRef.current) {
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
-    }
-    const request: google.maps.places.AutocompleteRequest = {
-      input: query,
-      sessionToken: sessionTokenRef.current,
-      includedRegionCodes: ['ng'],
-      locationBias: { center: NG_BIAS_CENTER, radius: NG_BIAS_RADIUS_METERS },
-      language: 'en',
-      region: 'ng',
-    }
-    const result = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
-    const mapped: Suggestion[] = []
-    result.suggestions.forEach((s, idx) => {
-      const pp = s.placePrediction
-      if (!pp) return
-      const main = pp.mainText?.toString() ?? pp.text?.toString() ?? ''
-      const secondary = pp.secondaryText?.toString() ?? ''
-      mapped.push({
-        key: `new-${pp.placeId ?? 'p'}-${idx}`,
-        placeId: pp.placeId ?? '',
-        mainText: main,
-        secondaryText: secondary,
-        source: 'new',
-        prediction: pp,
-      })
-    })
-    return mapped
-  }, [])
-
-  const fetchWithLegacyApi = useCallback(async (query: string): Promise<Suggestion[]> => {
-    if (!legacyServiceRef.current) {
-      const placesLib = (await importLibrary('places')) as google.maps.PlacesLibrary
-      const AutocompleteService = placesLib.AutocompleteService ?? google.maps.places.AutocompleteService
-      if (!AutocompleteService) throw new Error('AutocompleteService not available')
-      legacyServiceRef.current = new AutocompleteService()
-    }
-    const service = legacyServiceRef.current
-    const bounds = new google.maps.LatLngBounds(
-      { lat: NG_BOUNDS.south, lng: NG_BOUNDS.west },
-      { lat: NG_BOUNDS.north, lng: NG_BOUNDS.east },
-    )
-    const predictions = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
-      service.getPlacePredictions(
-        {
-          input: query,
-          componentRestrictions: { country: 'ng' },
-          bounds,
-          language: 'en',
-          region: 'ng',
-        },
-        (results, statusVal) => {
-          if (statusVal === google.maps.places.PlacesServiceStatus.OK && results) {
-            resolve(results)
-            return
-          }
-          if (statusVal === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            resolve([])
-            return
-          }
-          reject(new Error(`Places autocomplete failed: ${statusVal}`))
-        },
-      )
-    })
-    return predictions.map((p, idx) => ({
-      key: `legacy-${p.place_id}-${idx}`,
-      placeId: p.place_id,
-      mainText: p.structured_formatting?.main_text ?? p.description,
-      secondaryText: p.structured_formatting?.secondary_text ?? '',
-      source: 'legacy' as const,
-      prediction: null,
-    }))
-  }, [])
 
   // Debounced autocomplete fetch tied to inputValue.
   useEffect(() => {
@@ -387,44 +278,25 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
       const seq = ++requestSeqRef.current
       setSearching(true)
       setSearchError(null)
-      let lastError: unknown = null
 
-      // Try the new API first unless we've already proven it's unavailable on this key.
-      let mapped: Suggestion[] | null = null
-      if (!forceLegacyRef.current) {
-        try {
-          mapped = await fetchWithNewApi(query)
-        } catch (err) {
-          lastError = err
-          console.warn('[AdminLgaMapPicker] new Places API failed, trying legacy:', err)
-          forceLegacyRef.current = true
-        }
-      }
+      try {
+        const mapped = await fetchPlaceSuggestions(query)
+        if (seq !== requestSeqRef.current) return
 
-      if (mapped === null) {
-        try {
-          mapped = await fetchWithLegacyApi(query)
-        } catch (err) {
-          lastError = err
-          console.error('[AdminLgaMapPicker] legacy Places API also failed:', err)
-        }
-      }
-
-      if (seq !== requestSeqRef.current) return
-
-      if (mapped === null) {
-        const msg = lastError instanceof Error ? lastError.message : 'Search failed'
-        setSearchError(`${msg}. Enable “Places API (New)” or “Places API” for your Google Maps key.`)
+        setSuggestions(mapped)
+        setShowDropdown(true)
+        setActiveIdx(mapped.length > 0 ? 0 : -1)
+      } catch (error) {
+        if (seq !== requestSeqRef.current) return
+        const msg = error instanceof Error ? error.message : 'Search failed'
+        setSearchError(`${msg}. Enable Places API and allow your site domain in Google Cloud referrer restrictions.`)
         setSuggestions([])
         setShowDropdown(true)
-        setSearching(false)
-        return
+      } finally {
+        if (seq === requestSeqRef.current) {
+          setSearching(false)
+        }
       }
-
-      setSuggestions(mapped)
-      setShowDropdown(true)
-      setActiveIdx(mapped.length > 0 ? 0 : -1)
-      setSearching(false)
     }, 220)
 
     return () => {
@@ -433,7 +305,7 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
         debounceRef.current = null
       }
     }
-  }, [inputValue, status, fetchWithNewApi, fetchWithLegacyApi])
+  }, [inputValue, status])
 
   // Keep dropdown position aligned with input across scroll / resize.
   useEffect(() => {
@@ -475,7 +347,7 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
   }, [showDropdown])
 
   const resolveAndApplyPrediction = useCallback(
-    async (sug: Suggestion) => {
+    async (sug: PlaceSuggestion) => {
       // Strategy: try the modern Place.fetchFields when we have a PlacePrediction,
       // otherwise fall back to Geocoder by placeId (works with the basic Places API only too).
       if (sug.source === 'new' && sug.prediction) {
@@ -530,19 +402,14 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
   )
 
   const handleSelectSuggestion = useCallback(
-    async (sug: Suggestion) => {
+    async (sug: PlaceSuggestion) => {
       setShowDropdown(false)
       setInputValue(sug.mainText)
       setSearchError(null)
       try {
         await resolveAndApplyPrediction(sug)
       } finally {
-        // Refresh session token after a successful (or failed) selection.
-        try {
-          sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
-        } catch {
-          sessionTokenRef.current = null
-        }
+        resetPlaceAutocompleteSession()
       }
     },
     [resolveAndApplyPrediction],

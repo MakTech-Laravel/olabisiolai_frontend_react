@@ -6,27 +6,12 @@ import { createPortal } from 'react-dom'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
 import { parsePlaceToLgaPick } from '@/features/maps/parsePlaceToLgaPick'
 import { ensureGoogleMapsConfigured } from '@/lib/googleMapsInit'
+import {
+  fetchPlaceSuggestions,
+  resetPlaceAutocompleteSession,
+  type PlaceSuggestion,
+} from '@/lib/googlePlacesAutocomplete'
 import { cn } from '@/lib/utils'
-
-const NG_BIAS_CENTER: google.maps.LatLngLiteral = { lat: 9.082, lng: 8.6753 }
-const NG_BIAS_RADIUS_METERS = 900_000
-const NG_BOUNDS: google.maps.LatLngBoundsLiteral = {
-  north: 13.892,
-  south: 4.272,
-  east: 14.677,
-  west: 2.692,
-}
-
-type SuggestionSource = 'new' | 'legacy'
-
-type Suggestion = {
-  key: string
-  placeId: string
-  mainText: string
-  secondaryText: string
-  source: SuggestionSource
-  prediction: google.maps.places.PlacePrediction | null
-}
 
 function extractComponent(
   components: google.maps.GeocoderAddressComponent[] | undefined,
@@ -98,16 +83,13 @@ export function GoogleAddressAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null)
-  const legacyServiceRef = useRef<google.maps.places.AutocompleteService | null>(null)
   const debounceRef = useRef<number | null>(null)
   const requestSeqRef = useRef(0)
-  const forceLegacyRef = useRef(false)
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -142,83 +124,7 @@ export function GoogleAddressAutocomplete({
     }
   }, [apiKey])
 
-  const fetchWithNewApi = useCallback(async (query: string): Promise<Suggestion[]> => {
-    const placesLib = (await importLibrary('places')) as google.maps.PlacesLibrary
-    const AutocompleteSuggestion = placesLib.AutocompleteSuggestion
-    if (!AutocompleteSuggestion) throw new Error('AutocompleteSuggestion not available')
-    if (!sessionTokenRef.current) {
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
-    }
-    const request: google.maps.places.AutocompleteRequest = {
-      input: query,
-      sessionToken: sessionTokenRef.current,
-      includedRegionCodes: ['ng'],
-      locationBias: { center: NG_BIAS_CENTER, radius: NG_BIAS_RADIUS_METERS },
-      language: 'en',
-      region: 'ng',
-    }
-    const result = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
-    const mapped: Suggestion[] = []
-    result.suggestions.forEach((s, idx) => {
-      const pp = s.placePrediction
-      if (!pp) return
-      mapped.push({
-        key: `new-${pp.placeId ?? 'p'}-${idx}`,
-        placeId: pp.placeId ?? '',
-        mainText: pp.mainText?.toString() ?? pp.text?.toString() ?? '',
-        secondaryText: pp.secondaryText?.toString() ?? '',
-        source: 'new',
-        prediction: pp,
-      })
-    })
-    return mapped
-  }, [])
-
-  const fetchWithLegacyApi = useCallback(async (query: string): Promise<Suggestion[]> => {
-    if (!legacyServiceRef.current) {
-      const placesLib = (await importLibrary('places')) as google.maps.PlacesLibrary
-      const AutocompleteService = placesLib.AutocompleteService ?? google.maps.places.AutocompleteService
-      if (!AutocompleteService) throw new Error('AutocompleteService not available')
-      legacyServiceRef.current = new AutocompleteService()
-    }
-    const service = legacyServiceRef.current
-    const bounds = new google.maps.LatLngBounds(
-      { lat: NG_BOUNDS.south, lng: NG_BOUNDS.west },
-      { lat: NG_BOUNDS.north, lng: NG_BOUNDS.east },
-    )
-    const predictions = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
-      service.getPlacePredictions(
-        {
-          input: query,
-          componentRestrictions: { country: 'ng' },
-          bounds,
-          language: 'en',
-          region: 'ng',
-        },
-        (results, statusVal) => {
-          if (statusVal === google.maps.places.PlacesServiceStatus.OK && results) {
-            resolve(results)
-            return
-          }
-          if (statusVal === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            resolve([])
-            return
-          }
-          reject(new Error(`Places autocomplete failed: ${statusVal}`))
-        },
-      )
-    })
-    return predictions.map((p, idx) => ({
-      key: `legacy-${p.place_id}-${idx}`,
-      placeId: p.place_id,
-      mainText: p.structured_formatting?.main_text ?? p.description,
-      secondaryText: p.structured_formatting?.secondary_text ?? '',
-      source: 'legacy' as const,
-      prediction: null,
-    }))
-  }, [])
-
-  const resolveSuggestion = useCallback(async (suggestion: Suggestion): Promise<LgaMapPickResult | null> => {
+  const resolveSuggestion = useCallback(async (suggestion: PlaceSuggestion): Promise<LgaMapPickResult | null> => {
     if (suggestion.source === 'new' && suggestion.prediction) {
       try {
         const place = suggestion.prediction.toPlace()
@@ -252,7 +158,7 @@ export function GoogleAddressAutocomplete({
   }, [])
 
   const handleSelectSuggestion = useCallback(
-    async (suggestion: Suggestion) => {
+    async (suggestion: PlaceSuggestion) => {
       setSearching(true)
       setSearchError(null)
       try {
@@ -269,7 +175,7 @@ export function GoogleAddressAutocomplete({
         setSuggestions([])
         setShowDropdown(false)
         setActiveIdx(-1)
-        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
+        resetPlaceAutocompleteSession()
       } catch (error) {
         setSearchError(error instanceof Error ? error.message : 'Could not load address details.')
       } finally {
@@ -300,41 +206,27 @@ export function GoogleAddressAutocomplete({
       const seq = ++requestSeqRef.current
       setSearching(true)
       setSearchError(null)
-      let lastError: unknown = null
-      let mapped: Suggestion[] | null = null
 
-      if (!forceLegacyRef.current) {
-        try {
-          mapped = await fetchWithNewApi(query)
-        } catch (error) {
-          lastError = error
-          forceLegacyRef.current = true
-        }
-      }
+      try {
+        const mapped = await fetchPlaceSuggestions(query)
+        if (seq !== requestSeqRef.current) return
 
-      if (mapped === null) {
-        try {
-          mapped = await fetchWithLegacyApi(query)
-        } catch (error) {
-          lastError = error
-        }
-      }
-
-      if (seq !== requestSeqRef.current) return
-
-      if (mapped === null) {
-        const msg = lastError instanceof Error ? lastError.message : 'Search failed'
-        setSearchError(`${msg}. Enable Places API and Geocoding API for your Google Maps key.`)
+        setSuggestions(mapped)
+        setShowDropdown(true)
+        setActiveIdx(mapped.length > 0 ? 0 : -1)
+      } catch (error) {
+        if (seq !== requestSeqRef.current) return
+        const msg = error instanceof Error ? error.message : 'Search failed'
+        setSearchError(
+          `${msg}. Check VITE_GOOGLE_MAPS_API_KEY, enable Places API, and allow https://gidira.cloud/* in Google Cloud referrer restrictions.`,
+        )
         setSuggestions([])
         setShowDropdown(true)
-        setSearching(false)
-        return
+      } finally {
+        if (seq === requestSeqRef.current) {
+          setSearching(false)
+        }
       }
-
-      setSuggestions(mapped)
-      setShowDropdown(true)
-      setActiveIdx(mapped.length > 0 ? 0 : -1)
-      setSearching(false)
     }, 180)
 
     return () => {
@@ -343,7 +235,7 @@ export function GoogleAddressAutocomplete({
         debounceRef.current = null
       }
     }
-  }, [value, status, disabled, fetchWithLegacyApi, fetchWithNewApi])
+  }, [value, status, disabled])
 
   useEffect(() => {
     if (!showDropdown) return
