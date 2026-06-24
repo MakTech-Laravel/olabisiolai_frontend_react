@@ -4,7 +4,8 @@ import Pusher from 'pusher-js'
 import { getAccessToken } from '@/auth/token'
 import { env } from '@/config/env'
 import { messagingEnv } from '@/config/messagingEnv'
-
+import { ECHO_CHANNELS } from '@/constants/channels'
+import { ECHO_EVENTS } from '@/constants/events'
 export type ReverbEcho = Echo<'reverb'>
 
 declare global {
@@ -30,7 +31,7 @@ export function isReverbConfigured(): boolean {
   return messagingEnv.isReverbConfigured()
 }
 
-function buildEchoFingerprint(): string {
+function buildEchoFingerprint(accessToken?: string | null): string {
   return [
     messagingEnv.reverbKey ?? '',
     messagingEnv.reverbHost ?? '',
@@ -38,18 +39,20 @@ function buildEchoFingerprint(): string {
     messagingEnv.reverbScheme,
     resolveBroadcastAuthUrl(env.apiBaseUrl),
     env.authStrategy,
+    accessToken ?? '',
   ].join('|')
 }
 
-function buildAuthHeaders(): Record<string, string> {
+function buildAuthHeaders(accessToken?: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   }
 
   if (env.authStrategy !== 'http_only_cookie') {
     Object.defineProperty(headers, 'Authorization', {
       get(): string {
-        const token = getAccessToken()
+        const token = accessToken ?? getAccessToken()
         return token ? `Bearer ${token}` : ''
       },
       enumerable: true,
@@ -60,13 +63,13 @@ function buildAuthHeaders(): Record<string, string> {
   return headers
 }
 
-export function createEcho(): ReverbEcho | null {
+export function createEcho(accessToken?: string | null): ReverbEcho | null {
   if (!messagingEnv.isReverbConfigured()) {
     disconnectEcho()
     return null
   }
 
-  const fingerprint = buildEchoFingerprint()
+  const fingerprint = buildEchoFingerprint(accessToken)
   if (echoInstance && echoConnectionFingerprint === fingerprint) {
     return echoInstance
   }
@@ -81,10 +84,10 @@ export function createEcho(): ReverbEcho | null {
     wsPort: messagingEnv.reverbPort,
     wssPort: messagingEnv.reverbPort,
     forceTLS: useTls,
-    enabledTransports: useTls ? ['wss'] : ['ws'],
+    enabledTransports: useTls ? ['wss'] : ['ws', 'wss'],
     disableStats: true,
     authEndpoint: resolveBroadcastAuthUrl(env.apiBaseUrl),
-    auth: { headers: buildAuthHeaders() },
+    auth: { headers: buildAuthHeaders(accessToken) },
     ...(env.authStrategy === 'http_only_cookie'
       ? { withCredentials: true }
       : {}),
@@ -115,13 +118,15 @@ export function subscribeToUserNotifications(
     return () => undefined
   }
 
-  const channelName = `App.Models.User.${userId}`
+  const channelName = ECHO_CHANNELS.user(Number(userId))
   const channel = echo.private(channelName)
 
-  channel.listen('.notification.created', (payload: Record<string, unknown>) => {
+  channel.listen(ECHO_EVENTS.appNotification, (payload: Record<string, unknown>) => {
     onNotification(payload)
   })
-
+  channel.listen(ECHO_EVENTS.newMessage, (payload: Record<string, unknown>) => {
+    onNotification(payload)
+  })
   return () => {
     echo.leave(channelName)
   }

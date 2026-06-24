@@ -20,7 +20,7 @@ export function useTypingIndicator(
   conversation: TypingConversation | null,
   selfUser: TypingSelf | null,
 ) {
-  const echo = useEcho()
+  const { echo } = useEcho()
   const typingUsers = useMessagingStore((s) => {
     if (!conversation?.uuid) return EMPTY_TYPING_USERS
     return s.typingUsers[conversation.uuid] ?? EMPTY_TYPING_USERS
