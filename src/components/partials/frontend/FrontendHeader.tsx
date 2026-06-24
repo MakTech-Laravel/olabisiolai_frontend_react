@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
+  Bell,
   CircleUserRound,
   Home,
   LocateFixed,
@@ -58,6 +59,22 @@ function resolveUserAvatar(user: unknown): string {
   return DEFAULT_HEADER_AVATAR;
 }
 
+function ActivityBellLink() {
+  return (
+    <Button
+      asChild
+      type="button"
+      variant="ghost"
+      className="relative h-10 w-10 rounded-xl p-0 text-foreground hover:bg-[#F1F5F9]"
+      aria-label="Notifications"
+    >
+      <Link to="/user/activity">
+        <Bell className="size-5" />
+      </Link>
+    </Button>
+  );
+}
+
 function HeaderToolbar({
   isLightHeader,
   showTradeNav,
@@ -74,6 +91,7 @@ function HeaderToolbar({
   const { isAuthenticated, logout, user } = useAuth();
   const avatarSrc = resolveUserAvatar(user);
   const isVendor = hasAnyRole(user, "vendor");
+  const showActivityBell = isAuthenticated && hasAnyRole(user, ["user", "vendor"]);
   const profilePath = "/user/profile";
 
   const regionTrigger = cn(
@@ -109,6 +127,8 @@ function HeaderToolbar({
           </Link>
         </Button>
       ) : null}
+
+      {showActivityBell ? <ActivityBellLink /> : null}
 
       {isAuthenticated ? (
         <DropdownMenu>
@@ -307,6 +327,7 @@ export function FrontendHeader() {
   const primaryRole = getUserRoles(user)[0];
   const dashboardPath = primaryRole ? getRoleDashboard(primaryRole) ?? "/user/dashboard" : "/user/dashboard";
   const isVendor = hasAnyRole(user, "vendor");
+  const showActivityBell = isAuthenticated && hasAnyRole(user, ["user", "vendor"]);
   const profilePath = "/user/profile";
   const isLightHeader =
     pathname === "/" ||
@@ -348,15 +369,18 @@ export function FrontendHeader() {
               className="block h-8 w-auto"
             />
           </Link>
-          <MobileMenu
-            showTradeNav={showTradeNav}
-            isAuthenticated={isAuthenticated}
-            logout={logout}
-            avatarSrc={avatarSrc}
-            dashboardPath={dashboardPath}
-            isVendor={isVendor}
-            profilePath={profilePath}
-          />
+          <div className="flex items-center gap-1">
+            {showActivityBell ? <ActivityBellLink /> : null}
+            <MobileMenu
+              showTradeNav={showTradeNav}
+              isAuthenticated={isAuthenticated}
+              logout={logout}
+              avatarSrc={avatarSrc}
+              dashboardPath={dashboardPath}
+              isVendor={isVendor}
+              profilePath={profilePath}
+            />
+          </div>
         </div>
         {showHeaderSearch ? <GlobalBusinessSearch variant="header" className="min-w-0 w-full" /> : null}
       </div>
