@@ -84,7 +84,11 @@ export function createEcho(accessToken?: string | null): ReverbEcho | null {
     wsPort: messagingEnv.reverbPort,
     wssPort: messagingEnv.reverbPort,
     forceTLS: useTls,
-    enabledTransports: useTls ? ['wss'] : ['ws', 'wss'],
+    // Always offer both transports. pusher-js relies on the `ws` transport entry
+    // to establish the socket and upgrades to TLS via forceTLS; restricting to
+    // ['wss'] alone leaves it with no usable transport and it hangs in
+    // "connecting" even when the server accepts the upgrade (HTTP 101).
+    enabledTransports: ['ws', 'wss'],
     disableStats: true,
     authEndpoint: resolveBroadcastAuthUrl(env.apiBaseUrl),
     auth: { headers: buildAuthHeaders(accessToken) },
