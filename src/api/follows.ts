@@ -45,6 +45,42 @@ export type FollowingListPayload = {
 
 export const USER_FOLLOWING_DEFAULT_PER_PAGE = 12
 
+export type FollowerUser = {
+  follower_user_id: number
+  followed_at: string
+  user: {
+    id: number
+    uuid: string
+    name: string
+    image_url: string | null
+  } | null
+}
+
+export type FollowersListPayload = {
+  followers: FollowerUser[]
+  count: number
+  pagination: {
+    current_page: number
+    per_page: number
+    last_page: number
+    total: number
+  }
+}
+
+export const USER_FOLLOWERS_DEFAULT_PER_PAGE = 20
+
+export async function fetchBusinessFollowers(params: {
+  business_id: number
+  page?: number
+  per_page?: number
+}): Promise<FollowersListPayload> {
+  const response = await request.get<LaravelEnvelope<FollowersListPayload>>('/user/follows/followers', {
+    params,
+  })
+
+  return assertFollowSuccess(response.data, 'Could not load followers list.')
+}
+
 type LaravelEnvelope<T> = {
   success?: boolean
   message?: string

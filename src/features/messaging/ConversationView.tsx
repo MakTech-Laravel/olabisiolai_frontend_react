@@ -9,7 +9,6 @@ import { TypingIndicator } from '@/components/chat/TypingIndicator'
 import { ChatErrorBoundary } from '@/components/ui/ChatErrorBoundary'
 import type { AuthUser } from '@/auth/types'
 import { sendMessageWithAttachments } from '@/api/messages'
-import { QUERY_KEYS } from '@/constants/queryKeys'
 import { appendOrMergeMessageInCache } from '@/features/messaging/messageCache'
 import { applyNewMessagePreview } from '@/features/messaging/conversationCache'
 import { useConversation } from '@/hooks/useConversation'
@@ -40,10 +39,12 @@ export function ConversationView({
   conversationUuid,
   selfUser,
   onOpenSidebar,
+  onBack,
 }: {
   conversationUuid: string | null
   selfUser: AuthUser | null
   onOpenSidebar?: () => void
+  onBack?: () => void
 }) {
   const queryClient = useQueryClient()
   const { data: conversation, isLoading: convLoading } =
@@ -120,7 +121,7 @@ export function ConversationView({
             isActiveConversation: true,
           })
         }
-        void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
       } catch {
         showError('Failed to send with attachments')
       } finally {
@@ -168,34 +169,41 @@ export function ConversationView({
 
   if (!conversationUuid) {
     return (
-      <div className="flex flex-1 items-center justify-center text-chat-meta">
-        Select a conversation
+      <div className="flex h-full flex-1 items-center justify-center bg-chat-surface p-6 text-center text-chat-meta">
+        <div>
+          <p className="font-heading text-lg font-bold text-ink">Select a conversation</p>
+          <p className="mt-1 text-sm">Choose a thread from the list to start chatting.</p>
+        </div>
       </div>
     )
   }
 
   if (convLoading || !conversation) {
     return (
-      <div className="flex flex-1 items-center justify-center text-chat-meta">
-        Loading…
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-chat-surface">
+        <div className="flex flex-1 items-center justify-center text-chat-meta">
+          Loading…
+        </div>
       </div>
     )
   }
 
   return (
     <ChatErrorBoundary>
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-chat-surface">
+      <section className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-chat-surface">
         <ChatHeader
           conversation={conversation}
           selfUserId={selfId}
           onOpenSidebar={onOpenSidebar}
+          onBack={onBack}
         />
         {inf.isLoading && pages.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center text-chat-meta">
+          <div className="flex min-h-0 items-center justify-center overflow-hidden text-chat-meta">
             Loading messages…
           </div>
         ) : (
-          <InfiniteMessageList
+          <div className="h-full min-h-0 overflow-hidden">
+            <InfiniteMessageList
             key={conversationUuid}
             pages={pages}
             hasNextPage={Boolean(inf.hasNextPage)}
@@ -209,8 +217,9 @@ export function ConversationView({
             onDelete={onDelete}
             onMarkPeerMessageRead={markAsRead}
           />
+          </div>
         )}
-        <div className="shrink-0">
+        <div className="shrink-0 border-t border-chat-border-footer bg-card">
           <TypingIndicator users={typingUsers} />
           <MessageInput
             value={draft}

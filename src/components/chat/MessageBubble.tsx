@@ -86,13 +86,13 @@ export const MessageBubble = React.memo(function MessageBubble({
       ) : null}
       <div
         className={cn(
-          'flex min-w-0 w-full max-w-[min(100%,18rem)] flex-col sm:max-w-md',
-          isOwn ? 'ml-auto items-end' : 'mr-auto',
+          'flex min-w-0 max-w-[88%] flex-col sm:max-w-md md:max-w-lg lg:max-w-xl',
+          isOwn ? 'ml-auto items-end' : 'mr-auto items-start',
         )}
       >
         <div
           className={cn(
-            'w-full rounded-2xl p-2 shadow-sm sm:p-3',
+            'max-w-full rounded-2xl p-2 shadow-sm sm:p-3',
             isOwn
               ? 'rounded-br-md bg-chat-accent text-text-white sm:rounded-br-2xl'
               : 'rounded-bl-md bg-chat-bubble-them text-ink sm:rounded-bl-2xl',
@@ -112,7 +112,7 @@ export const MessageBubble = React.memo(function MessageBubble({
             />
           ) : null}
           {message.body ? (
-            <p className="whitespace-pre-wrap wrap-anywhere text-sm leading-5">
+            <p className="break-words whitespace-pre-wrap text-sm leading-5 [overflow-wrap:anywhere]">
               {message.body}
             </p>
           ) : null}

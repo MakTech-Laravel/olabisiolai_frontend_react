@@ -320,7 +320,7 @@ function MobileMenu({
   );
 }
 
-export function FrontendHeader() {
+export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: boolean }) {
   const { pathname } = useLocation();
   const [locationMapOpen, setLocationMapOpen] = useState(false);
   const { isAuthenticated, logout, user } = useAuth();
@@ -335,9 +335,10 @@ export function FrontendHeader() {
     pathname === "/service" ||
     pathname.startsWith("/businesses/") ||
     pathname === "/messages" ||
+    pathname.startsWith("/user/messages") ||
     pathname === "/reviews";
   const showTradeNav = pathname !== "/trade";
-  const showHeaderSearch = pathname !== "/";
+  const showHeaderSearch = pathname !== "/" && !(compactOnMobile && pathname.startsWith("/user/messages"));
   const isFiltersPage = pathname === "/filters";
   const showLocationPicker = !isFiltersPage;
   const avatarSrc = resolveUserAvatar(user);
@@ -351,13 +352,13 @@ export function FrontendHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b",
+        "sticky top-0 z-40 shrink-0 border-b",
         isLightHeader
           ? "border-border-light bg-white text-foreground shadow-[0_1px_0_0_rgb(0_0_0_/0.04)]"
           : "border-border bg-background/90 text-foreground backdrop-blur-md",
       )}
     >
-      <div className={cn(container, "flex flex-col gap-3 py-3 md:hidden")}>
+      <div className={cn(container, "flex flex-col gap-3 py-3 md:hidden", compactOnMobile && "gap-2 py-2")}>
         <div className="flex items-center justify-between gap-3">
           <Link to="/" className="inline-flex shrink-0 items-center">
             <img

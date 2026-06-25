@@ -32,7 +32,7 @@ export default function AdminMessages() {
 
   return (
     <div className="h-[calc(100dvh-8rem)] min-h-[480px]">
-      <MessagingLayout selfUser={identityQuery.data} conversationQueryParam="c" />
+      <MessagingLayout selfUser={identityQuery.data} conversationQueryParam="c" inboxScope="all" />
     </div>
   )
 }

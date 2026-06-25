@@ -63,7 +63,7 @@ function handleNewMessage(
     }))
     bumpConversationToTopInCache(ctx.queryClient, conversationUuid)
   } else {
-    void ctx.queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+    void ctx.queryClient.invalidateQueries({ queryKey: ['conversations'] })
   }
 
   if (payload.from_platform_admin === true) {

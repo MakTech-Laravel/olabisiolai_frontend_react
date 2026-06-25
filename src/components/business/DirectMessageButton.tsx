@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { QUERY_KEYS } from "@/constants/queryKeys";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
+import { seedNewConversationInCache } from "@/features/messaging/conversationCache";
 import { startDirectConversationWithVendor } from "@/features/messaging/startDirectConversation";
 import { directMessageTo } from "@/lib/directMessage";
 import { showError } from "@/lib/sweetAlert";
@@ -70,12 +70,16 @@ export function DirectMessageButton({
           businessInfoId,
         });
 
-        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
+        seedNewConversationInCache(queryClient, conv, "personal");
+
+        const search = new URLSearchParams();
+        search.set('scope', 'personal');
+        search.set('c', conv.uuid);
 
         navigate(
           {
             pathname: messagesPath,
-            search: `?c=${encodeURIComponent(conv.uuid)}`,
+            search: `?${search.toString()}`,
           },
           { state: { from: fromPath } },
         );

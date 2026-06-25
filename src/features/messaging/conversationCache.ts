@@ -5,6 +5,16 @@ import { getConversationPreviewTime, getMessagePreviewText } from '@/utils/messa
 import type { Conversation, ParticipantPresence } from '@/types/conversation'
 import type { Message } from '@/types/message'
 
+function patchAllConversationLists(
+  queryClient: QueryClient,
+  patchList: (list: Conversation[] | undefined) => Conversation[] | undefined,
+) {
+  queryClient.setQueriesData<Conversation[]>({ queryKey: ['conversations'] }, (old) => {
+    if (!Array.isArray(old)) return old
+    return patchList(old) ?? old
+  })
+}
+
 export function patchConversationPeerPresence(
   conversation: Conversation,
   peerUserId: number,
@@ -42,8 +52,7 @@ export function setPeerPresenceInCaches(
     return changed ? next : list
   }
 
-  queryClient.setQueryData<Conversation[]>(QUERY_KEYS.conversations, patchList)
-  queryClient.setQueryData<Conversation[]>(['vendor-conversations'], patchList)
+  patchAllConversationLists(queryClient, patchList)
 
   queryClient.setQueryData<Conversation>(
     QUERY_KEYS.conversation(conversationUuid),
@@ -71,7 +80,7 @@ export function updateConversationInCache(
   conversationUuid: string,
   updater: (c: Conversation) => Conversation,
 ) {
-  queryClient.setQueryData<Conversation[]>(QUERY_KEYS.conversations, (old) => {
+  patchAllConversationLists(queryClient, (old) => {
     if (!old?.length) return old
     let changed = false
     const next = old.map((c) => {
@@ -87,7 +96,7 @@ export function bumpConversationToTopInCache(
   queryClient: QueryClient,
   conversationUuid: string,
 ) {
-  queryClient.setQueryData<Conversation[]>(QUERY_KEYS.conversations, (old) => {
+  patchAllConversationLists(queryClient, (old) => {
     if (!old?.length) return old
     const idx = old.findIndex((c) => c.uuid === conversationUuid)
     if (idx <= 0) return old
@@ -124,3 +133,21 @@ export function applyNewMessagePreview(
   bumpConversationToTopInCache(queryClient, conversationUuid)
 }
 
+/** Prime caches after creating a thread so the chat opens without a fetch error. */
+export function seedNewConversationInCache(
+  queryClient: QueryClient,
+  conversation: Conversation,
+  inboxScope: 'personal' | `business:${number}` = 'personal',
+) {
+  queryClient.setQueryData(QUERY_KEYS.conversation(conversation.uuid), conversation)
+
+  const listKey = QUERY_KEYS.conversations(
+    inboxScope === 'personal' ? 'personal' : inboxScope,
+  )
+
+  queryClient.setQueryData<Conversation[]>(listKey, (old) => {
+    const list = Array.isArray(old) ? old : []
+    if (list.some((c) => c.uuid === conversation.uuid)) return list
+    return [conversation, ...list]
+  })
+}

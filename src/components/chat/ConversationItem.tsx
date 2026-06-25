@@ -54,21 +54,22 @@ export const ConversationItem = React.memo(function ConversationItem({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-colors',
+        'flex w-full items-start gap-3 border-b border-border-light px-4 py-3.5 text-left transition-colors',
         isActive
-          ? 'border-l-4 border-chat-accent bg-card shadow-sm'
-          : 'border-l-4 border-transparent hover:bg-card/60',
+          ? 'border-l-4 border-l-chat-accent bg-chat-input-bg'
+          : 'border-l-4 border-l-transparent bg-white active:bg-auth-bg',
+        conversation.unread_count > 0 && !isActive && 'bg-white',
       )}
     >
       <div className="relative shrink-0">
-        <Avatar src={avatarUrl} name={title} className="size-12 rounded-xl" />
+        <Avatar src={avatarUrl} name={title} className="size-[50px] rounded-full" />
         {mu?.status === 'online' ? (
           <OnlineStatus status="online" size="lg" />
         ) : null}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-base font-bold text-ink">
+          <p className={cn('truncate text-[15px] text-ink', conversation.unread_count > 0 ? 'font-bold' : 'font-semibold')}>
             {peerBusinessId !== null ? (
               <BusinessProfileLink
                 businessId={peerBusinessId}
@@ -81,15 +82,22 @@ export const ConversationItem = React.memo(function ConversationItem({
           </p>
           <span
             className={cn(
-              'shrink-0 text-[10px]',
-              isActive ? 'font-semibold uppercase text-chat-accent' : 'text-chat-meta',
+              'shrink-0 text-[12px]',
+              conversation.unread_count > 0 ? 'font-semibold text-chat-meta' : 'text-chat-meta',
             )}
           >
             {formatRelative(timeSrc)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-xs text-chat-meta">{preview}</p>
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <p
+            className={cn(
+              'min-w-0 flex-1 truncate text-[13.5px]',
+              conversation.unread_count > 0 ? 'font-medium text-ink' : 'text-chat-meta',
+            )}
+          >
+            {preview}
+          </p>
           {conversation.unread_count > 0 ? (
             <UnreadCountBadge>
               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}

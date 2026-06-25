@@ -9,13 +9,11 @@ import {
   MessageSquare,
   Pencil,
   Rocket,
-  Settings,
   Share2,
   Trash2,
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
-import { ProfileManageReviewsSection } from '@/components/profile/hub/ProfileManageReviewsSection'
 import { ProfileContactLeadsBreakdown } from '@/components/profile/hub/ProfileContactLeadsBreakdown'
 import { ProfileInsightsPanel } from '@/components/profile/hub/ProfileInsightsPanel'
 import {
@@ -206,18 +204,26 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                 {business.locationLabel ? ` · ${business.locationLabel}` : ''}
               </p>
               <div className="mt-3 flex gap-6">
-                <p className="text-left">
+                <Link
+                  to={`/user/business-followers?business_id=${business.id}`}
+                  onClick={onClose}
+                  className="text-left transition-opacity hover:opacity-80"
+                >
                   <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.followersCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">followers</span>
-                </p>
-                <p className="text-left">
+                </Link>
+                <Link
+                  to={`/vendor/reviews?business_id=${business.id}`}
+                  onClick={onClose}
+                  className="text-left transition-opacity hover:opacity-80"
+                >
                   <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.reviewsCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews</span>
-                </p>
+                </Link>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {isPremiumActive ? (
@@ -250,12 +256,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
             <ProfileContactLeadsBreakdown businessId={business.id} isPremiumActive={isPremiumActive} />
 
             <div className="px-[18px] pb-6 pt-2">
-              <ProfileManageReviewsSection
-                businessId={business.id}
-                reviewsCount={business.reviewsCount ?? 0}
-                onNavigate={onClose}
-              />
-
               <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05)]">
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
@@ -336,14 +336,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   title="Share page"
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
-                />
-                <ManageToolRow
-                  iconClass="bg-auth-bg text-body-secondary"
-                  icon={<Settings className="size-5" strokeWidth={2} />}
-                  title="Business settings"
-                  subtitle="Hours, contact, category"
-                  to={`/vendor/settings?business_id=${business.id}`}
-                  onNavigate={onClose}
                 />
               </div>
 

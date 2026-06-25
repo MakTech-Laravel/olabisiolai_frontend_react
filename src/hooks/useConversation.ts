@@ -13,8 +13,13 @@ export function useConversation(uuid: string | null) {
     enabled: Boolean(uuid),
     initialData: () => {
       if (!uuid) return undefined
-      const list = queryClient.getQueryData<Conversation[]>(QUERY_KEYS.conversations)
-      return list?.find((c) => c.uuid === uuid)
+      const caches = queryClient.getQueriesData<Conversation[]>({ queryKey: ['conversations'] })
+      for (const [, list] of caches) {
+        if (!Array.isArray(list)) continue
+        const hit = list.find((c) => c.uuid === uuid)
+        if (hit) return hit
+      }
+      return undefined
     },
     staleTime: 30_000,
   })

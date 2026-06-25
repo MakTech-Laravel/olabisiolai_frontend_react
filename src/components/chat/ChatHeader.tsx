@@ -1,4 +1,4 @@
-import { Menu, MessageCircle } from 'lucide-react'
+import { ChevronLeft, MessageCircle } from 'lucide-react'
 
 import { BusinessProfileLink } from '@/components/business/BusinessProfileLink'
 import { OnlineStatus } from '@/components/chat/OnlineStatus'
@@ -19,12 +19,14 @@ interface ChatHeaderProps {
   conversation: Conversation
   selfUserId: number
   onOpenSidebar?: () => void
+  onBack?: () => void
 }
 
 export function ChatHeader({
   conversation,
   selfUserId,
   onOpenSidebar,
+  onBack,
 }: ChatHeaderProps) {
   const title = getConversationTitle(conversation, selfUserId)
   const peerBusinessId =
@@ -45,16 +47,25 @@ export function ChatHeader({
     conversation.peer?.presence?.last_seen_at ?? mu?.last_seen_at ?? null
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-chat-border bg-chat-surface-header px-4 backdrop-blur-sm sm:h-20 sm:px-6 md:px-8">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-chat-border bg-chat-surface-header px-3 backdrop-blur-sm sm:h-16 sm:px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-        {onOpenSidebar ? (
+        {onBack ? (
+          <button
+            type="button"
+            className="rounded-lg p-2 hover:bg-muted lg:hidden"
+            aria-label="Back to conversations"
+            onClick={onBack}
+          >
+            <ChevronLeft className="size-5 text-chat-accent" />
+          </button>
+        ) : onOpenSidebar ? (
           <button
             type="button"
             className="rounded-lg p-2 hover:bg-muted md:hidden"
             aria-label="Open conversations"
             onClick={onOpenSidebar}
           >
-            <Menu className="size-5 text-ink" />
+            <ChevronLeft className="size-5 text-chat-accent" />
           </button>
         ) : null}
         <div className="relative">

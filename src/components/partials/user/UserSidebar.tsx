@@ -15,7 +15,7 @@ type SidebarItem = {
 const sidebarItems: SidebarItem[] = [
   { key: "overview", label: "Overview", to: "/user/profile", icon: LayoutGrid },
   { key: "following", label: "Following", to: "/user/following", icon: UserPlus },
-  { key: "messages", label: "Messages", to: "/user/messages", icon: MessageSquare },
+  { key: "messages", label: "Messages", to: "/user/messages?scope=personal", icon: MessageSquare },
   { key: "settings", label: "Settings & Activity", to: "/user/settings", icon: Settings },
 ];
 
