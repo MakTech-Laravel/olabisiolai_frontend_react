@@ -404,7 +404,7 @@ export default function AccountSettings() {
 
   return (
     <>
-      <UserShell active="settings">
+      <UserShell>
         <section className="min-h-0 flex-1 bg-chat-surface p-3 sm:p-6 lg:p-8">
           <Link
             to="/user/settings"

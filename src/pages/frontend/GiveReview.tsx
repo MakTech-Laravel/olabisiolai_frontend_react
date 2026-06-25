@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Send, Star, Upload, X } from "lucide-react";
 import axios from "axios";
 
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getAuthDisplayName } from "@/auth/displayName";
 import { useAuth } from "@/auth/useAuth";
 import { CUSTOMER_LOGIN_PATH } from "@/features/auth/loginReturn";
+import { FrontendHeader } from "@/components/partials/frontend/FrontendHeader";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
 import { submitReview } from "@/features/reviews/publicReviewApi";
@@ -24,10 +25,14 @@ type LocationState = {
 export default function GiveReview() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as LocationState;
   const from = state?.from;
-  const businessId = state?.business_id;
-  const businessName = state?.business_name ?? null;
+  const queryBusinessId = Number(searchParams.get("business_id") ?? "");
+  const businessId =
+    state?.business_id ??
+    (Number.isFinite(queryBusinessId) && queryBusinessId > 0 ? queryBusinessId : undefined);
+  const businessName = state?.business_name ?? searchParams.get("business_name");
 
   const { user, isAuthenticated, isUserLoading, isSessionLoading } = useAuth();
 
@@ -168,6 +173,33 @@ export default function GiveReview() {
 
   const pageShell = "min-h-dvh bg-bg-section pb-16 pt-6 font-sans md:pt-10";
 
+  if (!businessId && !isUserLoading && !isSessionLoading && isAuthenticated) {
+    return (
+      <div className="flex min-h-screen flex-col bg-auth-bg text-ink">
+        <FrontendHeader />
+        <main className={cn(container, "flex-1 py-8")}>
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex items-center gap-2 text-base font-normal text-chat-accent hover:underline"
+          >
+            <ArrowLeft className="size-6 shrink-0" aria-hidden />
+            Back
+          </button>
+          <div className="mt-8 rounded-2xl border border-border-light/80 bg-card p-8 text-center shadow-md">
+            <h1 className="text-xl font-semibold text-ink-heading">Write a Review</h1>
+            <p className="mt-2 text-sm text-body-secondary">
+              Choose a business from browse, open its profile, then tap Write a review.
+            </p>
+            <Button asChild className="mt-6">
+              <Link to="/filters">Browse businesses</Link>
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className={pageShell}>
@@ -228,11 +260,15 @@ export default function GiveReview() {
           <p className="mt-2 text-sm text-body-secondary">
             Reviews are posted under your account name. Please sign in to continue.
           </p>
-          {!businessId && (
+          {!businessId ? (
             <p className="mt-3 rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
-              No business selected. Please go back and try again.
+              No business selected.{" "}
+              <Link to="/filters" className="font-semibold underline">
+                Browse businesses
+              </Link>{" "}
+              to pick one.
             </p>
-          )}
+          ) : null}
 
           {error && (
             <p className="mt-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">

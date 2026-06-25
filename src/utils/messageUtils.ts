@@ -269,7 +269,7 @@ export function getConversationTitle(
 ): string {
   if (conv.display_name?.trim()) return conv.display_name.trim()
   if (conv.conversation_name?.trim()) return conv.conversation_name.trim()
-  if (conv.name?.trim()) return conv.name
+  // if (conv.name?.trim()) return conv.name
   if (conv.type === 'direct') {
     const other = conv.participants.find((p) => p.user_id !== selfUserId)?.user
     const label = other?.display_name?.trim() || other?.name?.trim()

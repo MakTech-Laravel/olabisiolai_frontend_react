@@ -9,6 +9,7 @@ const UnifiedProfile = lazy(() => import("@/pages/user/UnifiedProfile"));
 const UserWallet = lazy(() => import("@/pages/user/UserWallet"));
 const Following = lazy(() => import("@/pages/user/Following"));
 const BusinessFollowers = lazy(() => import("@/pages/user/BusinessFollowers"));
+const BusinessReviews = lazy(() => import("@/pages/user/BusinessReviews"));
 const Messages = lazy(() => import("@/pages/user/Messages"));
 const UserActivity = lazy(() => import("@/pages/user/UserActivity"));
 const SettingsHub = lazy(() => import("@/pages/user/SettingsHub"));
@@ -31,6 +32,7 @@ export const userRoutes: RouteObject = {
     { path: "/user/wallet", element: suspensePage(UserWallet) },
     { path: "/user/following", element: suspensePage(Following) },
     { path: "/user/business-followers", element: suspensePage(BusinessFollowers) },
+    { path: "/user/business-reviews", element: suspensePage(BusinessReviews) },
     { path: "/user/favorites", element: <Navigate to="/user/following" replace /> },
     { path: "/user/messages", element: suspensePage(Messages) },
     { path: "/user/activity", element: suspensePage(UserActivity) },

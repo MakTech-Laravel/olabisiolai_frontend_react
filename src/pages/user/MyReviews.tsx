@@ -36,7 +36,7 @@ export default function MyReviews() {
             <p className="text-sm text-body-secondary">
               Customer reviews you wrote are listed here when you are in customer mode. To manage reviews on your
               business, open{' '}
-              <Link to="/vendor/reviews" className="font-semibold text-brand hover:underline">
+              <Link to="/user/business-reviews" className="font-semibold text-brand hover:underline">
                 Reviews Received
               </Link>
               .
@@ -53,8 +53,8 @@ export default function MyReviews() {
         ) : reviews.length === 0 ? (
           <div className="mt-6 rounded-2xl bg-card p-6 text-center shadow-sm">
             <p className="text-sm text-body-secondary">You have not written any reviews yet.</p>
-            <Link to="/reviews" className="mt-4 inline-flex text-sm font-semibold text-brand hover:underline">
-              Write a review
+            <Link to="/filters" className="mt-4 inline-flex text-sm font-semibold text-brand hover:underline">
+              Browse businesses to write a review
             </Link>
           </div>
         ) : (

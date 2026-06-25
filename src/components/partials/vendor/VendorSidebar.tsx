@@ -31,7 +31,7 @@ const items = [
   { to: "/vendor/verification", label: "Verification", icon: BadgeCheck, premiumOnly: false },
   { to: "/vendor/boost", label: "Boost", icon: Rocket, premiumOnly: true },
   { to: "/vendor/analytics", label: "Analytics", icon: BarChart2, premiumOnly: true },
-  { to: "/vendor/reviews", label: "Reviews", icon: MessageSquareCheck, premiumOnly: false },
+  { to: "/user/business-reviews", label: "Reviews", icon: MessageSquareCheck, premiumOnly: false },
   { to: "/vendor/payments", label: "Payments", icon: Banknote, premiumOnly: false },
   { to: "/vendor/settings", label: "Settings", icon: Settings, premiumOnly: false },
 ];

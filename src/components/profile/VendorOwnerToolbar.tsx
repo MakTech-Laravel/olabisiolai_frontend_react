@@ -98,7 +98,7 @@ export function VendorOwnerToolbar({ businessId, className }: VendorOwnerToolbar
         <Button asChild variant="outline" size="sm" className="rounded-lg bg-card">
           <Link to="/user/settings">
             <Settings className="mr-1.5 size-4" aria-hidden />
-            Settings
+            Settings & Activity
           </Link>
         </Button>
       </div>

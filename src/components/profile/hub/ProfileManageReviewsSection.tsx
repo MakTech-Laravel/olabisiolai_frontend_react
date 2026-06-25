@@ -49,7 +49,7 @@ export function ProfileManageReviewsSection({
   })
 
   const reviews = reviewsQuery.data ?? []
-  const reviewsPath = `/vendor/reviews?business_id=${businessId}`
+  const reviewsPath = `/user/business-reviews?business_id=${businessId}`
 
   return (
     <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05)]">

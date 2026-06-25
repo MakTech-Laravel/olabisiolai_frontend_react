@@ -1,15 +1,9 @@
-import { ChevronRight, Heart, MessageSquare, Settings, Star } from 'lucide-react'
+import { ChevronRight, MessageSquare, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ProfileHubSection } from './ProfileHubSection'
 
 const tools = [
-  {
-    label: 'Following',
-    description: 'Every business you follow & save',
-    to: '/user/following',
-    icon: Heart,
-  },
   {
     label: 'Messages',
     description: 'Your personal conversations',
@@ -17,33 +11,20 @@ const tools = [
     icon: MessageSquare,
   },
   {
-    label: 'Reviews written',
-    description: 'See reviews you left',
-    to: '/user/reviews',
-    icon: Star,
-  },
-  {
-    label: 'Settings & activity',
+    label: 'Settings & Activity',
     description: 'Account, privacy, help',
     to: '/user/settings',
     icon: Settings,
   },
 ] as const
 
-type ProfilePersonalToolsProps = {
-  reviewsCount?: number
-}
-
-export function ProfilePersonalTools({ reviewsCount }: ProfilePersonalToolsProps) {
+export function ProfilePersonalTools() {
   return (
     <ProfileHubSection title="Your activity">
       <div className="divide-y divide-border-light overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05),0_1px_1px_rgba(16,22,32,0.04)]">
         {tools.map((tool) => {
           const Icon = tool.icon
-          const description =
-            tool.label === 'Reviews written' && reviewsCount != null
-              ? `${reviewsCount} review${reviewsCount === 1 ? '' : 's'}`
-              : tool.description
+          const description = tool.description
 
           return (
             <Link

@@ -437,6 +437,18 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                     Verified
                   </span>
                 </>
+              ) : null} 
+              {capabilities.review ? (
+                <>
+                  <span className="text-stat-muted">·</span>
+                  <button
+                    type="button"
+                    onClick={onWriteReview}
+                    className="font-semibold text-chat-accent hover:underline"
+                  >
+                    Write a review
+                  </button>
+                </>
               ) : null}
             </div>
           </section>

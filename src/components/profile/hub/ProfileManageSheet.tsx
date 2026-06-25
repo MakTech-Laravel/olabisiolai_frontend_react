@@ -215,7 +215,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">followers</span>
                 </Link>
                 <Link
-                  to={`/vendor/reviews?business_id=${business.id}`}
+                  to={`/user/business-reviews?business_id=${business.id}`}
                   onClick={onClose}
                   className="text-left transition-opacity hover:opacity-80"
                 >

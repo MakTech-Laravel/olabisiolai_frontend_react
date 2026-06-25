@@ -66,7 +66,7 @@ export default function UserActivity() {
   const showInitialSpinner = isLoading && !data;
 
   return (
-    <UserShell active="settings">
+    <UserShell>
       <section className="min-h-0 flex-1 rounded-xl bg-card p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
