@@ -8,20 +8,18 @@ import {
   patchVendorSettings,
   type VendorSettingsPayload,
 } from '@/api/vendorSettings'
-import { disableTwoFactor, enableTwoFactor } from '@/api/vendorTwoFactor'
 import { ActionButtons } from '@/components/sections/vendor/settings/ActionButtons'
 import { BusinessProfileCard } from '@/components/sections/vendor/settings/BusinessProfileCard'
 import { CurrentPlanCard } from '@/components/sections/vendor/settings/CurrentPlanCard'
 import { NotificationChannelsCard } from '@/components/sections/vendor/settings/NotificationChannelsCard'
 import { SecurityAccessCard } from '@/components/sections/vendor/settings/SecurityAccessCard'
-import { TwoFactorSetupModal } from '@/components/sections/vendor/settings/TwoFactorSetupModal'
 import { VerifiedStatusCard } from '@/components/sections/vendor/settings/VerifiedStatusCard'
 import { AccountVerificationSection } from '@/components/settings/AccountVerificationSection'
 import { EmailVerificationSection } from '@/components/settings/EmailVerificationSection'
 import { useAuth } from '@/auth/useAuth'
 import { isUserAccountVerified } from '@/lib/accountVerification'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
-import { alert, Swal } from '@/lib/sweetAlert'
+import { alert } from '@/lib/sweetAlert'
 
 const VENDOR_SETTINGS_QUERY_KEY = ['vendor', 'settings'] as const
 
@@ -67,16 +65,9 @@ export default function VendorSettings() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
-  const [twoFactorBusy, setTwoFactorBusy] = useState(false)
-  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false)
-  const [twoFactorQr, setTwoFactorQr] = useState('')
-  const [twoFactorSecret, setTwoFactorSecret] = useState('')
-
   useEffect(() => {
     if (settingsQuery.data && form === null) {
       setForm(payloadToForm(settingsQuery.data))
-      setTwoFactorEnabled(settingsQuery.data.security.two_factor_enabled)
     }
   }, [settingsQuery.data, form])
 
@@ -114,7 +105,6 @@ export default function VendorSettings() {
 
   const applyServerPayload = useCallback((data: VendorSettingsPayload) => {
     setForm(payloadToForm(data))
-    setTwoFactorEnabled(data.security.two_factor_enabled)
     setLogoFile(null)
     setCurrentPassword('')
     setNewPassword('')
@@ -174,64 +164,6 @@ export default function VendorSettings() {
     },
   })
 
-  async function handleTwoFactorToggle(enabled: boolean) {
-    if (twoFactorBusy) return
-
-    if (enabled) {
-      setTwoFactorBusy(true)
-      try {
-        const result = await enableTwoFactor()
-        setTwoFactorQr(result.qr_code)
-        setTwoFactorSecret(result.secret)
-        setTwoFactorModalOpen(true)
-      } catch (error) {
-        await alert.toast.error(getLaravelErrorMessage(error, 'Could not start two-factor setup.'))
-      } finally {
-        setTwoFactorBusy(false)
-      }
-      return
-    }
-
-    const { value: password, isConfirmed } = await Swal.fire({
-      title: 'Disable two-factor authentication?',
-      text: 'Enter your account password to confirm.',
-      input: 'password',
-      inputPlaceholder: 'Password',
-      inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-      showCancelButton: true,
-      confirmButtonText: 'Disable 2FA',
-      confirmButtonColor: '#E42338',
-    })
-
-    if (!isConfirmed || !password) return
-
-    setTwoFactorBusy(true)
-    try {
-      await disableTwoFactor(password)
-      setTwoFactorEnabled(false)
-      await alert.toast.success('Two-factor authentication disabled.')
-      void queryClient.invalidateQueries({ queryKey: VENDOR_SETTINGS_QUERY_KEY })
-    } catch (error) {
-      await alert.toast.error(getLaravelErrorMessage(error, 'Could not disable two-factor authentication.'))
-    } finally {
-      setTwoFactorBusy(false)
-    }
-  }
-
-  async function handleTwoFactorConfirmed(recoveryCodes: string[]) {
-    setTwoFactorModalOpen(false)
-    setTwoFactorEnabled(true)
-    setTwoFactorQr('')
-    setTwoFactorSecret('')
-    void queryClient.invalidateQueries({ queryKey: VENDOR_SETTINGS_QUERY_KEY })
-
-    await Swal.fire({
-      title: 'Two-factor enabled',
-      html: `<p class="text-sm mb-3">Store these recovery codes in a safe place. Each can be used once if you lose your device.</p><pre class="text-left text-xs bg-slate-100 p-3 rounded-lg overflow-auto max-h-48">${recoveryCodes.join('\n')}</pre>`,
-      confirmButtonText: 'I have saved my codes',
-    })
-  }
-
   function handleDiscard() {
     if (!settingsQuery.data) return
     applyServerPayload(settingsQuery.data)
@@ -257,18 +189,6 @@ export default function VendorSettings() {
 
   return (
     <div className="p-4 md:p-6">
-      <TwoFactorSetupModal
-        open={twoFactorModalOpen}
-        qrCode={twoFactorQr}
-        secret={twoFactorSecret}
-        onClose={() => {
-          setTwoFactorModalOpen(false)
-          setTwoFactorQr('')
-          setTwoFactorSecret('')
-        }}
-        onConfirmed={handleTwoFactorConfirmed}
-      />
-
       <section className="space-y-6 md:space-y-8">
         {!isUserAccountVerified(user) ? (
           <AccountVerificationSection
@@ -309,8 +229,6 @@ export default function VendorSettings() {
               />
             </div>
             <SecurityAccessCard
-              twoFactorEnabled={twoFactorEnabled}
-              twoFactorBusy={twoFactorBusy}
               disabled={saveMutation.isPending}
               currentPassword={currentPassword}
               newPassword={newPassword}
@@ -324,7 +242,6 @@ export default function VendorSettings() {
               onToggleCurrentPassword={() => setShowCurrentPassword((v) => !v)}
               onToggleNewPassword={() => setShowNewPassword((v) => !v)}
               onToggleConfirmPassword={() => setShowConfirmPassword((v) => !v)}
-              onTwoFactorToggle={handleTwoFactorToggle}
             />
             <ActionButtons
               dirty={dirty}
