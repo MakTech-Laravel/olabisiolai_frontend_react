@@ -1,7 +1,6 @@
 import { FiltersResultsMap } from "@/components/maps/FiltersResultsMap";
 import FiltersSection from "@/components/sections/filters/FiltersSection";
 import ServiceCard from "@/components/sections/filters/ServiceCard";
-import { env } from "@/config/env";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useLocationCatalog } from "@/features/locations/useLocationCatalog";
