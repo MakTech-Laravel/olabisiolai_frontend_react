@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle, Send, Star, Upload, X } from "lucide-react";
 import axios from "axios";
 
@@ -12,9 +13,10 @@ import { CUSTOMER_LOGIN_PATH } from "@/features/auth/loginReturn";
 import { FrontendHeader } from "@/components/partials/frontend/FrontendHeader";
 import { container } from "@/lib/container";
 import { cn } from "@/lib/utils";
-import { submitReview } from "@/features/reviews/publicReviewApi";
+import { submitReview, invalidateBusinessReviewQueries } from "@/features/reviews/publicReviewApi";
 
 const MAX_STARS = 5;
+const MAX_REVIEW_IMAGES = 10;
 
 type LocationState = {
   from?: string;
@@ -24,6 +26,7 @@ type LocationState = {
 
 export default function GiveReview() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const state = location.state as LocationState;
@@ -73,7 +76,11 @@ export default function GiveReview() {
 
   const displayName = getAuthDisplayName(user);
 
-  const goBack = () => {
+  const goBack = async () => {
+    if (businessId) {
+      await invalidateBusinessReviewQueries(queryClient, businessId);
+    }
+
     if (typeof from === "string" && from.startsWith("/") && !from.startsWith("//")) {
       navigate(from);
       return;
@@ -86,7 +93,7 @@ export default function GiveReview() {
   const onFilesChange = (list: FileList | null) => {
     if (!list?.length) return;
     const next = Array.from(list).filter((f) => /image\/(jpeg|png|webp)/i.test(f.type));
-    const newFiles = [...files, ...next].slice(0, 10);
+    const newFiles = [...files, ...next].slice(0, MAX_REVIEW_IMAGES);
     const added = newFiles.slice(files.length);
     const newPreviews = [...previews, ...added.map((f) => URL.createObjectURL(f))];
     setFiles(newFiles);
@@ -141,6 +148,7 @@ export default function GiveReview() {
         review_text: reviewText,
         images: files.length > 0 ? files : undefined,
       });
+      await invalidateBusinessReviewQueries(queryClient, businessId!);
       setSuccess(true);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
@@ -208,11 +216,11 @@ export default function GiveReview() {
             <CheckCircle className="size-14 text-success" strokeWidth={1.5} />
             <h1 className="text-xl font-semibold text-ink-heading">Review Submitted!</h1>
             <p className="text-sm text-body-secondary">
-              Thank you for your feedback. Your review has been received and is awaiting approval.
+              Thank you for your feedback. Your review has been published.
             </p>
             <Button
               type="button"
-              onClick={goBack}
+              onClick={() => void goBack()}
               className="mt-2 h-9 gap-2 rounded-[10px] bg-footer-bar px-6 text-sm font-medium text-text-white hover:bg-footer-bar/90"
             >
               Back
@@ -346,7 +354,7 @@ export default function GiveReview() {
 
           <div className="mt-2 space-y-2 px-4 pb-2 pt-2">
             <p className="text-base font-medium text-ink-heading">
-              Images{files.length > 0 ? ` (${files.length}/10)` : ""}
+              Images{files.length > 0 ? ` (${files.length}/${MAX_REVIEW_IMAGES})` : ""}
             </p>
             <input
               ref={fileInputRef}
@@ -381,7 +389,7 @@ export default function GiveReview() {
                       </button>
                     </div>
                   ))}
-                  {files.length < 10 && (
+                  {files.length < MAX_REVIEW_IMAGES && (
                     <label
                       htmlFor={imagesId}
                       className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border-gray bg-transparent transition-colors hover:bg-muted/30"

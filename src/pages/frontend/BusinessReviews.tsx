@@ -8,6 +8,7 @@ import {
   type BusinessReviewsSummary,
   type PublicReview,
 } from '@/features/reviews/publicReviewApi'
+import { ReviewImagesGallery } from '@/components/reviews/ReviewImagesGallery'
 import { fetchPublicBusinessById } from '@/features/business/publicBusinessApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveBusinessIdFromSlug } from '@/lib/encryptId'
@@ -101,6 +102,7 @@ function ReviewCard({ review, businessName, listingPath }: { review: PublicRevie
           </div>
           <StarRow rating={review.rating} className="my-2 text-base" />
           <p className="text-sm leading-relaxed text-body-secondary">{review.review_text}</p>
+          <ReviewImagesGallery images={review.images} />
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <button
               type="button"

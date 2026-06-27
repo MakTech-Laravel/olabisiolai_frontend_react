@@ -11,6 +11,7 @@ import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import type { PublicBusiness } from "@/features/business/publicBusinessApi";
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
+import { ReviewImagesGallery } from "@/components/reviews/ReviewImagesGallery";
 import { Button } from "@/components/ui/button";
 import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
 import { displayBusinessOverview } from "@/constants/businessOverview";
@@ -581,6 +582,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                         </div>
                         <StarRow rating={review.rating} size="sm" className="my-2" />
                         <p className="text-sm leading-relaxed text-body-secondary lg:text-[15px]">{review.review_text}</p>
+                        <ReviewImagesGallery images={review.images} />
                       </article>
                     );
                   })}

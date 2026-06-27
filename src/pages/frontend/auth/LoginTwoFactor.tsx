@@ -6,8 +6,6 @@ import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getAuthErrorMessage, getAuthFieldErrors } from '@/features/auth/errorMessage'
-import { extractUserFromAuthPayload } from '@/api/laravelResponse'
-import { getUserRoles } from '@/auth/roles'
 import { resolvePostLoginPath, verifyLoginTwoFactor } from '@/features/auth/service'
 import { type AuthRole } from '@/features/auth/types'
 import { type LoginReturnTarget } from '@/features/auth/loginReturn'
@@ -83,14 +81,6 @@ export default function LoginTwoFactor() {
       }
 
       const loggedInUser = loginResult.user
-      const roles = getUserRoles(extractUserFromAuthPayload(loggedInUser))
-      const isVendor = roles.includes('vendor') || role === 'vendor'
-
-
-      if (isVendor) {
-        navigate(await resolvePostLoginPath(loggedInUser, role), { replace: true })
-        return
-      }
 
       if (navigateAfterLogin(navigate, state.from)) {
         return

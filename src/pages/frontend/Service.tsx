@@ -144,7 +144,7 @@ export default function Service() {
     queryKey: ["reviews", businessId, reviewPage],
     queryFn: () => fetchBusinessReviews(businessId!, { page: reviewPage }),
     enabled: businessId !== null,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
@@ -252,8 +252,12 @@ export default function Service() {
     businessId === null || (businessFetched && !businessFetching && !business && !stateData);
 
   const handleWriteReview = () => {
-    if (!isAuthReady) return;
-    requireAuthNavigate("/reviews", {
+    if (!isAuthReady || businessId === null) return;
+    const reviewSearch = new URLSearchParams({
+      business_id: String(businessId),
+      ...(name ? { business_name: name } : {}),
+    });
+    requireAuthNavigate(`/reviews?${reviewSearch.toString()}`, {
       state: { from: pathname, business_id: businessId, business_name: name },
     });
   };

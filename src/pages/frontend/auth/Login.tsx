@@ -97,24 +97,27 @@ export default function Login() {
         throw new Error('Login succeeded, but no valid role was found for this account.')
       }
 
-      const isVendor = roles.includes('vendor')
-
-      if (isVendor) {
-        navigate(await resolvePostLoginPath(effectiveUser, 'vendor'), { replace: true })
-        return
-      }
-
-      const returnTo = (location.state as { from?: { pathname?: string; state?: unknown } } | null)
+      const returnTo = (location.state as { from?: { pathname?: string; search?: string; state?: unknown } } | null)
         ?.from
       if (returnTo?.pathname && !isUnsafePostLoginPath(returnTo.pathname)) {
-        navigate(returnTo.pathname, {
-          replace: true,
-          state: returnTo.state,
-        })
+        navigate(
+          {
+            pathname: returnTo.pathname,
+            search: returnTo.search ?? '',
+          },
+          {
+            replace: true,
+            state: returnTo.state,
+          },
+        )
         return
       }
 
-      navigate(await resolvePostLoginPath(effectiveUser, 'user'), { replace: true })
+      const isVendor = roles.includes('vendor')
+      navigate(
+        await resolvePostLoginPath(effectiveUser, isVendor ? 'vendor' : 'user'),
+        { replace: true },
+      )
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Login failed. Please try again.'
