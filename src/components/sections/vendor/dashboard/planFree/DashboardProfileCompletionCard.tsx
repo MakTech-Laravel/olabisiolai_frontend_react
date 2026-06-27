@@ -10,10 +10,10 @@ export function DashboardProfileCompletionCard({ dashboard }: VendorDashboardCar
 
   const nextHref =
     profileCompletion.nextStepKey === "profile_photo"
-      ? "/vendor/profile"
+      ? "/user/profile"
       : profileCompletion.nextStepKey === "verified_id"
         ? "/vendor/verification"
-        : "/vendor/profile";
+        : "/user/profile";
 
   return (
     <Card>

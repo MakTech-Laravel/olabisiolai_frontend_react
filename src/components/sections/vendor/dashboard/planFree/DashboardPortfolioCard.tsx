@@ -23,7 +23,7 @@ export function DashboardPortfolioCard({ dashboard }: VendorDashboardCardProps) 
             <PortfolioThumb key={`${src}-${index}`} src={src} index={index} />
           ))}
           <Link
-            to="/vendor/profile"
+            to="/user/profile"
             className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-[#E6BDB8] text-muted-foreground transition-colors hover:bg-muted sm:h-20 sm:w-20"
             aria-label="Upload portfolio photo"
           >

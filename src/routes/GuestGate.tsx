@@ -1,21 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom'
 
-import { VendorAuthRedirect } from '@/components/partials/vendor/VendorAuthRedirect'
 import { rolePolicy } from '@/auth/rolePolicy'
 import { getUserRoles, hasAnyRole } from '@/auth/roles'
 import { useAuth } from '@/auth/useAuth'
 import { env } from '@/config/env'
 
-function pickDashboardForUserRoles(roles: string[]): string {
-  if (roles.includes('admin')) {
-    return rolePolicy.admin?.dashboard ?? '/admin'
-  }
-  for (const r of roles) {
-    const dash = rolePolicy[r]?.dashboard
-    if (dash) return dash
-  }
-  return '/user/dashboard'
-}
+const AUTHENTICATED_LOGIN_REDIRECT = '/user/profile'
 
 /**
  * GuestGate protects guest-only pages (login/fallback pages).
@@ -57,11 +47,18 @@ export function GuestGate({
 
   const roles = getUserRoles(user)
 
-  if (roles.includes('vendor')) {
-    return <VendorAuthRedirect />
+  if (roles.includes('admin')) {
+    const adminHome = redirectTo ?? rolePolicy.admin?.dashboard ?? '/admin'
+    if (env.loginMode === 'single') {
+      return <Navigate to={adminHome} replace />
+    }
+    if (roleScope && hasAnyRole(user, roleScope)) {
+      return <Navigate to={adminHome} replace />
+    }
+    return children
   }
 
-  const recommended = redirectTo ?? pickDashboardForUserRoles(roles)
+  const recommended = redirectTo ?? AUTHENTICATED_LOGIN_REDIRECT
 
   if (env.loginMode === 'single') {
     return <Navigate to={recommended} replace />

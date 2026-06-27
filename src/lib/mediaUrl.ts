@@ -36,10 +36,15 @@ export function resolveMediaUrl(
     try {
       const parsed = new URL(raw);
       const isAppMedia =
-        parsed.pathname.startsWith("/storage/") || parsed.pathname.startsWith("/images/");
+        parsed.pathname.startsWith("/storage/") ||
+        parsed.pathname.startsWith("/images/") ||
+        parsed.pathname.startsWith("/files/");
 
       if (origin && isAppMedia) {
-        return `${origin}${parsed.pathname}${parsed.search}`;
+        const pathname = parsed.pathname.startsWith("/files/")
+          ? parsed.pathname.replace(/^\/files\//, "/storage/")
+          : parsed.pathname;
+        return `${origin}${pathname}${parsed.search}`;
       }
     } catch {
       /* keep raw */
@@ -48,13 +53,17 @@ export function resolveMediaUrl(
     return raw;
   }
 
-  const path = raw.startsWith("/") ? raw : `/storage/${raw.replace(/^\/+/, "")}`;
+  const normalizedPath = raw.startsWith("/files/")
+    ? raw.replace(/^\/files\//, "/storage/")
+    : raw.startsWith("/")
+      ? raw
+      : `/storage/${raw.replace(/^\/+/, "")}`;
 
   if (origin) {
-    return `${origin}${path}`;
+    return `${origin}${normalizedPath}`;
   }
 
-  return path;
+  return normalizedPath;
 }
 
 export function resolveMediaUrls(urls: string[] | null | undefined): string[] {

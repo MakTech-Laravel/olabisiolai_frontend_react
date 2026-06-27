@@ -28,7 +28,7 @@ export function PremiumPortfolioGallery({ dashboard }: VendorDashboardCardProps)
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-bold text-foreground font-manrope">Portfolio gallery</h3>
           <Link
-            to="/vendor/profile"
+            to="/user/profile"
             className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline font-inter"
           >
             <ImageIcon className="size-4" aria-hidden />
