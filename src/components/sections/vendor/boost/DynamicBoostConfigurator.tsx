@@ -114,8 +114,7 @@ export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoo
           <div>
             <h2 className="text-lg font-semibold text-ink">Dynamic Boost</h2>
             <p className="mt-1 text-sm text-body-secondary">
-              Increase visibility in your target LGA. Choose duration and budget — no slot limits. Multiple vendors can
-              boost the same area and rotate fairly in search results.
+              Increase visibility in your target LGA. Choose duration and budget — no slot limits.
             </p>
           </div>
         </div>

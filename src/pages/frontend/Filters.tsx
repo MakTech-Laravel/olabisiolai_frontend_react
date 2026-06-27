@@ -628,6 +628,7 @@ export default function Filters() {
                   logoUrl={business.logoUrl}
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
+                  isPremium={business.isPremium}
                   boostStatus={business.boostStatus}
                   isFollowing={business.isFollowing}
                   followersCount={business.followersCount}

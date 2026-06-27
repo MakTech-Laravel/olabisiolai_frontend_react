@@ -59,6 +59,6 @@ export async function handleTradePageVendorCta(options: {
   return handleVendorOnboardingCta({
     ...options,
     vendorDestination: "choose-plan",
-    scrollToPlans: scrollToTradeChoosePlan,
+    guestDestination: "vendor-register",
   });
 }

@@ -231,7 +231,11 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const boostRaw = str(r.boost_status ?? r.boostStatus, 'none').toLowerCase();
   const boostStatus: PublicBusiness['boostStatus'] =
     boostRaw === 'active' ? 'active' : 'none';
-  const isPremium = r.is_premium === true || r.isPremium === true;
+  const isPremium =
+    r.is_premium === true ||
+    r.isPremium === true ||
+    r.is_premium_active === true ||
+    r.isPremiumActive === true;
 
   const vendorObj = rec(r.vendor) ?? rec(r.user);
   const vendorUserIdRaw = num(vendorObj?.id ?? r.vendor_id ?? r.user_id, NaN);

@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { MapPin, Star, CheckCircle, Zap } from "lucide-react";
+import { BadgeCheck, MapPin, Star } from "lucide-react";
 
 import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
@@ -26,6 +26,7 @@ interface ServiceCardProps {
   logoUrl?: string;
   coverPhotoUrls?: string[];
   verified: boolean;
+  isPremium?: boolean;
   boostStatus?: "active" | "none";
   isFollowing?: boolean;
   followersCount?: number;
@@ -51,6 +52,7 @@ export default function ServiceCard({
   logoUrl,
   coverPhotoUrls,
   verified,
+  isPremium = false,
   boostStatus = "none",
   isFollowing = false,
   followersCount = 0,
@@ -95,6 +97,7 @@ export default function ServiceCard({
           logoUrl: logoUrl ?? image,
           coverPhotoUrls: coverPhotoUrls ?? (image ? [image] : []),
           verified,
+          isPremium,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
@@ -124,29 +127,24 @@ export default function ServiceCard({
         <div className="relative aspect-[16/10] w-full overflow-hidden xl:aspect-auto xl:min-h-[220px] xl:h-full">
           <img
             src={image}
-            alt="Business Image"
+            alt={name}
             className="absolute inset-0 size-full object-cover"
           />
-        </div>
-
-        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-          {verified ? (
-            <div className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
-            </div>
-          ) : null}
-          {isBoosted ? (
-            <div className="bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <Zap className="w-3 h-3 mr-1" /> BOOSTED
-            </div>
-          ) : null}
         </div>
       </div>
       <div className="w-full p-3 md:p-4">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 text-lg font-inter font-semibold text-text-primary">
-            <BusinessProfileLink businessId={id} businessName={name} />
-          </h3>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <h3 className="min-w-0 truncate text-lg font-inter font-semibold text-text-primary">
+              <BusinessProfileLink businessId={id} businessName={name} />
+            </h3>
+            {verified ? (
+              <BadgeCheck
+                className="size-4 shrink-0 text-chat-accent"
+                aria-label="Verified business"
+              />
+            ) : null}
+          </div>
           {vendorUserId ? (
             <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
               <FollowVendorButton

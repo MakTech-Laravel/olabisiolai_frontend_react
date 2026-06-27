@@ -3,12 +3,11 @@ import {
   Bell,
   CircleUserRound,
   Home,
+  LayoutGrid,
   LocateFixed,
   LogIn,
   LogOut,
   Search,
-  Settings,
-  TrendingUp,
   User,
   X,
 } from "lucide-react";
@@ -77,13 +76,11 @@ function ActivityBellLink() {
 
 function HeaderToolbar({
   isLightHeader,
-  showTradeNav,
   dashboardPath,
   showLocationPicker,
   onOpenLocationMap,
 }: {
   isLightHeader: boolean;
-  showTradeNav: boolean;
   dashboardPath: string;
   showLocationPicker: boolean;
   onOpenLocationMap: () => void;
@@ -111,20 +108,6 @@ function HeaderToolbar({
         >
           Nigeria
           <LocateFixed className="size-4 text-blue-500" aria-hidden />
-        </Button>
-      ) : null}
-
-      {showTradeNav ? (
-        <Button
-          asChild
-          type="button"
-          variant="secondary"
-          className="h-11 rounded-lg bg-brand-red px-6 text-base font-medium text-ice shadow-none hover:bg-brand-red/90"
-        >
-          <Link to="/trade" className="inline-flex items-center gap-2">
-            <TrendingUp className="size-5 shrink-0" aria-hidden />
-            Trade
-          </Link>
         </Button>
       ) : null}
 
@@ -161,15 +144,15 @@ function HeaderToolbar({
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to={profilePath} className="flex items-center gap-2">
-                <User className="size-4" aria-hidden />
-                Profile
+              <Link to={dashboardPath} className="flex items-center gap-2">
+                <LayoutGrid className="size-4" aria-hidden />
+                Dashboard
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to={dashboardPath} className="flex items-center gap-2">
-                <Settings className="size-4" aria-hidden />
-                Dashboard
+              <Link to={profilePath} className="flex items-center gap-2">
+                <User className="size-4" aria-hidden />
+                Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -202,7 +185,6 @@ function HeaderToolbar({
 }
 
 function MobileMenu({
-  showTradeNav,
   isAuthenticated,
   logout,
   avatarSrc,
@@ -210,7 +192,6 @@ function MobileMenu({
   isVendor,
   profilePath,
 }: {
-  showTradeNav: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
   avatarSrc: string;
@@ -261,52 +242,46 @@ function MobileMenu({
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          {isAuthenticated ? (
+            <DropdownMenuItem asChild className="rounded-lg">
+              <Link to={dashboardPath} className="flex items-center gap-2 py-2">
+                <LayoutGrid className="size-4" aria-hidden />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/" className="flex items-center gap-2 py-2">
               <Home className="size-4" aria-hidden />
               Home
             </Link>
           </DropdownMenuItem>
-          {showTradeNav ? (
-            <DropdownMenuItem asChild className="rounded-lg">
-              <Link to="/trade" className="flex items-center gap-2 py-2">
-                <TrendingUp className="size-4" aria-hidden />
-                Trade
-              </Link>
-            </DropdownMenuItem>
-          ) : null}
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/filters" className="flex items-center gap-2 py-2">
               <Search className="size-4" aria-hidden />
               Browse Businesses
             </Link>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        {isAuthenticated ? (
-          <>
+          {isAuthenticated ? (
             <DropdownMenuItem asChild className="rounded-lg">
               <Link to={profilePath} className="flex items-center gap-2 py-2">
                 <User className="size-4" aria-hidden />
                 Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild className="rounded-lg">
-              <Link to={dashboardPath} className="flex items-center gap-2 py-2">
-                <Settings className="size-4" aria-hidden />
-                Dashboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                void logout();
-              }}
-              className="rounded-lg text-brand-red focus:text-brand-red"
-            >
-              <LogOut className="size-4" aria-hidden />
-              Logout
-            </DropdownMenuItem>
-          </>
+          ) : null}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        {isAuthenticated ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              void logout();
+            }}
+            className="rounded-lg text-brand-red focus:text-brand-red"
+          >
+            <LogOut className="size-4" aria-hidden />
+            Logout
+          </DropdownMenuItem>
         ) : (
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/login/phone" className="flex items-center gap-2 py-2">
@@ -331,13 +306,11 @@ export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: 
   const profilePath = "/user/profile";
   const isLightHeader =
     pathname === "/" ||
-    pathname === "/trade" ||
     pathname === "/service" ||
     pathname.startsWith("/businesses/") ||
     pathname === "/messages" ||
     pathname.startsWith("/user/messages") ||
     pathname === "/reviews";
-  const showTradeNav = pathname !== "/trade";
   const showHeaderSearch = pathname !== "/" && !(compactOnMobile && pathname.startsWith("/user/messages"));
   const isFiltersPage = pathname === "/filters";
   const showLocationPicker = !isFiltersPage;
@@ -373,7 +346,6 @@ export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: 
           <div className="flex items-center gap-1">
             {showActivityBell ? <ActivityBellLink /> : null}
             <MobileMenu
-              showTradeNav={showTradeNav}
               isAuthenticated={isAuthenticated}
               logout={logout}
               avatarSrc={avatarSrc}
@@ -411,7 +383,6 @@ export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: 
 
         <HeaderToolbar
           isLightHeader={isLightHeader}
-          showTradeNav={showTradeNav}
           dashboardPath={dashboardPath}
           showLocationPicker={showLocationPicker}
           onOpenLocationMap={() => setLocationMapOpen(true)}

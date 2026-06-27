@@ -67,5 +67,5 @@ export async function handleVendorOnboardingCta(
     return;
   }
 
-  navigate("/trade#choose-your-plan");
+  navigate("/vendor/choose-your-plan");
 }
