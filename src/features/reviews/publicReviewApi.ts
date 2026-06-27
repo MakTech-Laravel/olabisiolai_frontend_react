@@ -52,18 +52,19 @@ function mapReviewImages(raw: unknown): PublicReviewImage[] {
   if (!Array.isArray(raw)) return [];
 
   return raw
-    .map((entry) => {
+    .map((entry): PublicReviewImage | null => {
       const row = entry as Record<string, unknown>;
       const url = resolveMediaUrl(String(row.url ?? ''), '');
       if (!url) return null;
 
-      return {
+      const image: PublicReviewImage = {
         id: Number(row.id ?? 0),
         url,
-        original_filename: row.original_filename
-          ? String(row.original_filename)
-          : undefined,
       };
+      if (row.original_filename) {
+        image.original_filename = String(row.original_filename);
+      }
+      return image;
     })
     .filter((image): image is PublicReviewImage => image !== null);
 }
