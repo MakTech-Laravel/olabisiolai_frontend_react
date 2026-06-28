@@ -353,25 +353,11 @@ function extractPagination(data: unknown): Partial<PublicBusinessesPage> | null 
   return null;
 }
 
-/** Fisher–Yates shuffle for public marketplace cards only (admin lists are unchanged). */
-export function shufflePublicBusinesses(items: PublicBusiness[]): PublicBusiness[] {
-  const shuffled = [...items];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = shuffled[i];
-    shuffled[i] = shuffled[j];
-    shuffled[j] = tmp;
-  }
-  return shuffled;
-}
-
 function parseBusinessesPage(data: unknown): PublicBusinessesPage {
   const rows = extractList(data);
-  const items = shufflePublicBusinesses(
-    rows
-      .map((row, i) => parseBusiness(row, i))
-      .filter((b): b is PublicBusiness => b !== null),
-  );
+  const items = rows
+    .map((row, i) => parseBusiness(row, i))
+    .filter((b): b is PublicBusiness => b !== null);
 
   const pagination = extractPagination(data);
   return {
