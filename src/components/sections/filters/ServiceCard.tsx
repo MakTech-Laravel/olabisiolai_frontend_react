@@ -1,8 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Crown, MapPin, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 
-import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
+import {
+  BusinessListingCardTitle,
+  BusinessListingStatusBadges,
+} from "@/components/business/BusinessListingCardChrome";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
@@ -130,27 +133,16 @@ export default function ServiceCard({
             alt={name}
             className="absolute inset-0 size-full object-cover"
           />
-          {isPremium ? (
-            <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)]">
-              <Crown className="size-3 fill-white" aria-hidden />
-              Premium
-            </span>
-          ) : null}
+          <BusinessListingStatusBadges
+            isPremium={isPremium}
+            isBoosted={isBoosted}
+            className="absolute left-3 top-3 z-10"
+          />
         </div>
       </div>
       <div className="w-full p-3 md:p-4">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <h3 className="min-w-0 truncate text-lg font-inter font-semibold text-text-primary">
-              <BusinessProfileLink businessId={id} businessName={name} />
-            </h3>
-            {verified ? (
-              <BadgeCheck
-                className="size-4 shrink-0 text-chat-accent"
-                aria-label="Verified business"
-              />
-            ) : null}
-          </div>
+          <BusinessListingCardTitle businessId={id} businessName={name} verified={verified} />
           {vendorUserId ? (
             <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
               <FollowVendorButton
