@@ -142,13 +142,6 @@ export default function VendorBoostReviewPayPage() {
     ? `${boostSelection.tierLabel} · ${boostSelection.durationDays} days`
     : "Boost campaign";
 
-  const boostActionLabel =
-    boostSelection?.renewType === "extend"
-      ? "Extend boost"
-      : boostSelection?.renewType === "boost_again"
-        ? "Boost again"
-        : "Boost purchase";
-
   useEffect(() => {
     if (!isVerification || !verificationStatus?.awaiting_document_submission) {
       return;

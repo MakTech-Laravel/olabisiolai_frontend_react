@@ -21,12 +21,10 @@ import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import type { PublicBusiness } from "@/features/business/publicBusinessApi";
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import type { PublicReview } from "@/features/reviews/publicReviewApi";
-import { ReviewImagesGallery } from "@/components/reviews/ReviewImagesGallery";
 import { Button } from "@/components/ui/button";
 import { NO_CATEGORY_LABEL, NO_LOCATION_LABEL } from "@/features/business/publicBusinessApi";
 import { displayBusinessOverview } from "@/constants/businessOverview";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
-import { businessProfilePath } from "@/lib/businessProfile";
 import {
   businessPageBody,
   businessPageHero,
@@ -180,12 +178,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     showCatalogSection,
     showCustomerActions,
     capabilities,
-    reviewsRef,
-    reviewsList,
-    pagination,
-    reviewPage,
-    onReviewPageChange,
-    seeAllReviewsHref,
     showDirectMessage = false,
     onFollowersChange,
     onOpenPhotos,
@@ -194,7 +186,6 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
   } = props;
 
   const ratingScore = rating > 0 ? (Number.isInteger(rating) ? String(rating) : rating.toFixed(1)) : null;
-  const resolvedSeeAllReviewsHref = seeAllReviewsHref ?? `${businessProfilePath(businessId)}/reviews`;
   const categoryIsPlaceholder = categoryLabel === NO_CATEGORY_LABEL;
   const locationIsPlaceholder = locationText === NO_LOCATION_LABEL;
   const isPageLoading = businessFetching && !businessFetched;

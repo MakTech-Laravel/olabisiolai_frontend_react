@@ -240,7 +240,6 @@ export default function ChoosePlanForm() {
   );
   const stateOptions = allStates;
   const cityOptions = citiesForState;
-  const boostBudget = clampBoostBudget(boostBudgetAmount);
   const premiumSelected = isPremiumPlanSelected();
 
   const orphanFieldErrorSummary = useMemo(() => {
