@@ -84,7 +84,11 @@ export function useVendorSubscriptionAccess() {
     navigate("/vendor/boost");
   }, [navigate]);
 
-  const isLoading = hasToken && !subscription && onboardingQuery.isPending;
+  const isLoading =
+    hasToken &&
+    (onboardingQuery.isPending ||
+      subscriptionQuery.isPending ||
+      (onboardingQuery.isSuccess && subscription === null && !subscriptionQuery.isError));
 
   return {
     subscription,

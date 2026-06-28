@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 
 import { BasicBoost } from '@/components/sections/vendor/boost/BasicBoost'
+import { BoostVerificationGate } from '@/components/sections/vendor/boost/BoostVerificationGate'
 import { DynamicBoostConfigurator } from '@/components/sections/vendor/boost/DynamicBoostConfigurator'
 import { VendorBoostCampaignsTable } from '@/components/sections/vendor/boost/VendorBoostCampaignsTable'
 import { buildBoostCheckoutFromCampaign } from '@/features/boost/buildBoostCheckoutFromCampaign'
@@ -16,9 +18,15 @@ import { Button } from '@/components/ui/button'
 
 export default function VendorBoost() {
   const navigate = useNavigate()
-  const { isPremiumActive: isPremium, goToPremiumPayment } = useVendorSubscriptionAccess()
+  const queryClient = useQueryClient()
+  const { isPremiumActive: isPremium, canBoost, isLoading, goToPremiumPayment } = useVendorSubscriptionAccess()
   const [renewalContext, setRenewalContext] = useState<BoostRenewalContext | null>(null)
   const [prefilledLocationId, setPrefilledLocationId] = useState('')
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['vendor', 'subscription', 'status'] })
+    void queryClient.invalidateQueries({ queryKey: ['vendor', 'onboarding', 'status'] })
+  }, [queryClient])
 
   const { data: catalog, isPending: catalogLoading } = useQuery({
     queryKey: ['vendor', 'boost', 'catalog'],
@@ -67,6 +75,14 @@ export default function VendorBoost() {
     scrollToConfigurator()
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[50vh] w-full items-center justify-center p-6">
+        <Loader2 className="size-8 animate-spin text-brand-red" aria-label="Loading boost access" />
+      </div>
+    )
+  }
+
   if (!isPremium) {
     return (
       <div className="w-full space-y-6 p-4 md:p-6">
@@ -74,6 +90,14 @@ export default function VendorBoost() {
         <Button type="button" className="w-full rounded-xl" onClick={() => goToPremiumPayment()}>
           Upgrade to Premium for Boost
         </Button>
+      </div>
+    )
+  }
+
+  if (!canBoost) {
+    return (
+      <div className="w-full p-4 md:p-6">
+        <BoostVerificationGate />
       </div>
     )
   }
