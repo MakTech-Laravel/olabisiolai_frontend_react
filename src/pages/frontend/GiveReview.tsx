@@ -265,9 +265,6 @@ export default function GiveReview() {
           <h1 className="text-xl font-semibold leading-7 text-ink-heading">
             {businessName ? `Review for ${businessName}` : "Write a Review"}
           </h1>
-          <p className="mt-2 text-sm text-body-secondary">
-            Reviews are posted under your account name. Please sign in to continue.
-          </p>
           {!businessId ? (
             <p className="mt-3 rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
               No business selected.{" "}

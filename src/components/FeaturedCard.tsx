@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
-  Star,
+  BadgeCheck,
+  Crown,
   MapPin,
-  CheckCircle,
+  Star,
   Zap,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ interface FeaturedCardProps {
   logoUrl?: string;
   coverPhotoUrls?: string[];
   verified: boolean;
+  isPremium?: boolean;
   boostStatus?: "active" | "none";
   isFollowing?: boolean;
   followersCount?: number;
@@ -56,6 +58,7 @@ export function FeaturedCard({
   logoUrl,
   coverPhotoUrls,
   verified,
+  isPremium = false,
   boostStatus = "none",
   isFollowing = false,
   followersCount = 0,
@@ -100,6 +103,7 @@ export function FeaturedCard({
           logoUrl: logoUrl ?? image,
           coverPhotoUrls: coverPhotoUrls ?? (image ? [image] : []),
           verified,
+          isPremium,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
@@ -132,24 +136,33 @@ export function FeaturedCard({
           className="w-full h-48 object-cover"
         />
 
-        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-          {verified ? (
-            <div className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
-            </div>
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          {isPremium ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)]">
+              <Crown className="size-3 fill-white" aria-hidden />
+              Premium
+            </span>
           ) : null}
           {isBoosted ? (
-            <div className="bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <Zap className="w-3 h-3 mr-1" /> BOOSTED
+            <div className="flex items-center rounded-full bg-amber-500 px-2 py-1 text-xs font-semibold text-white">
+              <Zap className="mr-1 size-3" /> BOOSTED
             </div>
           ) : null}
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-6">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 text-lg font-inter font-semibold text-text-primary">
-            <BusinessProfileLink businessId={id} businessName={name} />
-          </h3>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <h3 className="min-w-0 truncate text-lg font-inter font-semibold text-text-primary">
+              <BusinessProfileLink businessId={id} businessName={name} />
+            </h3>
+            {verified ? (
+              <BadgeCheck
+                className="size-4 shrink-0 text-chat-accent"
+                aria-label="Verified business"
+              />
+            ) : null}
+          </div>
           {vendorUserId ? (
             <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
               <FollowVendorButton

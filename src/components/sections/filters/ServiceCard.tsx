@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { BadgeCheck, MapPin, Star } from "lucide-react";
+import { BadgeCheck, Crown, MapPin, Star } from "lucide-react";
 
 import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
@@ -130,6 +130,12 @@ export default function ServiceCard({
             alt={name}
             className="absolute inset-0 size-full object-cover"
           />
+          {isPremium ? (
+            <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)]">
+              <Crown className="size-3 fill-white" aria-hidden />
+              Premium
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="w-full p-3 md:p-4">
