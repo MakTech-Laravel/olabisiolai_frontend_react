@@ -22,7 +22,12 @@ export function OrderSummaryCard({
   planTitle?: string;
   totalAmount?: number;
   isVerification?: boolean;
-  boostLine?: { label: string; amount: number } | null;
+  boostLine?: {
+    label: string;
+    amount: number;
+    dailyBudget?: number;
+    durationDays?: number;
+  } | null;
   /** Optional slot for checkboxes / notices above Pay Now */
   beforePayButton?: ReactNode;
 }) {
@@ -64,11 +69,19 @@ export function OrderSummaryCard({
         </div>
 
         {boostLine && boostLine.amount > 0 ? (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>Boost add-on ({boostLine.label})</span>
-            <span className="font-semibold text-foreground">
-              {formatNaira(boostLine.amount, { freeLabel: false })}
-            </span>
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Boost add-on ({boostLine.label})</span>
+              <span className="font-semibold text-foreground">
+                {formatNaira(boostLine.amount, { freeLabel: false })}
+              </span>
+            </div>
+            {boostLine.dailyBudget != null && boostLine.durationDays != null ? (
+              <p className="text-xs">
+                Daily budget: {formatNaira(boostLine.dailyBudget, { freeLabel: false })} ·{' '}
+                {boostLine.durationDays} {boostLine.durationDays === 1 ? 'day' : 'days'}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

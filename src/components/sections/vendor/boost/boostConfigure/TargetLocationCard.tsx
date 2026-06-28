@@ -81,7 +81,7 @@ export function TargetLocationCard({
             )}
 
             <p className="inline-flex items-start gap-2 text-xs text-muted-foreground">
-              Plans and slot availability update when you change location.
+              Choose the LGA where you want more visibility in search results.
             </p>
           </div>
           <div>

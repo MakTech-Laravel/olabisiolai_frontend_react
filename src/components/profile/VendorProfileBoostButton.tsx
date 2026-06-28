@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Crown, Lock, Rocket } from 'lucide-react'
+import { Crown, Rocket } from 'lucide-react'
 
 import { PremiumAccessButton } from '@/components/partials/vendor/PremiumAccessButton'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,9 @@ type VendorProfileBoostButtonProps = {
 }
 
 export function VendorProfileBoostButton({ className, compact = false }: VendorProfileBoostButtonProps) {
-  const { isPremiumActive, isVerified, canBoost } = useVendorSubscriptionAccess()
+  const { isPremiumActive } = useVendorSubscriptionAccess()
 
-  if (canBoost) {
+  if (isPremiumActive) {
     return (
       <Button
         asChild
@@ -24,22 +24,6 @@ export function VendorProfileBoostButton({ className, compact = false }: VendorP
         <Link to="/vendor/boost">
           <Rocket className="mr-1.5 size-4" aria-hidden />
           Boost
-        </Link>
-      </Button>
-    )
-  }
-
-  if (isPremiumActive && !isVerified) {
-    return (
-      <Button
-        asChild
-        size={compact ? 'sm' : 'default'}
-        variant="outline"
-        className={cn('rounded-full', className)}
-      >
-        <Link to="/vendor/verification">
-          <Lock className="mr-1.5 size-4" aria-hidden />
-          Verify to Boost
         </Link>
       </Button>
     )

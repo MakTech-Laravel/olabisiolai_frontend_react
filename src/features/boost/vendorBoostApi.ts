@@ -126,14 +126,14 @@ export async function initVendorBoostPayment(params: {
   gateway?: PaymentGateway;
   /** @deprecated legacy slot-tier boosts */
   tierKey?: string;
-}): Promise<{ payment: BoostPaymentSession; message: string }> {
+}): Promise<{ payment: BoostPaymentSession; requestId?: number; message: string }> {
   const locationId =
     params.locationId !== undefined && params.locationId !== ""
       ? Number(params.locationId)
       : undefined;
 
   const res = await request.post<
-    ApiEnvelope<{ payment: BoostPaymentSession; request: unknown }>
+    ApiEnvelope<{ payment: BoostPaymentSession; request: { id?: number } }>
   >("/vendor/boost/payment/init", {
     duration_days: params.durationDays,
     budget_amount: params.budgetAmount,
@@ -143,8 +143,11 @@ export async function initVendorBoostPayment(params: {
     gateway: params.gateway,
   });
 
+  const requestId = res.data.data.request?.id;
+
   return {
     payment: res.data.data.payment,
+    requestId: typeof requestId === "number" ? requestId : undefined,
     message: res.data.message,
   };
 }

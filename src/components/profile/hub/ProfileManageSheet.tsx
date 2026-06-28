@@ -99,7 +99,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   const queryClient = useQueryClient()
   const [isDeleting, setIsDeleting] = useState(false)
   const isPremiumActive = business?.isPremiumActive === true
-  const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
+  const canBoost = isPremiumActive
 
   const publicUrl = business ? `${appOrigin()}${businessProfilePath(business.id)}` : ''
 

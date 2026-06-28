@@ -35,6 +35,7 @@ import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
 import {
   clearBoostCheckoutSelection,
   readBoostCheckoutSelection,
+  saveBoostCheckoutSelection,
 } from "@/features/boost/boostCheckoutSession";
 import {
   confirmVendorBoostPayment,
@@ -42,6 +43,7 @@ import {
   resumeVendorBoostPayment,
   type BoostPaymentSession,
 } from "@/features/boost/vendorBoostApi";
+import { formatBoostBudget } from "@/features/boost/dynamicBoostConfig";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
 import { fetchVendorSettings } from "@/api/vendorSettings";
@@ -501,15 +503,22 @@ export default function VendorBoostReviewPayPage() {
           return;
         }
 
-        const { payment } = await initVendorBoostPayment({
+        const { payment, requestId } = await initVendorBoostPayment({
           durationDays: boostSelection.durationDays,
-          budgetAmount: boostSelection.amount,
+          budgetAmount: boostSelection.budgetAmount,
           locationId: boostSelection.locationId,
           renewType: boostSelection.renewType,
           sourceCampaignId: boostSelection.sourceCampaignId,
           gateway: selectedGateway,
         });
         setCheckoutPayment(payment);
+        if (requestId) {
+          saveBoostCheckoutSelection({
+            ...boostSelection,
+            paymentId: payment.id,
+            requestId,
+          }, { standalonePayment: true });
+        }
         if (selectedGateway === "flutterwave") {
           setShouldOpenFlutterwave(true);
         } else {
@@ -574,16 +583,24 @@ export default function VendorBoostReviewPayPage() {
             }
             totalAmount={amountNgn}
             isVerification={isVerification}
-            boostLine={
-              isBoostCheckout && boostSelection
-                ? {
-                  label: `${boostActionLabel} · ${boostSelection.locationLabel}`,
-                  amount: amountNgn,
-                }
-                : null
-            }
+            boostLine={null}
             beforePayButton={
-              <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+              <div className="space-y-2">
+                {isBoostCheckout && boostSelection ? (
+                  <div className="rounded-lg border border-border-light bg-muted/30 px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Daily budget</span>
+                      <span className="font-semibold text-foreground">
+                        {formatBoostBudget(boostSelection.budgetAmount)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-muted-foreground">Total cost</span>
+                      <span className="font-bold text-brand">{formatBoostBudget(amountNgn)}</span>
+                    </div>
+                  </div>
+                ) : null}
+                <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
                   className="mt-0.5 size-4 rounded border"
@@ -594,6 +611,7 @@ export default function VendorBoostReviewPayPage() {
                   After a successful card payment, save masked card details and billing as a default checkout profile.
                 </span>
               </label>
+              </div>
             }
           />
         </div>

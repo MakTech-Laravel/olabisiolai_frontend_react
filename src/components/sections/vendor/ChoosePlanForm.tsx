@@ -23,6 +23,7 @@ import { clearBoostCheckoutSelection, saveBoostCheckoutSelection } from "@/featu
 import { DynamicBoostSelectionFields } from "@/components/sections/vendor/boost/DynamicBoostSelectionFields";
 import {
   clampBoostBudget,
+  computeBoostTotal,
   DYNAMIC_BOOST_TIER_KEY,
   type DynamicBoostDuration,
 } from "@/features/boost/dynamicBoostConfig";
@@ -396,24 +397,19 @@ export default function ChoosePlanForm() {
         setFieldErrors({ boost_duration: "Select a location before adding boost." });
         return;
       }
-      if (!selectedLocation.boost?.enabled) {
-        setFieldErrors({
-          boost_duration: "Boost is not enabled for this LGA yet. Skip boost or choose another location.",
-        });
-        return;
-      }
     }
 
+    const boostDaily = clampBoostBudget(boostBudgetAmount);
     const boostCheckout =
-      includeBoost && premiumSelected && selectedLocation?.boost?.enabled
+      includeBoost && premiumSelected && selectedLocation
         ? {
           locationId: selectedLocation.id,
           locationLabel: selectedLocation.label,
           tierKey: DYNAMIC_BOOST_TIER_KEY,
           tierLabel: "Dynamic Boost",
           durationDays: boostDurationDays,
-          amount: boostBudget,
-          budgetAmount: boostBudget,
+          amount: computeBoostTotal(boostDaily, boostDurationDays),
+          budgetAmount: boostDaily,
         }
         : null;
 
@@ -618,21 +614,15 @@ export default function ChoosePlanForm() {
                 {selectedLocation.state} / {selectedLocation.city} / {selectedLocation.lga}
               </p>
 
-              {selectedLocation.boost?.enabled ? (
-                <DynamicBoostSelectionFields
-                  className="mt-4"
-                  includeBoost={includeBoost}
-                  onIncludeBoostChange={setIncludeBoost}
-                  durationDays={boostDurationDays}
-                  budgetAmount={boostBudgetAmount}
-                  onDurationChange={setBoostDurationDays}
-                  onBudgetChange={setBoostBudgetAmount}
-                />
-              ) : (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Boost is not enabled for this LGA yet. You can add boost later from your business profile.
-                </p>
-              )}
+              <DynamicBoostSelectionFields
+                className="mt-4"
+                includeBoost={includeBoost}
+                onIncludeBoostChange={setIncludeBoost}
+                durationDays={boostDurationDays}
+                budgetAmount={boostBudgetAmount}
+                onDurationChange={setBoostDurationDays}
+                onBudgetChange={setBoostBudgetAmount}
+              />
 
               <FieldErrorText id="err-boost_duration" message={fieldErrors.boost_duration} />
             </div>
