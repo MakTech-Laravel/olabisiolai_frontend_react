@@ -313,6 +313,28 @@
     display: none;
   }
 
+  .scrollbar-visible {
+    scrollbar-width: thin;
+    scrollbar-color: #b8c4d4 #f1f4f8;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-track {
+    background: #f1f4f8;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-thumb {
+    background: #b8c4d4;
+    border-radius: 999px;
+  }
+
+  .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
   body.app-bottom-nav-active {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }

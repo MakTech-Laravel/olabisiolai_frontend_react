@@ -18,6 +18,7 @@ import {
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
+import { catalogTitleFromImageFile } from '@/features/catalog/catalogMessageContext'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { showError, showSuccess } from '@/lib/sweetAlert'
@@ -138,14 +139,18 @@ export function VendorOwnerCatalogSection({
   }
 
   async function handleSave() {
-    if (!editor.name.trim()) {
-      showError('Enter a name for this catalog item.')
+    const resolvedName =
+      editor.name.trim() ||
+      (editor.image ? catalogTitleFromImageFile(editor.image) : '')
+
+    if (!resolvedName) {
+      showError('Enter a name for this catalog item or upload a photo.')
       return
     }
 
     const input: CatalogItemInput = {
       type: editor.type,
-      name: editor.name,
+      name: resolvedName,
       description: editor.description,
       priceLabel: editor.priceLabel,
       priceFrom: editor.priceFrom,
@@ -262,13 +267,18 @@ export function VendorOwnerCatalogSection({
           <Input
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            onChange={(event) =>
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null
               setEditor((current) => ({
                 ...current,
-                image: event.target.files?.[0] ?? null,
+                image: file,
                 removeImage: false,
+                name:
+                  file && (!current.item || !current.name.trim())
+                    ? catalogTitleFromImageFile(file)
+                    : current.name,
               }))
-            }
+            }}
           />
         </div>
       </div>

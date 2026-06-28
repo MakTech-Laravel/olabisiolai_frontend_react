@@ -473,6 +473,11 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                 items={catalogItems}
                 catalogLocked={catalogLocked}
                 businessId={businessId}
+                businessName={name}
+                vendorUserUuid={vendorUserUuid}
+                fromPath={pathname}
+                showMessageBusiness={showDirectMessage && capabilities.message}
+                messagesPath="/messages"
                 className="space-y-3 [&_h2]:text-[21px] [&_h2]:lg:text-3xl [&_p]:text-[14.5px] [&_p]:lg:text-base"
               />
             </section>

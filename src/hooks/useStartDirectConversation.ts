@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { startDirectConversationWithVendor } from '@/features/messaging/startDirectConversation'
 import { seedNewConversationInCache } from '@/features/messaging/conversationCache'
+import { moveCatalogDraftToConversation, peekPendingCatalogForConversation, prepareCatalogMessageWithImage } from '@/features/catalog/catalogMessageContext'
 import {
   hasPendingDirectMessageState,
   type DirectMessageLocationState,
@@ -54,6 +55,11 @@ export function useStartDirectConversation({
         if (cancelled) return
 
         seedNewConversationInCache(queryClient, conv, 'personal')
+        moveCatalogDraftToConversation(conv.uuid)
+        const catalogPending = peekPendingCatalogForConversation(conv.uuid)
+        if (catalogPending) {
+          await prepareCatalogMessageWithImage(conv.uuid, catalogPending)
+        }
 
         const next = new URLSearchParams(searchParams)
         if (inboxScope === 'personal') {

@@ -32,5 +32,29 @@ export function formatPhoneDisplay(phone: string): string {
 
 /** Digits-only string suitable for wa.me links. */
 export function phoneDigitsForUrl(phone: string): string {
-  return normalizeNigerianPhone(phone) ?? phone.replace(/\D/g, '')
+  return (
+    normalizeNigerianPhone(phone) ??
+    // normalizeBangladeshPhone(phone) ??
+    phone.replace(/\D/g, '')
+  )
+}
+
+/** Normalize to WhatsApp E.164 digits without + (e.g. 8801712345678). */
+export function normalizeBangladeshPhone(input: string): string | null {
+  const digits = input.replace(/\D/g, '')
+  if (!digits) return null
+
+  if (digits.startsWith('0') && digits.length === 11) {
+    return `880${digits.slice(1)}`
+  }
+
+  if (digits.startsWith('880') && digits.length >= 12) {
+    return digits
+  }
+
+  if (digits.length === 10 && digits.startsWith('1')) {
+    return `880${digits}`
+  }
+
+  return null
 }
