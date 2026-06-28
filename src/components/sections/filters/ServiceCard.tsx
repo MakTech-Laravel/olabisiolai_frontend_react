@@ -154,6 +154,7 @@ export default function ServiceCard({
           {vendorUserId ? (
             <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
               <FollowVendorButton
+                businessId={id}
                 followingUserId={vendorUserId}
                 initialFollowing={following}
                 listingPath={listingPath}

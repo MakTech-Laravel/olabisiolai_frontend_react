@@ -11,6 +11,7 @@ import { showError } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 type FollowVendorButtonProps = {
+  businessId: number
   followingUserId: number | null
   initialFollowing?: boolean
   disabled?: boolean
@@ -25,6 +26,7 @@ type FollowVendorButtonProps = {
 }
 
 export function FollowVendorButton({
+  businessId,
   followingUserId,
   initialFollowing = false,
   disabled = false,
@@ -45,9 +47,9 @@ export function FollowVendorButton({
 
   useEffect(() => {
     setIsFollowing(initialFollowing)
-  }, [initialFollowing, followingUserId])
+  }, [initialFollowing, followingUserId, businessId])
 
-  if (!followingUserId) {
+  if (!followingUserId || businessId <= 0) {
     return null
   }
 
@@ -63,10 +65,11 @@ export function FollowVendorButton({
 
     setLoading(true)
     try {
-      const result = await toggleFollow(followingUserId!)
+      const result = await toggleFollow(followingUserId!, businessId)
       setIsFollowing(result.following)
       onFollowChange?.(result.following, result.followers_count)
       patchListingFollowStateInCache(queryClient, {
+        businessId,
         followingUserId: followingUserId!,
         following: result.following,
         followersCount: result.followers_count,

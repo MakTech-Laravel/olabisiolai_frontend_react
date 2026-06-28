@@ -32,7 +32,7 @@ export default function VendorDashboard() {
 
   const { data: dashboard, isPending, isError, error } = useQuery({
     queryKey: ["vendor", "dashboard"],
-    queryFn: fetchVendorDashboard,
+    queryFn: () => fetchVendorDashboard(),
     staleTime: 60_000,
   });
 

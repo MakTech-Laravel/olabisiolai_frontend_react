@@ -375,6 +375,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                   <span className="font-bold text-ink">{followersCount.toLocaleString()}</span> followers
                 </p>
                 <FollowVendorButton
+                  businessId={businessId}
                   followingUserId={vendorUserId}
                   initialFollowing={isFollowingVendor}
                   listingPath={pathname}

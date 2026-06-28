@@ -8,7 +8,6 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-import { fetchNotifications } from '@/api/notifications'
 import {
   fetchVendorAnalytics,
   type VendorAnalyticsRange,
@@ -52,7 +51,7 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
 
   const dashboardQuery = useQuery({
     queryKey: ['vendor', 'dashboard', 'profile-hub', businessId],
-    queryFn: fetchVendorDashboard,
+    queryFn: () => fetchVendorDashboard(businessId),
     enabled: !locked,
     staleTime: 60_000,
   })
@@ -62,13 +61,6 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
     queryFn: () => fetchVendorAnalytics(mapInsightsRange(range), businessId),
     enabled: !locked,
     staleTime: 60_000,
-  })
-
-  const notificationsQuery = useQuery({
-    queryKey: ['notifications', 'unread', 'profile-hub'],
-    queryFn: () => fetchNotifications({ page: 1, perPage: 1 }),
-    enabled: !locked,
-    staleTime: 30_000,
   })
 
   const isLoading = !locked && (dashboardQuery.isLoading || analyticsQuery.isLoading)
@@ -83,7 +75,7 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
     follows: formatDashboardCount(followersCount),
     msgs: isLoading
       ? '—'
-      : formatDashboardCount(analyticsQuery.data?.messagesCount ?? notificationsQuery.data?.unread_count ?? 0),
+      : formatDashboardCount(analyticsQuery.data?.messagesCount ?? 0),
   }
 
   return (

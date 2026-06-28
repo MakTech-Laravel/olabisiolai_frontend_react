@@ -257,8 +257,11 @@ export function visibilitySubtitle(delta: number | null | undefined, premium: bo
     : "Keep your profile updated to attract high-intent leads.";
 }
 
-export async function fetchVendorDashboard(): Promise<VendorDashboardData> {
-  const res = await request.get("/vendor/dashboard");
+export async function fetchVendorDashboard(businessId?: number): Promise<VendorDashboardData> {
+  const res = await request.get("/vendor/dashboard", {
+    params:
+      businessId != null && businessId > 0 ? { business_id: businessId } : undefined,
+  });
   const data = unwrapData(res);
 
   const business = asRecord(data.business) ?? {};

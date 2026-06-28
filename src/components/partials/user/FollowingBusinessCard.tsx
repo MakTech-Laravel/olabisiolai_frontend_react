@@ -42,8 +42,9 @@ export function FollowingBusinessCard({
     if (unfollowing) return
     setUnfollowing(true)
     try {
-      const result = await toggleFollow(followingUserId)
+      const result = await toggleFollow(followingUserId, businessInfoId)
       patchListingFollowStateInCache(queryClient, {
+        businessId: businessInfoId,
         followingUserId,
         following: result.following,
         followersCount: result.followers_count,

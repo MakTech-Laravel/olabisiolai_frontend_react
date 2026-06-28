@@ -5,6 +5,7 @@ import { request } from '@/api/request'
 export type FollowToggleData = {
   following: boolean
   following_user_id: number
+  business_info_id?: number
   followers_count?: number
 }
 
@@ -95,9 +96,13 @@ function assertFollowSuccess<T>(body: LaravelEnvelope<T> | undefined, fallback: 
   throw new Error(body?.message || fallback)
 }
 
-export async function toggleFollow(followingUserId: number): Promise<FollowToggleData> {
+export async function toggleFollow(
+  followingUserId: number,
+  businessId: number,
+): Promise<FollowToggleData> {
   const response = await request.post<LaravelEnvelope<FollowToggleData>>('/user/follows/toggle', {
     following_user_id: followingUserId,
+    business_id: businessId,
   })
 
   return assertFollowSuccess(
