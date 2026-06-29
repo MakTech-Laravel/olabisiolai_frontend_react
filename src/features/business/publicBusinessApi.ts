@@ -504,6 +504,10 @@ export async function fetchPublicBusinessesPage(params?: {
       if (strictFiltered) {
         return parsedPage;
       }
+      // Home listing is authoritative even when empty — do not fall through to legacy 404s.
+      if (label === 'GET /businesses/home') {
+        return parsedPage;
+      }
       if (parsedPage.items.length > 0) return parsedPage;
     } catch (err) {
       lastError = err;
