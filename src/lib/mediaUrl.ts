@@ -23,7 +23,7 @@ export function apiOrigin(): string {
  */
 export function resolveMediaUrl(
   url: string | null | undefined,
-  fallback = "/images/default.jpg",
+  fallback = "https://placehold.net/600x400.png",
 ): string {
   const raw = (url ?? "").trim();
   if (!raw) {

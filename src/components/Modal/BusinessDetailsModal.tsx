@@ -151,7 +151,7 @@ export function BusinessDetailsModal({ open, onClose, businessId }: BusinessDeta
                   className="h-20 w-20 shrink-0 rounded-xl border border-gray-200 object-cover bg-gray-50"
                   onError={(event) => {
                     event.currentTarget.onerror = null;
-                    event.currentTarget.src = resolveMediaUrl("/images/default.jpg");
+                    event.currentTarget.src = resolveMediaUrl("https://placehold.net/600x400.png");
                   }}
                 />
                 <div className="min-w-0 flex-1 pr-8">

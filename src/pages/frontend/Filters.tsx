@@ -22,50 +22,6 @@ function hasGeoSearchParams(searchParams: URLSearchParams): boolean {
   return searchParams.has("lat") && searchParams.has("lng");
 }
 
-const fallbackBusiness = (
-  id: number,
-  name: string,
-  category: string,
-  location: string,
-  image: string,
-): PublicBusiness => ({
-  id,
-  name,
-  category,
-  location,
-  rating: 4.8,
-  reviews: 100,
-  description: "",
-  image,
-  logoUrl: image,
-  coverPhotoUrls: [image],
-  servicesOffered: [],
-  verified: true,
-  memberSince: null,
-  verifiedSince: null,
-  responseTimeLabel: null,
-  socialAccounts: [],
-  isFavorite: false,
-  followersCount: 0,
-  isFollowing: false,
-  boostStatus: 'none',
-  isPremium: false,
-  vendorUserId: null,
-  vendorUserUuid: null,
-  businessHours: [],
-  businessHoursDisplay: [],
-  catalogItems: [],
-  catalogLocked: true,
-  catalogCount: 0,
-});
-
-const FALLBACK_BUSINESSES: PublicBusiness[] = [
-  fallbackBusiness(1, "Premium Plumbing Services", "Plumbing", "Lagos, Ikeja", "/images/feature/1.jpg"),
-  fallbackBusiness(2, "Sparkle Clean Services", "Cleaning", "Lagos, Surulere", "/images/feature/1-1.jpg"),
-  fallbackBusiness(3, "Elite Electrical Solutions", "Electrical", "Lagos, Victoria Island", "/images/feature/1-2.jpg"),
-  fallbackBusiness(4, "Glamour Beauty Spa", "Beauty & Spa", "Lagos, Lekki", "/images/feature/1-3.jpg"),
-];
-
 const FILTERS_BASE_PATH = "/filters";
 
 export default function Filters() {
@@ -177,24 +133,10 @@ export default function Filters() {
 
   const businesses = useMemo<PublicBusiness[]>(() => {
     if (businessesQuery.isError) {
-      const hasActiveFilters =
-        filterCategoryId != null ||
-        selectedLocationId != null ||
-        hasGeoSearch ||
-        searchTerm.length > 0 ||
-        verifiedOnly;
-      return hasActiveFilters ? [] : FALLBACK_BUSINESSES;
+      return [];
     }
     return businessesQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  }, [
-    businessesQuery.data?.pages,
-    businessesQuery.isError,
-    filterCategoryId,
-    selectedLocationId,
-    hasGeoSearch,
-    searchTerm,
-    verifiedOnly,
-  ]);
+  }, [businessesQuery.data?.pages, businessesQuery.isError]);
   const businessesLoading = businessesQuery.isPending;
 
   const handleSelectCategory = (categoryId: number | null) => {
