@@ -6,7 +6,7 @@ import {
 
 type RawRecord = Record<string, unknown>;
 
-export type VendorAnalyticsRange = "30d" | "quarter" | "yearly";
+export type VendorAnalyticsRange = "7d" | "30d" | "quarter" | "yearly";
 
 export type VendorAnalyticsStat = {
   title: string;
@@ -36,6 +36,13 @@ export type VendorAnalyticsData = {
   rangeLabel: string;
   stats: VendorAnalyticsStat[];
   messagesCount: number;
+  followersCount: number;
+  insightDeltas: {
+    views: number | null;
+    leads: number | null;
+    followers: number | null;
+    messages: number | null;
+  };
   trafficTrend: {
     viewsHeights: number[];
     enquiriesHeights: number[];
@@ -138,6 +145,15 @@ function buildConicGradient(channels: VendorAnalyticsChannel[]): string {
   }
 
   return `conic-gradient(${stops.join(", ")})`;
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 function parseStats(raw: RawRecord): VendorAnalyticsStat[] {
@@ -286,6 +302,13 @@ export async function fetchVendorAnalytics(
     rangeLabel: pickString(data, ["range_label"], "Last 30 Days"),
     stats: parseStats(data),
     messagesCount: asNumber(statsRaw.messages_count),
+    followersCount: asNumber(statsRaw.followers_count),
+    insightDeltas: {
+      views: asNullableNumber(statsRaw.profile_views_delta_percent),
+      leads: asNullableNumber(statsRaw.total_enquiries_delta_percent),
+      followers: asNullableNumber(statsRaw.followers_delta_percent),
+      messages: asNullableNumber(statsRaw.messages_delta_percent),
+    },
     trafficTrend: {
       viewsHeights,
       enquiriesHeights,

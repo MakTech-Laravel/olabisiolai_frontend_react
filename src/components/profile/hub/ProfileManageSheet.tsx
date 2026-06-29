@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
   ChevronRight,
@@ -24,6 +24,7 @@ import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } fr
 import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
 import { VENDOR_PREMIUM_INFO_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { alert, showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -100,6 +101,33 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   const [isDeleting, setIsDeleting] = useState(false)
   const isPremiumActive = business?.isPremiumActive === true
   const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
+
+  const subscriptionQuery = useQuery({
+    queryKey: ['vendor', 'subscription', 'status', 'profile-manage', business?.id],
+    queryFn: () => fetchSubscriptionStatus({ businessId: business!.id }),
+    enabled: open && business !== null && isPremiumActive,
+    staleTime: 60_000,
+  })
+
+  const premiumSubscription = subscriptionQuery.data?.subscription
+  const premiumRenewalLabel = (() => {
+    if (!premiumSubscription?.expires_at) {
+      return 'Analytics & badge active'
+    }
+
+    const daysRemaining =
+      typeof premiumSubscription.days_remaining === 'number' ? premiumSubscription.days_remaining : null
+
+    if (daysRemaining !== null && daysRemaining > 0) {
+      return `Renews ${premiumSubscription.expires_at} · ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`
+    }
+
+    if (premiumSubscription.is_expired) {
+      return `Expired ${premiumSubscription.expires_at}`
+    }
+
+    return `Renews ${premiumSubscription.expires_at}`
+  })()
 
   const publicUrl = business ? `${appOrigin()}${businessProfilePath(business.id)}` : ''
 
@@ -277,18 +305,18 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   }
                 />
                 {isPremiumActive ? (
-                  <div className="flex w-full items-center gap-3.5 border-b border-border-light px-4 py-[15px]">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]">
-                      <Crown className="size-5" strokeWidth={2} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <b className="block text-[15px] font-semibold text-ink">Premium</b>
-                      <small className="block text-[12.5px] text-chat-meta">Analytics & badge active</small>
-                    </span>
-                    <span className="rounded-full bg-[#E7F6EF] px-2.5 py-1 text-[11px] font-bold text-[#13a36b]">
-                      Active
-                    </span>
-                  </div>
+                  <ManageToolRow
+                    iconClass="bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]"
+                    icon={<Crown className="size-5" strokeWidth={2} />}
+                    title="Premium"
+                    subtitle={premiumRenewalLabel}
+                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_INFO_PATH)}
+                    trailing={
+                      <span className="rounded-full bg-[#E7F6EF] px-2.5 py-1 text-[11px] font-bold text-[#13a36b]">
+                        {premiumSubscription?.is_expired ? 'Expired' : 'Active'}
+                      </span>
+                    }
+                  />
                 ) : (
                   <ManageToolRow
                     iconClass="bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]"
