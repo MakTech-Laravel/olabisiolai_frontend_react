@@ -46,23 +46,41 @@ export function BusinessImageLightbox({
   const pinchStartDistance = React.useRef<number | null>(null);
   const pinchStartScale = React.useRef(1);
   const dragStart = React.useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const imageRef = React.useRef<HTMLImageElement | null>(null);
 
   const total = photos.length;
   const currentSrc = photos[index] ?? "";
+
+  const markImageLoaded = React.useCallback(() => {
+    const img = imageRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+      return true;
+    }
+    return false;
+  }, []);
 
   React.useEffect(() => {
     if (!open) return;
     setIndex(clamp(initialIndex, 0, Math.max(0, photos.length - 1)));
     setScale(1);
     setTranslate({ x: 0, y: 0 });
-    setLoaded(false);
   }, [open, initialIndex, photos.length]);
 
   React.useEffect(() => {
     setScale(1);
     setTranslate({ x: 0, y: 0 });
-    setLoaded(false);
-  }, [index]);
+  }, [index, currentSrc]);
+
+  React.useLayoutEffect(() => {
+    if (!open || !currentSrc) {
+      setLoaded(false);
+      return;
+    }
+    if (!markImageLoaded()) {
+      setLoaded(false);
+    }
+  }, [open, currentSrc, markImageLoaded]);
 
   const goPrev = React.useCallback(() => {
     if (total <= 1) return;
@@ -247,6 +265,12 @@ export function BusinessImageLightbox({
           ) : null}
           <img
             key={currentSrc}
+            ref={(node) => {
+              imageRef.current = node;
+              if (node?.complete && node.naturalWidth > 0) {
+                setLoaded(true);
+              }
+            }}
             src={currentSrc}
             alt={`${businessName ?? "Business"} photo ${index + 1}`}
             className={cn(
@@ -258,6 +282,7 @@ export function BusinessImageLightbox({
             }}
             draggable={false}
             onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
             onDoubleClick={handleDoubleClick}
           />
         </div>
