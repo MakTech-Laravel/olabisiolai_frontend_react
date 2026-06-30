@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { BusinessCatalogImage } from "@/components/business/BusinessCatalogImage";
 import { Card } from "@/components/ui/card";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 import type { VendorDashboardCardProps } from "../dashboardTypes";
@@ -40,13 +41,11 @@ export function DashboardPortfolioCard({ dashboard }: VendorDashboardCardProps) 
 
 function PortfolioThumb({ src, index }: { src: string; index: number }) {
   return (
-    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-muted sm:h-20 sm:w-20">
-      <img
-        src={resolveMediaUrl(src, fallbackImg)}
-        alt={`Portfolio ${index + 1}`}
-        className="h-full w-full object-cover"
-        loading="lazy"
-      />
-    </div>
+    <BusinessCatalogImage
+      src={resolveMediaUrl(src, fallbackImg)}
+      alt={`Portfolio ${index + 1}`}
+      className="size-16 shrink-0 rounded-md border sm:size-20"
+      aspectClassName="aspect-square size-16 sm:size-20"
+    />
   );
 }

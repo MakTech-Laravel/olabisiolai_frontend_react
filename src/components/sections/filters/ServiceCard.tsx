@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { MapPin, Star } from "lucide-react";
 
+import { BusinessCatalogImage } from "@/components/business/BusinessCatalogImage";
 import {
   BusinessListingCardTitle,
   BusinessListingStatusBadges,
@@ -9,6 +10,7 @@ import {
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
+import { businessListingImageClass } from "@/lib/businessImageLayout";
 import { businessProfilePath } from "@/lib/businessProfile";
 import type { SocialAccount } from "@/features/business/socialAccounts";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
@@ -127,12 +129,8 @@ export default function ServiceCard({
       )}
     >
       <div className="w-full shrink-0 xl:w-2/5">
-        <div className="relative aspect-[16/10] w-full overflow-hidden xl:aspect-auto xl:min-h-[220px] xl:h-full">
-          <img
-            src={image}
-            alt={name}
-            className="absolute inset-0 size-full object-cover"
-          />
+        <div className="relative w-full overflow-hidden xl:min-h-[220px] xl:h-full">
+          <BusinessCatalogImage src={image} alt={name} className={cn(businessListingImageClass, "xl:min-h-[220px]")} />
           <BusinessListingStatusBadges
             isPremium={isPremium}
             isBoosted={isBoosted}

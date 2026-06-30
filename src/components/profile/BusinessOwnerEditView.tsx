@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { BadgeCheck, Globe, Lock, MapPin, Phone, Star, type LucideIcon } from 'lucide-react'
 
+import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { BusinessHoursDisplay } from '@/components/business/BusinessHoursDisplay'
 import { SocialPlatformIcon } from '@/components/business/SocialPlatformIcon'
 import type { PublicBusiness } from '@/features/business/publicBusinessApi'
@@ -101,9 +102,12 @@ function ContactRowIcon({ icon }: { icon: ContactRow['icon'] }) {
 
 function AspectCover({ src, className }: { src: string; className?: string }) {
   return (
-    <div className={cn('relative isolate overflow-hidden bg-border-light', className)}>
-      <img src={src} alt="" className="absolute inset-0 block size-full object-cover" loading="lazy" />
-    </div>
+    <BusinessCatalogImage
+      src={src}
+      alt=""
+      className={className}
+      aspectClassName="aspect-[4/3] w-full max-h-[min(540px,72vh)]"
+    />
   )
 }
 

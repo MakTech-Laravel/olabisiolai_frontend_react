@@ -5,7 +5,9 @@ import { Link, useLocation } from 'react-router-dom'
 
 import { toggleFollow } from '@/api/follows'
 import { patchListingFollowStateInCache } from '@/features/follows/patchListingFollowCache'
+import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { DirectMessageButton } from '@/components/business/DirectMessageButton'
+import { businessListingImageClass } from '@/lib/businessImageLayout'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 import { showError } from '@/lib/sweetAlert'
@@ -60,9 +62,9 @@ export function FollowingBusinessCard({
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border-light bg-card shadow-sm">
-      <div className="relative h-48 bg-muted">
-        <Link to={profileTo} className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
-          <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+      <div className="relative bg-muted">
+        <Link to={profileTo} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+          <BusinessCatalogImage src={image} alt={title} className={businessListingImageClass} />
         </Link>
         <button
           type="button"

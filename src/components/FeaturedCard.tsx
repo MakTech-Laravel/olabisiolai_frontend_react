@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { MapPin, Star } from "lucide-react";
 
+import { BusinessCatalogImage } from "@/components/business/BusinessCatalogImage";
 import {
   BusinessListingCardTitle,
   BusinessListingStatusBadges,
@@ -9,6 +10,7 @@ import {
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
+import { businessListingImageClass } from "@/lib/businessImageLayout";
 import { businessProfilePath } from "@/lib/businessProfile";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
 import type { SocialAccount } from "@/features/business/socialAccounts";
@@ -127,10 +129,11 @@ export function FeaturedCard({
       )}
     >
       <div className="relative">
-        <img
+        <BusinessCatalogImage
           src={image}
-          alt="Business Image"
-          className="w-full h-48 object-cover"
+          alt={name}
+          className={businessListingImageClass}
+          priority={false}
         />
 
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">

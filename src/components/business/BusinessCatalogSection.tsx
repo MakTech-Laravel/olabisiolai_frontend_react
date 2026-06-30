@@ -3,6 +3,7 @@ import { Crown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { CatalogItemDetailSheet } from '@/components/business/CatalogItemDetailSheet'
+import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import {
   formatCatalogPrice,
   type BusinessCatalogItem,
@@ -156,7 +157,7 @@ export function BusinessCatalogSection({
                 className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-transform transition-shadow duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
               >
                 <div
-                  className="relative h-[100px]"
+                  className="relative"
                   style={{
                     background: item.imageUrl
                       ? undefined
@@ -164,8 +165,10 @@ export function BusinessCatalogSection({
                   }}
                 >
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt="" className="size-full object-cover" loading="lazy" />
-                  ) : null}
+                    <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" />
+                  ) : (
+                    <div className="aspect-[4/3] w-full" />
+                  )}
                   <span
                     className={cn(
                       'absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',

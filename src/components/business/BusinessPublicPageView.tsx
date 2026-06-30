@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, BadgeCheck, CheckCircle2, Clock, Crown, MapPin, Sparkles, Star } from "lucide-react";
 
+import { BusinessCatalogImage } from "@/components/business/BusinessCatalogImage";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { BusinessCatalogSection } from "@/components/business/BusinessCatalogSection";
 import {
@@ -38,20 +39,6 @@ import {
 } from "@/lib/businessPageLayout";
 import { cn } from "@/lib/utils";
 import type { BusinessCatalogItem } from "@/features/catalog/businessCatalogApi";
-
-function AspectCover({ src, className }: { src: string; className?: string }) {
-  return (
-    <div className={cn("relative isolate overflow-hidden bg-border-light", className)}>
-      <img
-        src={src}
-        alt=""
-        className="absolute inset-0 block size-full object-cover"
-        loading="lazy"
-        decoding="async"
-      />
-    </div>
-  );
-}
 
 function StarRow({ rating = 0, className, size = "md" }: { rating?: number; className?: string; size?: "sm" | "md" }) {
   const clamped = Math.min(5, Math.max(0, rating));
@@ -135,6 +122,7 @@ type BusinessPublicPageViewProps = {
   showDirectMessage?: boolean;
   onFollowersChange: (count: number, following?: boolean) => void;
   onOpenPhotos: () => void;
+  onOpenPhotoAt: (index: number) => void;
   onWriteReview: () => void;
   hideBackLink?: boolean;
 };
@@ -181,6 +169,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     showDirectMessage = false,
     onFollowersChange,
     onOpenPhotos,
+    onOpenPhotoAt,
     onWriteReview,
     hideBackLink = false,
   } = props;
@@ -310,7 +299,14 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
               <BusinessHeroSkeleton />
             ) : (
               <>
-                <AspectCover src={heroCover} className={businessPageHero} />
+                <BusinessCatalogImage
+                  src={heroCover}
+                  alt={`${name} cover photo`}
+                  className={businessPageHero}
+                  aspectClassName="aspect-[4/3] w-full max-h-[min(540px,72vh)]"
+                  priority
+                  onClick={() => onOpenPhotoAt(0)}
+                />
                 <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-black/5 lg:rounded-2xl" aria-hidden />
                 {isPremium ? (
                   <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-[0_4px_12px_rgba(154,107,31,0.4)] lg:left-5 lg:top-5">
@@ -335,7 +331,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                         key={`${src}-thumb-${index}`}
                         className="size-[46px] overflow-hidden rounded-[11px] border-2 border-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] lg:size-[52px]"
                       >
-                        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+                        <img src={src} alt="" className="size-full object-contain" loading="lazy" />
                       </span>
                     ))}
                     {coverPhotos.length > 3 ? (
@@ -537,19 +533,18 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
               </div>
               <div className={businessPagePhotoGrid}>
                 {coverPhotos.slice(0, 5).map((src, index) => (
-                  <button
+                  <BusinessCatalogImage
                     key={`${src}-${index}`}
-                    type="button"
-                    className="relative aspect-square overflow-hidden rounded-[13px] transition-transform hover:scale-[1.02] active:scale-[0.98] lg:rounded-xl"
-                    onClick={onOpenPhotos}
-                  >
-                    <img src={src} alt="" className="size-full object-cover" loading="lazy" />
-                  </button>
+                    src={src}
+                    alt={`${name} photo ${index + 1}`}
+                    className="rounded-[13px] lg:rounded-xl"
+                    onClick={() => onOpenPhotoAt(index)}
+                  />
                 ))}
                 {coverPhotos.length > 5 ? (
                   <button
                     type="button"
-                    className="grid aspect-square place-items-center rounded-[13px] bg-[#dfe5ee] text-[15px] font-bold text-body-secondary transition-colors hover:bg-[#d0d8e4] lg:rounded-xl"
+                    className="grid place-items-center rounded-[13px] bg-[#dfe5ee] text-[15px] font-bold text-body-secondary transition-colors hover:bg-[#d0d8e4] lg:rounded-xl"
                     onClick={onOpenPhotos}
                   >
                     +{coverPhotos.length - 5}
