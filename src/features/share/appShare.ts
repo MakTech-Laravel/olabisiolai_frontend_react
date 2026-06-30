@@ -50,7 +50,7 @@ export async function shareGidiraApp(): Promise<void> {
 }
 
 export async function shareInviteVendor(): Promise<void> {
-  const url = `${appOrigin()}/trade#choose-your-plan`
+  const url = `${appOrigin()}/vendor/choose-your-plan`
   await shareLink({
     title: 'Join Gidira as a vendor',
     text: 'List your business on Gidira and reach more customers.',

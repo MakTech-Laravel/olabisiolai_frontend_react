@@ -41,7 +41,7 @@ export const vendorRoutes: RouteObject = {
   ),
   children: [
     { path: "/vendor/dashboard", element: vendorSuspensePage(VendorProfile) },
-    { path: "/vendor/profile", element: vendorSuspensePage(VendorProfile) },
+    { path: "/vendor/profile", element: <Navigate to="/user/profile" replace /> },
     { path: "/vendor/leads", element: vendorSuspensePage(VendorLeads) },
     { path: "/vendor/notifications", element: vendorSuspensePage(VendorNotifications) },
     { path: "/vendor/verification", element: vendorSuspensePage(VendorVerification) },

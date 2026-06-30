@@ -25,7 +25,6 @@ export default function Featured() {
     data: businesses,
     isLoading,
     isError,
-    error,
   } = useQuery({
     queryKey: ["businesses", "home"],
     queryFn: () => fetchPublicBusinesses(),
@@ -34,6 +33,7 @@ export default function Featured() {
   });
 
   const list = businesses ?? [];
+  const showEmpty = !isLoading && (list.length === 0 || isError);
 
   return (
     <div className="lg:mb-20 mb-12 bg-bg-section">
@@ -49,16 +49,15 @@ export default function Featured() {
                 <SkeletonCard key={i} />
               ))}
             </div>
-          ) : isError ? (
-            <p className="text-center text-destructive font-inter py-12">
-              {import.meta.env.DEV
-                ? `Failed to load businesses: ${(error as Error)?.message ?? "Unknown error"}`
-                : "Unable to load businesses. Please try again later."}
-            </p>
-          ) : list.length === 0 ? (
-            <p className="text-center text-text-secondary font-inter py-12">
-              No businesses available at the moment.
-            </p>
+          ) : showEmpty ? (
+            <div className="py-12 text-center font-inter">
+              <p className="text-lg text-text-primary">
+                No featured businesses yet.
+              </p>
+              <p className="mt-2 text-sm text-text-secondary">
+                We are onboarding vendors — check back soon or browse all listings below.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 items-stretch gap-12 md:grid-cols-2 lg:grid-cols-3">
               {list.slice(0, 6).map((business) => (
@@ -78,6 +77,7 @@ export default function Featured() {
                   logoUrl={business.logoUrl}
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
+                  isPremium={business.isPremium}
                   boostStatus={business.boostStatus}
                   isFollowing={business.isFollowing}
                   followersCount={business.followersCount}

@@ -2,9 +2,11 @@ import * as React from 'react'
 import { MoreHorizontal, Pencil } from 'lucide-react'
 
 import { AttachmentPreview } from '@/components/chat/AttachmentPreview'
+import { CatalogEnquiryCard } from '@/components/chat/CatalogEnquiryCard'
 import { MessageStatusIcon } from '@/components/chat/MessageStatusIcon'
 import { ReplyQuote } from '@/components/chat/ReplyQuote'
 import { Avatar } from '@/components/ui/Avatar'
+import { parseCatalogEnquiryBody } from '@/features/catalog/catalogMessageContext'
 import type { Message } from '@/types/message'
 import { cn } from '@/lib/utils'
 import { formatMessageTime } from '@/utils/formatters'
@@ -42,6 +44,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   const bubbleRef = React.useRef<HTMLDivElement>(null)
 
   const replyParent = parentMessage ?? message.parent ?? null
+  const catalogEnquiry = parseCatalogEnquiryBody(message.body)
   const displayStatus = isOwn
     ? resolveOwnMessageDisplayStatus(message, peerIsOnline)
     : message.status
@@ -86,13 +89,13 @@ export const MessageBubble = React.memo(function MessageBubble({
       ) : null}
       <div
         className={cn(
-          'flex min-w-0 w-full max-w-[min(100%,18rem)] flex-col sm:max-w-md',
-          isOwn ? 'ml-auto items-end' : 'mr-auto',
+          'flex min-w-0 max-w-[88%] flex-col sm:max-w-md md:max-w-lg lg:max-w-xl',
+          isOwn ? 'ml-auto items-end' : 'mr-auto items-start',
         )}
       >
         <div
           className={cn(
-            'w-full rounded-2xl p-2 shadow-sm sm:p-3',
+            'max-w-full rounded-2xl p-2 shadow-sm sm:p-3',
             isOwn
               ? 'rounded-br-md bg-chat-accent text-text-white sm:rounded-br-2xl'
               : 'rounded-bl-md bg-chat-bubble-them text-ink sm:rounded-bl-2xl',
@@ -111,12 +114,19 @@ export const MessageBubble = React.memo(function MessageBubble({
               onScrollToParent={onScrollToParent}
             />
           ) : null}
-          {message.body ? (
-            <p className="whitespace-pre-wrap wrap-anywhere text-sm leading-5">
+          {catalogEnquiry?.userText ? (
+            <p className="break-words whitespace-pre-wrap text-sm leading-5 [overflow-wrap:anywhere]">
+              {catalogEnquiry.userText}
+            </p>
+          ) : message.body && !catalogEnquiry ? (
+            <p className="break-words whitespace-pre-wrap text-sm leading-5 [overflow-wrap:anywhere]">
               {message.body}
             </p>
           ) : null}
           <AttachmentPreview items={message.attachments} />
+          {catalogEnquiry && !(message.attachments?.length ?? 0) ? (
+            <CatalogEnquiryCard catalog={catalogEnquiry.catalog} isOwn={isOwn} />
+          ) : null}
           {message.edited_at ? (
             <p
               className={cn(

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { FileImage, FileText, Film, Paperclip, Send, Smile, X } from 'lucide-react'
 
+import { CatalogComposerPreview } from '@/components/chat/CatalogComposerPreview'
 import { EmojiPicker } from '@/components/chat/EmojiPicker'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { TYPING_DEBOUNCE_MS, MESSAGING_ATTACHMENT_MAX_COUNT } from '@/constants/config'
+import type { CatalogMessagePayload } from '@/features/catalog/catalogMessageContext'
 import type { Message } from '@/types/message'
 import { cn } from '@/lib/utils'
 import { getMessagePreviewText } from '@/utils/messageUtils'
@@ -55,6 +57,9 @@ interface MessageInputProps {
   onFiles: (files: FileList | File[] | null) => void
   pendingFiles?: File[]
   onRemoveFile?: (index: number) => void
+  catalogAttachment?: CatalogMessagePayload | null
+  catalogImageLoading?: boolean
+  onDismissCatalog?: () => void
 }
 
 export function MessageInput({
@@ -70,12 +75,25 @@ export function MessageInput({
   onFiles,
   pendingFiles = [],
   onRemoveFile,
+  catalogAttachment = null,
+  catalogImageLoading = false,
+  onDismissCatalog,
 }: MessageInputProps) {
   const [emojiOpen, setEmojiOpen] = React.useState(false)
   const emojiAnchorRef = React.useRef<HTMLDivElement>(null)
   const typingTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const fileRef = React.useRef<HTMLInputElement>(null)
   const pendingAcceptRef = React.useRef<string>(ATTACHMENT_OPTIONS[3].accept)
+
+  const catalogImageFile = React.useMemo(
+    () => pendingFiles.find((file) => file.type.startsWith('image/')) ?? null,
+    [pendingFiles],
+  )
+
+  const extraFiles = React.useMemo(
+    () => pendingFiles.filter((file) => file !== catalogImageFile),
+    [pendingFiles, catalogImageFile],
+  )
 
   const handleChange = (v: string) => {
     onChange(v)
@@ -107,7 +125,9 @@ export function MessageInput({
 
   const canSend =
     !disabled &&
-    (editingMessage ? value.trim().length > 0 : value.trim().length > 0 || pendingFiles.length > 0)
+    (editingMessage
+      ? value.trim().length > 0
+      : value.trim().length > 0 || pendingFiles.length > 0 || Boolean(catalogAttachment))
 
   return (
     <div className="relative">
@@ -129,20 +149,31 @@ export function MessageInput({
           </button>
         </div>
       ) : null}
-      {pendingFiles.length > 0 ? (
+
+      {catalogAttachment && onDismissCatalog ? (
+        <CatalogComposerPreview
+          catalog={catalogAttachment}
+          imageFile={catalogImageFile}
+          imageLoading={catalogImageLoading}
+          onDismiss={onDismissCatalog}
+        />
+      ) : null}
+
+      {extraFiles.length > 0 ? (
         <div className="flex flex-wrap gap-2 border-t border-chat-border px-4 py-2">
-          {pendingFiles.map((f, i) => (
+          {extraFiles.map((f, i) => (
             <button
               key={`${f.name}-${f.size}-${i}`}
               type="button"
               className="rounded-lg bg-muted px-2 py-1 text-xs"
-              onClick={() => onRemoveFile?.(i)}
+              onClick={() => onRemoveFile?.(pendingFiles.indexOf(f))}
             >
               {f.name} ×
             </button>
           ))}
         </div>
       ) : null}
+
       <footer className="flex items-end gap-2 border-t border-chat-border-footer bg-card px-3 py-3 backdrop-blur-sm sm:gap-3 sm:px-6 sm:py-4">
         <input
           ref={fileRef}
@@ -193,7 +224,11 @@ export function MessageInput({
             value={value}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Type your message here..."
+            placeholder={
+              catalogAttachment
+                ? 'Add a message about this item…'
+                : 'Type your message here...'
+            }
             disabled={disabled}
             className="max-h-32 min-h-14 overflow-y-auto rounded-2xl border-0 bg-chat-input-bg py-3 pl-5 pr-12 text-sm text-ink scrollbar-hide placeholder:text-placeholder-text focus-visible:ring-2 focus-visible:ring-chat-accent-ring"
           />

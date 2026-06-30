@@ -65,7 +65,6 @@ function reverbPortResolved(scheme: 'http' | 'https'): number {
 const _reverbScheme = reverbSchemeResolved()
 
 export const messagingEnv = {
-  broadcastingAuthUrl: `${getApiOrigin()}/broadcasting/auth`,
   reverbKey: viteString('VITE_REVERB_APP_KEY'),
   reverbHost: normalizeReverbHost(viteString('VITE_REVERB_HOST')),
   reverbPort: reverbPortResolved(_reverbScheme),

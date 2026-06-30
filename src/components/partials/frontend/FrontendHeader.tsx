@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import {
+  Bell,
   CircleUserRound,
   Home,
+  LayoutGrid,
   LocateFixed,
   LogIn,
   LogOut,
   Search,
-  Settings,
-  TrendingUp,
   User,
   X,
 } from "lucide-react";
@@ -58,15 +58,29 @@ function resolveUserAvatar(user: unknown): string {
   return DEFAULT_HEADER_AVATAR;
 }
 
+function ActivityBellLink() {
+  return (
+    <Button
+      asChild
+      type="button"
+      variant="ghost"
+      className="relative h-10 w-10 rounded-xl p-0 text-foreground hover:bg-[#F1F5F9]"
+      aria-label="Notifications"
+    >
+      <Link to="/user/activity">
+        <Bell className="size-5" />
+      </Link>
+    </Button>
+  );
+}
+
 function HeaderToolbar({
   isLightHeader,
-  showTradeNav,
   dashboardPath,
   showLocationPicker,
   onOpenLocationMap,
 }: {
   isLightHeader: boolean;
-  showTradeNav: boolean;
   dashboardPath: string;
   showLocationPicker: boolean;
   onOpenLocationMap: () => void;
@@ -74,6 +88,7 @@ function HeaderToolbar({
   const { isAuthenticated, logout, user } = useAuth();
   const avatarSrc = resolveUserAvatar(user);
   const isVendor = hasAnyRole(user, "vendor");
+  const showActivityBell = isAuthenticated && hasAnyRole(user, ["user", "vendor"]);
   const profilePath = "/user/profile";
 
   const regionTrigger = cn(
@@ -96,19 +111,7 @@ function HeaderToolbar({
         </Button>
       ) : null}
 
-      {showTradeNav ? (
-        <Button
-          asChild
-          type="button"
-          variant="secondary"
-          className="h-11 rounded-lg bg-brand-red px-6 text-base font-medium text-ice shadow-none hover:bg-brand-red/90"
-        >
-          <Link to="/trade" className="inline-flex items-center gap-2">
-            <TrendingUp className="size-5 shrink-0" aria-hidden />
-            Trade
-          </Link>
-        </Button>
-      ) : null}
+      {showActivityBell ? <ActivityBellLink /> : null}
 
       {isAuthenticated ? (
         <DropdownMenu>
@@ -141,15 +144,15 @@ function HeaderToolbar({
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to={profilePath} className="flex items-center gap-2">
-                <User className="size-4" aria-hidden />
-                Profile
+              <Link to={dashboardPath} className="flex items-center gap-2">
+                <LayoutGrid className="size-4" aria-hidden />
+                Dashboard
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to={dashboardPath} className="flex items-center gap-2">
-                <Settings className="size-4" aria-hidden />
-                Dashboard
+              <Link to={profilePath} className="flex items-center gap-2">
+                <User className="size-4" aria-hidden />
+                Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -182,7 +185,6 @@ function HeaderToolbar({
 }
 
 function MobileMenu({
-  showTradeNav,
   isAuthenticated,
   logout,
   avatarSrc,
@@ -190,7 +192,6 @@ function MobileMenu({
   isVendor,
   profilePath,
 }: {
-  showTradeNav: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
   avatarSrc: string;
@@ -241,52 +242,46 @@ function MobileMenu({
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          {isAuthenticated ? (
+            <DropdownMenuItem asChild className="rounded-lg">
+              <Link to={dashboardPath} className="flex items-center gap-2 py-2">
+                <LayoutGrid className="size-4" aria-hidden />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/" className="flex items-center gap-2 py-2">
               <Home className="size-4" aria-hidden />
               Home
             </Link>
           </DropdownMenuItem>
-          {showTradeNav ? (
-            <DropdownMenuItem asChild className="rounded-lg">
-              <Link to="/trade" className="flex items-center gap-2 py-2">
-                <TrendingUp className="size-4" aria-hidden />
-                Trade
-              </Link>
-            </DropdownMenuItem>
-          ) : null}
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/filters" className="flex items-center gap-2 py-2">
               <Search className="size-4" aria-hidden />
               Browse Businesses
             </Link>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        {isAuthenticated ? (
-          <>
+          {isAuthenticated ? (
             <DropdownMenuItem asChild className="rounded-lg">
               <Link to={profilePath} className="flex items-center gap-2 py-2">
                 <User className="size-4" aria-hidden />
                 Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild className="rounded-lg">
-              <Link to={dashboardPath} className="flex items-center gap-2 py-2">
-                <Settings className="size-4" aria-hidden />
-                Dashboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                void logout();
-              }}
-              className="rounded-lg text-brand-red focus:text-brand-red"
-            >
-              <LogOut className="size-4" aria-hidden />
-              Logout
-            </DropdownMenuItem>
-          </>
+          ) : null}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        {isAuthenticated ? (
+          <DropdownMenuItem
+            onSelect={() => {
+              void logout();
+            }}
+            className="rounded-lg text-brand-red focus:text-brand-red"
+          >
+            <LogOut className="size-4" aria-hidden />
+            Logout
+          </DropdownMenuItem>
         ) : (
           <DropdownMenuItem asChild className="rounded-lg">
             <Link to="/login/phone" className="flex items-center gap-2 py-2">
@@ -300,23 +295,23 @@ function MobileMenu({
   );
 }
 
-export function FrontendHeader() {
+export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: boolean }) {
   const { pathname } = useLocation();
   const [locationMapOpen, setLocationMapOpen] = useState(false);
   const { isAuthenticated, logout, user } = useAuth();
   const primaryRole = getUserRoles(user)[0];
   const dashboardPath = primaryRole ? getRoleDashboard(primaryRole) ?? "/user/dashboard" : "/user/dashboard";
   const isVendor = hasAnyRole(user, "vendor");
+  const showActivityBell = isAuthenticated && hasAnyRole(user, ["user", "vendor"]);
   const profilePath = "/user/profile";
   const isLightHeader =
     pathname === "/" ||
-    pathname === "/trade" ||
     pathname === "/service" ||
     pathname.startsWith("/businesses/") ||
     pathname === "/messages" ||
+    pathname.startsWith("/user/messages") ||
     pathname === "/reviews";
-  const showTradeNav = pathname !== "/trade";
-  const showHeaderSearch = pathname !== "/";
+  const showHeaderSearch = pathname !== "/" && !(compactOnMobile && pathname.startsWith("/user/messages"));
   const isFiltersPage = pathname === "/filters";
   const showLocationPicker = !isFiltersPage;
   const avatarSrc = resolveUserAvatar(user);
@@ -330,13 +325,13 @@ export function FrontendHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b",
+        "sticky top-0 z-40 shrink-0 border-b",
         isLightHeader
           ? "border-border-light bg-white text-foreground shadow-[0_1px_0_0_rgb(0_0_0_/0.04)]"
           : "border-border bg-background/90 text-foreground backdrop-blur-md",
       )}
     >
-      <div className={cn(container, "flex flex-col gap-3 py-3 md:hidden")}>
+      <div className={cn(container, "flex flex-col gap-3 py-3 md:hidden", compactOnMobile && "gap-2 py-2")}>
         <div className="flex items-center justify-between gap-3">
           <Link to="/" className="inline-flex shrink-0 items-center">
             <img
@@ -348,15 +343,17 @@ export function FrontendHeader() {
               className="block h-8 w-auto"
             />
           </Link>
-          <MobileMenu
-            showTradeNav={showTradeNav}
-            isAuthenticated={isAuthenticated}
-            logout={logout}
-            avatarSrc={avatarSrc}
-            dashboardPath={dashboardPath}
-            isVendor={isVendor}
-            profilePath={profilePath}
-          />
+          <div className="flex items-center gap-1">
+            {showActivityBell ? <ActivityBellLink /> : null}
+            <MobileMenu
+              isAuthenticated={isAuthenticated}
+              logout={logout}
+              avatarSrc={avatarSrc}
+              dashboardPath={dashboardPath}
+              isVendor={isVendor}
+              profilePath={profilePath}
+            />
+          </div>
         </div>
         {showHeaderSearch ? <GlobalBusinessSearch variant="header" className="min-w-0 w-full" /> : null}
       </div>
@@ -386,7 +383,6 @@ export function FrontendHeader() {
 
         <HeaderToolbar
           isLightHeader={isLightHeader}
-          showTradeNav={showTradeNav}
           dashboardPath={dashboardPath}
           showLocationPicker={showLocationPicker}
           onOpenLocationMap={() => setLocationMapOpen(true)}

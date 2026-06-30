@@ -1,4 +1,13 @@
+import type { QueryClient } from '@tanstack/react-query';
+
 import { request } from '@/api/request';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
+
+export type PublicReviewImage = {
+  id: number;
+  url: string;
+  original_filename?: string;
+};
 
 export type PublicReview = {
   id: number;
@@ -7,6 +16,7 @@ export type PublicReview = {
   rating: number;
   review_text: string;
   created_at: string;
+  images: PublicReviewImage[];
 };
 
 export type ReviewRatingDistribution = {
@@ -38,6 +48,27 @@ export type FetchBusinessReviewsOptions = {
   sort?: 'recent' | 'top';
 };
 
+function mapReviewImages(raw: unknown): PublicReviewImage[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry): PublicReviewImage | null => {
+      const row = entry as Record<string, unknown>;
+      const url = resolveMediaUrl(String(row.url ?? ''), '');
+      if (!url) return null;
+
+      const image: PublicReviewImage = {
+        id: Number(row.id ?? 0),
+        url,
+      };
+      if (row.original_filename) {
+        image.original_filename = String(row.original_filename);
+      }
+      return image;
+    })
+    .filter((image): image is PublicReviewImage => image !== null);
+}
+
 function mapReviewRow(item: Record<string, unknown>): PublicReview {
   return {
     id: Number(item.id ?? 0),
@@ -48,7 +79,20 @@ function mapReviewRow(item: Record<string, unknown>): PublicReview {
     rating: Number(item.rating ?? 5),
     review_text: String(item.review_text ?? ''),
     created_at: String(item.created_at ?? ''),
+    images: mapReviewImages(item.images),
   };
+}
+
+/** Refetch business profile and review lists after a new review is submitted. */
+export async function invalidateBusinessReviewQueries(
+  queryClient: QueryClient,
+  businessId: number,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['business', businessId] }),
+    queryClient.invalidateQueries({ queryKey: ['reviews', businessId] }),
+    queryClient.invalidateQueries({ queryKey: ['business-reviews', businessId] }),
+  ]);
 }
 
 function mapSummary(raw: unknown): BusinessReviewsSummary | undefined {
@@ -130,8 +174,8 @@ export async function submitReview(payload: SubmitReviewPayload) {
   formData.append('is_anonymous', payload.is_anonymous ? '1' : '0');
   formData.append('rating', String(payload.rating));
   formData.append('review_text', payload.review_text.trim());
-  (payload.images ?? []).forEach((file) => {
-    formData.append('images[]', file);
+  (payload.images ?? []).forEach((file, index) => {
+    formData.append(`images[${index}]`, file);
   });
   const res = await request.post('/reviews/store', formData, { skipAuthRedirect: true });
   return (res.data as { data: unknown }).data;

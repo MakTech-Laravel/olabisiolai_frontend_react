@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { createUserBusiness, fetchUserBusinesses, setActiveBusinessId as updateActiveBusinessId } from '@/api/userBusinesses'
@@ -7,8 +7,6 @@ import { fetchUserSettings } from '@/api/userSettings'
 import { fetchUserReviews } from '@/api/userReviews'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
-import { UserSidebar } from '@/components/partials/user/UserSidebar'
-import { ProfileAccountSwitcherSheet } from '@/components/profile/hub/ProfileAccountSwitcherSheet'
 import { ProfileBusinessSection } from '@/components/profile/hub/ProfileBusinessSection'
 import {
   ProfileHubHeader,
@@ -39,8 +37,6 @@ export default function UnifiedProfile() {
   const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Guest'
 
   const [manageBusiness, setManageBusiness] = useState<ProfileHubBusiness | null>(null)
-  const [switcherOpen, setSwitcherOpen] = useState(false)
-  const [activeBusinessId, setActiveBusinessId] = useState<number | null>(null)
   const [isAddingBusiness, setIsAddingBusiness] = useState(false)
 
   const {
@@ -80,13 +76,6 @@ export default function UnifiedProfile() {
     staleTime: 30_000,
   })
 
-  useEffect(() => {
-    const stored = settingsQuery.data?.settings?.active_business_id
-    if (typeof stored === 'number' && stored > 0) {
-      setActiveBusinessId(stored)
-    }
-  }, [settingsQuery.data?.settings?.active_business_id])
-
   const hubBusinesses = useMemo<ProfileHubBusiness[]>(() => {
     return (businessesQuery.data ?? []).map((business) => ({
       ...business,
@@ -119,7 +108,6 @@ export default function UnifiedProfile() {
   }
 
   async function persistActiveBusiness(businessId: number | null) {
-    setActiveBusinessId(businessId)
     try {
       await updateActiveBusinessId(businessId)
       void queryClient.invalidateQueries({ queryKey: ['user-settings'] })
@@ -155,27 +143,19 @@ export default function UnifiedProfile() {
     }
   }
 
-  function openSwitcher() {
-    setSwitcherOpen(true)
-  }
-
   return (
     <div className="min-h-screen bg-auth-bg text-ink">
       <div className="lg:hidden">
-        <ProfileHubHeader onOpenSwitcher={openSwitcher} />
+        <ProfileHubHeader avatarUrl={avatarUrl} />
       </div>
       <div className="hidden lg:block">
         <FrontendHeader />
       </div>
 
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col lg:flex-row lg:gap-6 lg:px-8 lg:pb-10">
-        <div className="hidden shrink-0 lg:block lg:w-64">
-          <UserSidebar active="overview" mobileOpen={false} />
-        </div>
-
-        <main className="mx-auto w-full min-w-0 max-w-[430px] flex-1 pb-8 lg:max-w-none">
-          <div className="lg:grid lg:grid-cols-[minmax(300px,360px)_1fr] lg:items-start lg:gap-8 lg:pt-6">
-            <div className="lg:sticky lg:top-24 lg:self-start">
+      <div className="mx-auto w-full max-w-[1400px] lg:px-8 lg:pb-10">
+        <main className="mx-auto w-full min-w-0 max-w-[430px] pb-8 lg:max-w-none">
+          <div className="lg:space-y-4 lg:mt-4">
+            <div className="">
               <ProfileIdentitySection
                 displayName={displayName}
                 handleLabel={handleLabel}
@@ -187,7 +167,6 @@ export default function UnifiedProfile() {
                 onOpenPhotoPicker={openProfilePhotoPicker}
                 onPhotoChange={onProfilePhotoChange}
                 photoInputRef={profilePhotoInputRef}
-                onOpenSwitcher={openSwitcher}
               />
             </div>
 
@@ -199,7 +178,7 @@ export default function UnifiedProfile() {
                 </p>
               </div>
 
-              <ProfilePersonalTools reviewsCount={reviewsCount} />
+              <ProfilePersonalTools />
 
               <ProfileBusinessSection
                 businesses={hubBusinesses}
@@ -219,22 +198,6 @@ export default function UnifiedProfile() {
         open={manageBusiness !== null}
         onClose={() => setManageBusiness(null)}
         onBusinessDeleted={() => setManageBusiness(null)}
-      />
-
-      <ProfileAccountSwitcherSheet
-        open={switcherOpen}
-        onClose={() => setSwitcherOpen(false)}
-        displayName={displayName}
-        avatarUrl={avatarUrl}
-        businesses={hubBusinesses}
-        activeBusinessId={activeBusinessId}
-        onSelectPersonal={() => void persistActiveBusiness(null)}
-        onSelectBusiness={(business) => {
-          void persistActiveBusiness(business.id)
-          setManageBusiness(business)
-        }}
-        onAddBusiness={() => void handleAddBusiness()}
-        isAddingBusiness={isAddingBusiness}
       />
     </div>
   )

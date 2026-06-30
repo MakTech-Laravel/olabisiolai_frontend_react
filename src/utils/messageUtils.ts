@@ -3,6 +3,7 @@ import type { Attachment } from '@/types/attachment'
 import type { Message, MessageType } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
+import { catalogEnquiryPreviewText } from '@/features/catalog/catalogMessageContext'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 import { formatReadAt } from '@/utils/formatters'
 
@@ -37,6 +38,8 @@ export function getMessagePreviewText(message: {
   type?: MessageType
   attachments?: Attachment[]
 }): string {
+  const catalogPreview = catalogEnquiryPreviewText(message.body)
+  if (catalogPreview) return catalogPreview
   if (message.body?.trim()) return message.body.trim()
   const attachments = message.attachments ?? []
   if (attachments.length > 0) {
@@ -269,7 +272,7 @@ export function getConversationTitle(
 ): string {
   if (conv.display_name?.trim()) return conv.display_name.trim()
   if (conv.conversation_name?.trim()) return conv.conversation_name.trim()
-  if (conv.name?.trim()) return conv.name
+  // if (conv.name?.trim()) return conv.name
   if (conv.type === 'direct') {
     const other = conv.participants.find((p) => p.user_id !== selfUserId)?.user
     const label = other?.display_name?.trim() || other?.name?.trim()

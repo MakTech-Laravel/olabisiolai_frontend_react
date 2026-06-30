@@ -10,12 +10,18 @@ export async function getConversations(params: {
   page?: number
   type?: string
   archived?: boolean
+  inbox?: 'personal'
+  business_info_id?: number
 }): Promise<{ conversations: Conversation[]; meta: ApiResponse<Conversation[]>['meta'] }> {
   const res = await api.get<ApiResponse<Record<string, unknown>[]>>(messagingPath('/conversations'), {
     params: {
       page: params.page ?? 1,
       ...(params.type != null && params.type !== '' ? { type: params.type } : {}),
       ...(params.archived != null ? { archived: params.archived } : {}),
+      ...(params.inbox === 'personal' ? { inbox: 'personal' } : {}),
+      ...(params.business_info_id != null && params.business_info_id > 0
+        ? { business_info_id: params.business_info_id }
+        : {}),
     },
   })
   const { data, meta } = unwrapApi(res.data)

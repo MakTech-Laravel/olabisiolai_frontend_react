@@ -73,7 +73,7 @@ export default function DirectMessage() {
 
         <div
           className={cn(
-            "relative mt-6 flex max-h-[min(1024px,calc(100dvh-10rem))] min-h-[min(640px,calc(100dvh-16.5rem))] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
+            "relative mt-6 flex h-[min(720px,calc(100dvh-12rem))] min-h-[560px] flex-col overflow-hidden rounded-2xl border border-chat-border bg-chat-surface shadow-lg",
           )}
         >
           {starting || pendingPeer ? (
@@ -84,7 +84,7 @@ export default function DirectMessage() {
               </p>
             </div>
           ) : null}
-          <MessagingLayout selfUser={user} conversationQueryParam="c" />
+          <MessagingLayout selfUser={user} conversationQueryParam="c" inboxScope="personal" />
         </div>
       </div>
     </div>

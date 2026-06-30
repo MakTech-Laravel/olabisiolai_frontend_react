@@ -192,7 +192,7 @@ export function InfiniteMessageList({
   return (
     <div
       ref={scrollRef}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-5 sm:px-6 sm:py-8 md:px-8"
+      className="h-full min-h-0 overflow-y-auto overscroll-y-contain px-4 py-5 sm:px-6 sm:py-8 md:px-8"
     >
       {isFetchingNextPage ? (
         <div className="flex justify-center py-2">

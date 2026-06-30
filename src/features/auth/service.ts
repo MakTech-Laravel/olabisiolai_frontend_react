@@ -5,6 +5,7 @@ import {
   extractLoginVerificationChannel,
   extractRefreshTokenFromLoginBody,
   extractTwoFactorLoginToken,
+  extractTwoFactorDeliveryMeta,
   extractUserFromAuthPayload,
   isDeviceVerificationRequired,
   isLoginVerificationRequired,
@@ -41,6 +42,10 @@ import {
   getDeviceVerificationSession,
   saveDeviceVerificationSession,
 } from '@/features/auth/deviceVerificationStorage'
+import {
+  clearTwoFactorLoginSession,
+  saveTwoFactorLoginSession,
+} from '@/features/auth/twoFactorLoginStorage'
 import { resolveVendorPostLoginPath } from '@/features/subscription/vendorOnboardingApi'
 import { toNigerianPhonePayload } from '@/lib/nigerianPhone'
 import { getAuthDevicePayload } from '@/lib/deviceId'
@@ -141,7 +146,14 @@ async function hydrateSessionFromLoginBody(
 
 export type LoginUserResult =
   | { kind: 'authenticated'; user: AuthUser }
-  | { kind: 'two_factor'; twoFactorToken: string }
+  | {
+      kind: 'two_factor'
+      twoFactorToken: string
+      role?: AuthRole | 'admin'
+      verificationChannel?: VerificationChannel
+      maskedEmail?: string
+      maskedPhone?: string
+    }
   | {
       kind: 'device_verification'
       deviceVerificationToken: string
@@ -265,6 +277,40 @@ function parseLoginVerificationResult(
   }
 }
 
+function parseTwoFactorLoginResult(
+  body: unknown,
+  role: AuthRole | 'admin',
+): LoginUserResult | null {
+  if (!isTwoFactorLoginRequired(body)) {
+    return null
+  }
+
+  const twoFactorToken = extractTwoFactorLoginToken(body)
+  if (!twoFactorToken) {
+    throw new Error('Two-factor authentication is required, but the login token is missing.')
+  }
+
+  const delivery = extractTwoFactorDeliveryMeta(body)
+  logOtpFromResponse(body, 'two factor login')
+
+  saveTwoFactorLoginSession({
+    token: twoFactorToken,
+    role,
+    verificationChannel: delivery.verificationChannel,
+    maskedEmail: delivery.maskedEmail,
+    maskedPhone: delivery.maskedPhone,
+  })
+
+  return {
+    kind: 'two_factor',
+    twoFactorToken,
+    role,
+    verificationChannel: delivery.verificationChannel,
+    maskedEmail: delivery.maskedEmail,
+    maskedPhone: delivery.maskedPhone,
+  }
+}
+
 export async function loginUserWithRole(
   payload: LoginPayload,
   handlers: AuthHandlers,
@@ -291,13 +337,10 @@ export async function loginUserWithRole(
       return deviceVerificationResult
     }
 
-    if (isTwoFactorLoginRequired(res.data)) {
-      const twoFactorToken = extractTwoFactorLoginToken(res.data)
-      if (!twoFactorToken) {
-        throw new Error('Two-factor authentication is required, but the login token is missing.')
-      }
+    const twoFactorResult = parseTwoFactorLoginResult(res.data, payload.role)
+    if (twoFactorResult) {
       handlers.resetAuthState()
-      return { kind: 'two_factor', twoFactorToken }
+      return twoFactorResult
     }
 
     const user = await hydrateSessionFromLoginBody(
@@ -342,13 +385,10 @@ export async function verifyLoginTwoFactor(
       ...getAuthDevicePayload(),
     })
 
-    if (isTwoFactorLoginRequired(res.data)) {
-      const twoFactorToken = extractTwoFactorLoginToken(res.data)
-      if (!twoFactorToken) {
-        throw new Error('Two-factor authentication is required, but the login token is missing.')
-      }
+    const twoFactorResult = parseTwoFactorLoginResult(res.data, payload.role)
+    if (twoFactorResult) {
       handlers.resetAuthState()
-      return { kind: 'two_factor', twoFactorToken }
+      return twoFactorResult
     }
 
     const user = await hydrateSessionFromLoginBody(
@@ -362,11 +402,23 @@ export async function verifyLoginTwoFactor(
     }
     ensureRoleMatchesExpected(user, payload.role)
     clearDeviceVerificationSession()
+    clearTwoFactorLoginSession()
     return { kind: 'authenticated', user }
   } catch (error) {
     handlers.resetAuthState()
     throw error
   }
+}
+
+export async function resendTwoFactorLoginOtp(twoFactorToken: string, isAdmin = false) {
+  const path = isAdmin ? '/auth/admin/two-factor/resend-otp' : '/auth/two-factor/resend-otp'
+  const res = await request.post<unknown>(
+    path,
+    { two_factor_token: twoFactorToken },
+    { skipAuthRedirect: true },
+  )
+  logOtpFromResponse(res.data, 'two factor login resend')
+  return extractTwoFactorDeliveryMeta(res.data)
 }
 
 export async function resendNewDeviceLoginOtp(deviceVerificationToken: string) {
@@ -398,14 +450,11 @@ export async function verifyNewDeviceLoginOtp(
       { skipAuthRedirect: true },
     )
 
-    if (isTwoFactorLoginRequired(res.data)) {
-      const twoFactorToken = extractTwoFactorLoginToken(res.data)
-      if (!twoFactorToken) {
-        throw new Error('Two-factor authentication is required, but the login token is missing.')
-      }
+    const twoFactorResult = parseTwoFactorLoginResult(res.data, payload.role)
+    if (twoFactorResult) {
       clearDeviceVerificationSession()
       handlers.resetAuthState()
-      return { kind: 'two_factor', twoFactorToken }
+      return twoFactorResult
     }
 
     const user = await hydrateSessionFromLoginBody(
@@ -426,24 +475,59 @@ export async function verifyNewDeviceLoginOtp(
   }
 }
 
-export async function loginAdmin(payload: AdminLoginPayload, handlers: AuthHandlers) {
+export async function loginAdmin(payload: AdminLoginPayload, handlers: AuthHandlers): Promise<LoginUserResult> {
   const paths = ["/admin/login", "/auth/admin/login"];
   let last: unknown = null;
   for (const path of paths) {
     try {
       const res = await request.post<unknown>(path, payload);
-      return await hydrateSessionFromLoginBody(
+
+      const twoFactorResult = parseTwoFactorLoginResult(res.data, 'admin');
+      if (twoFactorResult) {
+        handlers.resetAuthState();
+        return twoFactorResult;
+      }
+
+      const user = await hydrateSessionFromLoginBody(
         res.data,
         handlers,
         "Unable to restore your admin session.",
         "Admin login response is missing access token.",
       );
+      if (!user) {
+        throw new Error("Unable to restore your admin session.");
+      }
+      return { kind: 'authenticated', user };
     } catch (e) {
       last = e;
     }
   }
   handlers.resetAuthState();
   throw last;
+}
+
+export async function verifyAdminLoginTwoFactor(
+  payload: { two_factor_token: string; code: string },
+  handlers: AuthHandlers,
+): Promise<LoginUserResult> {
+  try {
+    const res = await request.post<unknown>('/auth/admin/two-factor/verify', payload);
+
+    const user = await hydrateSessionFromLoginBody(
+      res.data,
+      handlers,
+      'Unable to restore your admin session after two-factor verification.',
+      'Admin login response is missing access token.',
+    );
+    if (!user) {
+      throw new Error('Unable to restore your admin session after two-factor verification.');
+    }
+    clearTwoFactorLoginSession();
+    return { kind: 'authenticated', user };
+  } catch (error) {
+    handlers.resetAuthState();
+    throw error;
+  }
 }
 
 export async function requestPhoneLoginOtp(payload: PhoneLoginRequestPayload) {
@@ -464,13 +548,10 @@ export async function verifyPhoneLoginOtp(
   try {
     const res = await request.post<unknown>('/auth/phone/verify-otp', payload)
 
-    if (isTwoFactorLoginRequired(res.data)) {
-      const twoFactorToken = extractTwoFactorLoginToken(res.data)
-      if (!twoFactorToken) {
-        throw new Error('Two-factor authentication is required, but the login token is missing.')
-      }
+    const twoFactorResult = parseTwoFactorLoginResult(res.data, payload.role)
+    if (twoFactorResult) {
       handlers.resetAuthState()
-      return { kind: 'two_factor', twoFactorToken }
+      return twoFactorResult
     }
 
     const user = await hydrateSessionFromLoginBody(

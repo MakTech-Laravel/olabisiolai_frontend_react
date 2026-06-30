@@ -4,9 +4,8 @@ export const businessPageOuter =
 
 export const businessPageSectionX = "mx-4";
 
-export const businessPageHero =
-  "h-[208px] w-full rounded-[22px] shadow-sm sm:h-[400px] lg:h-[400px] lg:rounded-2xl xl:h-[540px]";
-
+/** Shared responsive layout tokens for public + owner business pages. */
+export { BUSINESS_GALLERY_ASPECT_CLASS, businessPageHero } from "@/lib/businessImageLayout";
 export const businessPageTitle =
   "font-heading text-[27px] font-bold leading-tight tracking-tight text-ink lg:text-4xl xl:text-5xl";
 

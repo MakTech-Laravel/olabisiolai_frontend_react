@@ -170,7 +170,7 @@ export function AddLocationWizardModal({
                 Coordinates and Google Place data from Geocoding / Places are stored with the LGA for validation,
                 previews, and future regions.
               </p>
-              <AdminLgaMapPicker apiKey={googleMapsApiKey} onPick={handleMapPick} showDemoVendorCluster={false} />
+              <AdminLgaMapPicker apiKey={googleMapsApiKey} onPick={handleMapPick} />
               {mapPick && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs text-blue-900">
                   <p>

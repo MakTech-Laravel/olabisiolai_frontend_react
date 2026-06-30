@@ -231,7 +231,11 @@ function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
   const boostRaw = str(r.boost_status ?? r.boostStatus, 'none').toLowerCase();
   const boostStatus: PublicBusiness['boostStatus'] =
     boostRaw === 'active' ? 'active' : 'none';
-  const isPremium = r.is_premium === true || r.isPremium === true;
+  const isPremium =
+    r.is_premium === true ||
+    r.isPremium === true ||
+    r.is_premium_active === true ||
+    r.isPremiumActive === true;
 
   const vendorObj = rec(r.vendor) ?? rec(r.user);
   const vendorUserIdRaw = num(vendorObj?.id ?? r.vendor_id ?? r.user_id, NaN);
@@ -349,25 +353,11 @@ function extractPagination(data: unknown): Partial<PublicBusinessesPage> | null 
   return null;
 }
 
-/** Fisher–Yates shuffle for public marketplace cards only (admin lists are unchanged). */
-export function shufflePublicBusinesses(items: PublicBusiness[]): PublicBusiness[] {
-  const shuffled = [...items];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = shuffled[i];
-    shuffled[i] = shuffled[j];
-    shuffled[j] = tmp;
-  }
-  return shuffled;
-}
-
 function parseBusinessesPage(data: unknown): PublicBusinessesPage {
   const rows = extractList(data);
-  const items = shufflePublicBusinesses(
-    rows
-      .map((row, i) => parseBusiness(row, i))
-      .filter((b): b is PublicBusiness => b !== null),
-  );
+  const items = rows
+    .map((row, i) => parseBusiness(row, i))
+    .filter((b): b is PublicBusiness => b !== null);
 
   const pagination = extractPagination(data);
   return {
@@ -512,6 +502,10 @@ export async function fetchPublicBusinessesPage(params?: {
       }
       const parsedPage = parseBusinessesPage(data);
       if (strictFiltered) {
+        return parsedPage;
+      }
+      // Home listing is authoritative even when empty — do not fall through to legacy 404s.
+      if (label === 'GET /businesses/home') {
         return parsedPage;
       }
       if (parsedPage.items.length > 0) return parsedPage;

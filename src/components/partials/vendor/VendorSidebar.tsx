@@ -15,7 +15,6 @@ import {
   MessageSquareCheck,
   Rocket,
   Settings,
-  User,
   X,
 } from "lucide-react";
 import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
@@ -25,13 +24,12 @@ const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
 
 const items = [
   { to: "/user/profile", label: "My profile", icon: LayoutGrid, end: true, premiumOnly: false },
-  { to: "/vendor/profile", label: "Profile", icon: User, premiumOnly: false },
   { to: "/vendor/leads", label: "Leads", icon: MessageSquare, premiumOnly: false },
   { to: "/vendor/notifications", label: "Notifications", icon: Bell, premiumOnly: false },
   { to: "/vendor/verification", label: "Verification", icon: BadgeCheck, premiumOnly: false },
   { to: "/vendor/boost", label: "Boost", icon: Rocket, premiumOnly: true },
   { to: "/vendor/analytics", label: "Analytics", icon: BarChart2, premiumOnly: true },
-  { to: "/vendor/reviews", label: "Reviews", icon: MessageSquareCheck, premiumOnly: false },
+  { to: "/user/business-reviews", label: "Reviews", icon: MessageSquareCheck, premiumOnly: false },
   { to: "/vendor/payments", label: "Payments", icon: Banknote, premiumOnly: false },
   { to: "/vendor/settings", label: "Settings", icon: Settings, premiumOnly: false },
 ];

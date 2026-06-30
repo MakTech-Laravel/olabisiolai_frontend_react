@@ -1,16 +1,16 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  Star,
-  MapPin,
-  CheckCircle,
-  Zap,
-} from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 
-import { BusinessProfileLink } from "@/components/business/BusinessProfileLink";
+import { BusinessCatalogImage } from "@/components/business/BusinessCatalogImage";
+import {
+  BusinessListingCardTitle,
+  BusinessListingStatusBadges,
+} from "@/components/business/BusinessListingCardChrome";
 import { DirectMessageButton } from "@/components/business/DirectMessageButton";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
+import { businessListingImageClass } from "@/lib/businessImageLayout";
 import { businessProfilePath } from "@/lib/businessProfile";
 import { resolveBusinessContactPhone } from "@/lib/whatsappUrl";
 import type { SocialAccount } from "@/features/business/socialAccounts";
@@ -31,6 +31,7 @@ interface FeaturedCardProps {
   logoUrl?: string;
   coverPhotoUrls?: string[];
   verified: boolean;
+  isPremium?: boolean;
   boostStatus?: "active" | "none";
   isFollowing?: boolean;
   followersCount?: number;
@@ -56,6 +57,7 @@ export function FeaturedCard({
   logoUrl,
   coverPhotoUrls,
   verified,
+  isPremium = false,
   boostStatus = "none",
   isFollowing = false,
   followersCount = 0,
@@ -100,6 +102,7 @@ export function FeaturedCard({
           logoUrl: logoUrl ?? image,
           coverPhotoUrls: coverPhotoUrls ?? (image ? [image] : []),
           verified,
+          isPremium,
           phone: phone ?? null,
           whatsapp: whatsapp ?? null,
           vendorUserUuid: vendorUserUuid ?? null,
@@ -126,33 +129,24 @@ export function FeaturedCard({
       )}
     >
       <div className="relative">
-        <img
+        <BusinessCatalogImage
           src={image}
-          alt="Business Image"
-          className="w-full h-48 object-cover"
+          alt={name}
+          className={businessListingImageClass}
+          priority={false}
         />
 
-        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-          {verified ? (
-            <div className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <CheckCircle className="w-3 h-3 mr-1" /> VERIFIED
-            </div>
-          ) : null}
-          {isBoosted ? (
-            <div className="bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center">
-              <Zap className="w-3 h-3 mr-1" /> BOOSTED
-            </div>
-          ) : null}
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          <BusinessListingStatusBadges isPremium={isPremium} isBoosted={isBoosted} />
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-6">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 text-lg font-inter font-semibold text-text-primary">
-            <BusinessProfileLink businessId={id} businessName={name} />
-          </h3>
+          <BusinessListingCardTitle businessId={id} businessName={name} verified={verified} />
           {vendorUserId ? (
             <div className="relative z-10 shrink-0" onClick={(event) => event.stopPropagation()}>
               <FollowVendorButton
+                businessId={id}
                 followingUserId={vendorUserId}
                 initialFollowing={following}
                 listingPath={listingPath}

@@ -649,11 +649,15 @@ export default function VendorSubscriptionPayPage() {
                       ? `${boostSelection.tierLabel} · ${boostSelection.durationDays} days`
                       : "Boost campaign",
                   amount: boostLinePayment.amount,
+                  dailyBudget: boostSelection?.budgetAmount,
+                  durationDays: boostSelection?.durationDays,
                 }
                 : boostSelection
                   ? {
                     label: `${boostSelection.tierLabel} · ${boostSelection.durationDays} days`,
                     amount: boostSelection.amount,
+                    dailyBudget: boostSelection.budgetAmount,
+                    durationDays: boostSelection.durationDays,
                   }
                   : null
             }

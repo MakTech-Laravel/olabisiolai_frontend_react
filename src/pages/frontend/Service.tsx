@@ -16,6 +16,7 @@ import { BusinessOwnerEditView } from "@/components/profile/BusinessOwnerEditVie
 import { VendorOwnerEditShell, type OwnerPageMode } from "@/components/profile/VendorOwnerEditShell";
 import { useProfileViewMode } from "@/features/profile/useProfileViewMode";
 import { ServicePhotosModal } from "@/components/Modal/ServicePhotosModal";
+import { BusinessImageLightbox } from "@/components/business/BusinessImageLightbox";
 import { useRequireAuthNavigate } from "@/features/auth/useRequireAuthNavigate";
 import { Button } from "@/components/ui/button";
 import { container } from "@/lib/container";
@@ -103,6 +104,8 @@ type ServiceLocationState = {
 
 export default function Service() {
   const [photosOpen, setPhotosOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [reviewPage, setReviewPage] = useState(1);
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowingVendor, setIsFollowingVendor] = useState(false);
@@ -144,7 +147,7 @@ export default function Service() {
     queryKey: ["reviews", businessId, reviewPage],
     queryFn: () => fetchBusinessReviews(businessId!, { page: reviewPage }),
     enabled: businessId !== null,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
@@ -252,8 +255,12 @@ export default function Service() {
     businessId === null || (businessFetched && !businessFetching && !business && !stateData);
 
   const handleWriteReview = () => {
-    if (!isAuthReady) return;
-    requireAuthNavigate("/reviews", {
+    if (!isAuthReady || businessId === null) return;
+    const reviewSearch = new URLSearchParams({
+      business_id: String(businessId),
+      ...(name ? { business_name: name } : {}),
+    });
+    requireAuthNavigate(`/reviews?${reviewSearch.toString()}`, {
       state: { from: pathname, business_id: businessId, business_name: name },
     });
   };
@@ -365,6 +372,10 @@ export default function Service() {
                 }
               }}
               onOpenPhotos={() => setPhotosOpen(true)}
+              onOpenPhotoAt={(index) => {
+                setPhotoIndex(index);
+                setLightboxOpen(true);
+              }}
               onWriteReview={handleWriteReview}
               hideBackLink
             />
@@ -426,6 +437,10 @@ export default function Service() {
             }
           }}
           onOpenPhotos={() => setPhotosOpen(true)}
+          onOpenPhotoAt={(index) => {
+            setPhotoIndex(index);
+            setLightboxOpen(true);
+          }}
           onWriteReview={handleWriteReview}
         />
       )}
@@ -435,6 +450,15 @@ export default function Service() {
         onClose={() => setPhotosOpen(false)}
         businessName={name}
         photos={coverPhotos}
+        initialIndex={photoIndex}
+      />
+
+      <BusinessImageLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        photos={coverPhotos}
+        initialIndex={photoIndex}
+        businessName={name}
       />
     </div>
   );

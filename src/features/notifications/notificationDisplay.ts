@@ -91,7 +91,7 @@ export function resolveUserNotificationHref(
     return actionUrl
   }
   if (type === 'new_message' && conversationUuid) {
-    return `/user/messages?c=${encodeURIComponent(conversationUuid)}`
+    return `/user/messages?scope=personal&c=${encodeURIComponent(conversationUuid)}`
   }
   return USER_ROUTES[type] ?? '/user/activity'
 }
@@ -107,7 +107,7 @@ export function toNotificationDisplay(item: StoredNotification): NotificationDis
     if (d.from_platform_admin === true && typeof d.action_url === 'string' && d.action_url.startsWith('/')) {
       href = d.action_url
     } else if (conversationUuid) {
-      href = `/messages?c=${encodeURIComponent(conversationUuid)}`
+      href = `/user/messages?scope=personal&c=${encodeURIComponent(conversationUuid)}`
     }
   }
 

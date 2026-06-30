@@ -1,30 +1,72 @@
 import { Link } from 'react-router-dom'
-import { Camera, ChevronLeft, Loader2, Pencil, User } from 'lucide-react'
+import { Camera, ChevronLeft, Home, Loader2, LogOut, Pencil, User } from 'lucide-react'
 
+import { useAuth } from '@/auth/useAuth'
 import { HeaderAvatar } from '@/components/ui/HeaderAvatar'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 const LOGO_HEADER = '/images/landing/gidira-logo-header.svg'
 
 type ProfileHubHeaderProps = {
-  onOpenSwitcher: () => void
+  avatarUrl: string
 }
 
-export function ProfileHubHeader({ onOpenSwitcher }: ProfileHubHeaderProps) {
+export function ProfileHubHeader({ avatarUrl }: ProfileHubHeaderProps) {
+  const { logout } = useAuth()
+
   return (
     <header className="sticky top-0 z-40 border-b border-border-light bg-white px-[18px] py-3.5">
       <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
         <Link to="/" className="inline-flex shrink-0 items-center">
           <img src={LOGO_HEADER} alt="Gidira" className="h-8 w-auto" decoding="async" />
         </Link>
-        <button
-          type="button"
-          onClick={onOpenSwitcher}
-          className="inline-flex size-[42px] items-center justify-center rounded-xl bg-brand text-white shadow-[0_4px_10px_rgba(225,36,42,0.28)] transition-opacity hover:opacity-90"
-          aria-label="Switch account"
-        >
-          <User className="size-[22px]" strokeWidth={2} aria-hidden />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="size-[42px] overflow-hidden rounded-xl bg-brand p-0 shadow-[0_4px_10px_rgba(225,36,42,0.28)] hover:bg-brand/90"
+              aria-label="Account menu"
+            >
+              <HeaderAvatar src={avatarUrl} alt="Account" className="size-[42px] rounded-xl" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/" className="flex items-center gap-2">
+                <Home className="size-4" aria-hidden />
+                Home
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/user/profile" className="flex items-center gap-2">
+                <User className="size-4" aria-hidden />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                void logout()
+              }}
+              className="text-brand-red focus:text-brand-red"
+            >
+              <LogOut className="size-4" aria-hidden />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )
@@ -41,7 +83,6 @@ type ProfileIdentitySectionProps = {
   onOpenPhotoPicker: () => void
   onPhotoChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   photoInputRef: React.RefObject<HTMLInputElement | null>
-  onOpenSwitcher?: () => void
 }
 
 export function ProfileIdentitySection({
@@ -55,7 +96,6 @@ export function ProfileIdentitySection({
   onOpenPhotoPicker,
   onPhotoChange,
   photoInputRef,
-  onOpenSwitcher,
 }: ProfileIdentitySectionProps) {
   return (
     <section className="bg-white px-[18px] pb-[18px] pt-[22px] lg:rounded-2xl lg:border lg:border-border-light lg:shadow-[0_1px_2px_rgba(16,22,32,0.05),0_1px_1px_rgba(16,22,32,0.04)]">
@@ -90,23 +130,9 @@ export function ProfileIdentitySection({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h1 className="font-heading text-[21px] font-bold leading-tight tracking-[-0.01em] text-ink">
-              {displayName}
-            </h1>
-            {onOpenSwitcher ? (
-              <button
-                type="button"
-                onClick={onOpenSwitcher}
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-auth-bg text-body-secondary"
-                aria-label="Switch account"
-              >
-                <svg viewBox="0 0 24 24" className="size-[15px]" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-                  <path d="M7 10l5-5 5 5M7 14l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            ) : null}
-          </div>
+          <h1 className="font-heading text-[21px] font-bold leading-tight tracking-[-0.01em] text-ink">
+            {displayName}
+          </h1>
 
           {handleLabel ? <p className="mt-0.5 text-[13.5px] text-chat-meta">{handleLabel}</p> : null}
 

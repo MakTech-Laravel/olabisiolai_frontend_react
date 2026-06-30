@@ -15,7 +15,7 @@ export function ProfileHubFooter() {
           Messages
         </Link>
         <Link to="/user/settings" className="hover:underline">
-          Settings
+          Settings & Activity
         </Link>
       </div>
     </footer>

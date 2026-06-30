@@ -6,9 +6,10 @@ export type BoostCheckoutSelection = {
   tierKey: string;
   tierLabel: string;
   durationDays: number;
+  /** Total amount charged at checkout (daily budget × duration). */
   amount: number;
-  /** Dynamic boost budget (same as amount for dynamic tier). */
-  budgetAmount?: number;
+  /** Daily boost budget sent to the API as budget_amount. */
+  budgetAmount: number;
   renewType?: BoostRenewType;
   sourceCampaignId?: number;
   paymentId?: number;

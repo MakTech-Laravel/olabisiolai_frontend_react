@@ -63,5 +63,13 @@ export const authRoutes: RouteObject = {
       path: "/admin/login",
       element: <GuestGate>{suspensePage(AdminLogin)}</GuestGate>,
     },
+    {
+      path: "/admin/login/two-factor",
+      element: (
+        <GuestGate>
+          {suspensePage(LoginTwoFactor)}
+        </GuestGate>
+      ),
+    },
   ],
 };

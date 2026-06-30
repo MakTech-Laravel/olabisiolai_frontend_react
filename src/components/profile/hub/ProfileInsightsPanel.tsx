@@ -8,12 +8,11 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-import { fetchNotifications } from '@/api/notifications'
 import {
   fetchVendorAnalytics,
   type VendorAnalyticsRange,
 } from '@/features/analytics/vendorAnalyticsApi'
-import { formatDashboardCount, fetchVendorDashboard } from '@/features/dashboard/vendorDashboardApi'
+import { formatDashboardCount, formatDashboardDelta } from '@/features/dashboard/vendorDashboardApi'
 import { useVendorSubscriptionAccess } from '@/hooks/useVendorSubscriptionAccess'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +27,7 @@ const ranges: { key: ProfileInsightsRange; label: string }[] = [
 ]
 
 function mapInsightsRange(range: ProfileInsightsRange): VendorAnalyticsRange {
+  if (range === '7d') return '7d'
   if (range === '90d') return 'quarter'
   return '30d'
 }
@@ -45,17 +45,28 @@ type ProfileInsightsPanelProps = {
   isPremiumActive: boolean
 }
 
+function InsightDelta({ percent }: { percent: number | null | undefined }) {
+  const label = formatDashboardDelta(percent)
+  if (!label) return null
+
+  if (label === '0%') {
+    return <span className="text-[11.5px] font-bold text-chat-meta">0%</span>
+  }
+
+  const up = (percent ?? 0) > 0
+
+  return (
+    <span className={cn('text-[11.5px] font-bold', up ? 'text-[#13a36b]' : 'text-brand')}>
+      {up ? '↑' : '↓'}
+      {label.replace('+', '')}
+    </span>
+  )
+}
+
 export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremiumActive }: ProfileInsightsPanelProps) {
   const [range, setRange] = useState<ProfileInsightsRange>('30d')
   const { analyticsLocked, goToPremiumPayment } = useVendorSubscriptionAccess()
   const locked = analyticsLocked || !isPremiumActive
-
-  const dashboardQuery = useQuery({
-    queryKey: ['vendor', 'dashboard', 'profile-hub', businessId],
-    queryFn: fetchVendorDashboard,
-    enabled: !locked,
-    staleTime: 60_000,
-  })
 
   const analyticsQuery = useQuery({
     queryKey: ['vendor', 'analytics', 'profile-hub', businessId, range],
@@ -64,26 +75,24 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
     staleTime: 60_000,
   })
 
-  const notificationsQuery = useQuery({
-    queryKey: ['notifications', 'unread', 'profile-hub'],
-    queryFn: () => fetchNotifications({ page: 1, perPage: 1 }),
-    enabled: !locked,
-    staleTime: 30_000,
-  })
+  const isLoading = !locked && analyticsQuery.isLoading
 
-  const isLoading = !locked && (dashboardQuery.isLoading || analyticsQuery.isLoading)
+  const deltas = analyticsQuery.data?.insightDeltas
+  const viewsStat = analyticsQuery.data?.stats.find((s) => /profile view/i.test(s.title))
+  const leadsStat = analyticsQuery.data?.stats.find((s) => /enquir/i.test(s.title))
 
   const values: Record<string, string> = {
-    views:
-      analyticsQuery.data?.stats.find((s) => /view/i.test(s.title))?.value ??
-      formatDashboardCount(dashboardQuery.data?.stats.profileViews ?? 0),
-    leads:
-      analyticsQuery.data?.stats.find((s) => /lead|enquir/i.test(s.title))?.value ??
-      formatDashboardCount(dashboardQuery.data?.stats.enquiries ?? 0),
-    follows: formatDashboardCount(followersCount),
-    msgs: isLoading
-      ? '—'
-      : formatDashboardCount(analyticsQuery.data?.messagesCount ?? notificationsQuery.data?.unread_count ?? 0),
+    views: isLoading ? '—' : viewsStat?.value ?? '0',
+    leads: isLoading ? '—' : leadsStat?.value ?? '0',
+    follows: formatDashboardCount(analyticsQuery.data?.followersCount ?? followersCount),
+    msgs: isLoading ? '—' : formatDashboardCount(analyticsQuery.data?.messagesCount ?? 0),
+  }
+
+  const deltaByMetric: Record<string, number | null | undefined> = {
+    views: deltas?.views,
+    leads: deltas?.leads,
+    follows: deltas?.followers,
+    msgs: deltas?.messages,
   }
 
   return (
@@ -128,10 +137,12 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
                   <span className={cn('flex size-[30px] items-center justify-center rounded-[9px]', metric.tone)}>
                     <Icon className="size-4" strokeWidth={2} aria-hidden />
                   </span>
-                  {!locked ? <span className="text-[11.5px] font-bold text-[#13a36b]">↑8%</span> : null}
+                  {!locked ? <InsightDelta percent={deltaByMetric[metric.key]} /> : null}
                 </div>
                 <b className="font-heading text-[23px] font-bold leading-none text-ink">
-                  {locked ? (metric.key === 'views' ? '1.2k' : metric.key === 'leads' ? '48' : metric.key === 'follows' ? '126' : '19') : isLoading ? '—' : values[metric.key]}
+                  {locked
+                    ? (metric.key === 'views' ? '1.2k' : metric.key === 'leads' ? '48' : metric.key === 'follows' ? '126' : '19')
+                    : values[metric.key]}
                 </b>
                 <span className="mt-1 block text-xs text-chat-meta">{metric.label}</span>
               </div>
@@ -161,7 +172,8 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
 
       {!locked ? (
         <p className="mt-3 text-[11.5px] leading-relaxed text-chat-meta">
-          Leads are customers who called, messaged or chatted on WhatsApp in the last {range}.
+          Compared to the previous {range === '7d' ? '7 days' : range === '90d' ? 'quarter' : '30 days'}.
+          Leads are customers who called, messaged or chatted on WhatsApp.
         </p>
       ) : null}
     </div>

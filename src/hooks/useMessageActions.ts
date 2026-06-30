@@ -137,7 +137,7 @@ export function useMessageActions(
     onSuccess: (_, uuid) => {
       if (!conversationUuid) return
       removeMessageFromCache(queryClient, conversationUuid, uuid)
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
   })
 

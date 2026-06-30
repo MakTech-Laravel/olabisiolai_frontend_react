@@ -1,5 +1,4 @@
 import { importLibrary } from '@googlemaps/js-api-loader'
-import { MarkerClusterer } from '@googlemaps/markerclusterer'
 import { Loader2, MapPin, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -20,8 +19,6 @@ const NG_BOUNDS: google.maps.LatLngBoundsLiteral = {
 type Props = {
   apiKey: string | undefined
   onPick: (pick: LgaMapPickResult) => void
-  /** When true, draws sample pins around the selected point to validate clustering (replace with API vendor coords later). */
-  showDemoVendorCluster?: boolean
 }
 
 type SuggestionSource = 'new' | 'legacy'
@@ -83,26 +80,11 @@ function pickFromGeocoderResult(
   }
 }
 
-function randomDemoMarkers(center: google.maps.LatLngLiteral, count: number): google.maps.Marker[] {
-  const markers: google.maps.Marker[] = []
-  for (let i = 0; i < count; i++) {
-    const lat = center.lat + (Math.random() - 0.5) * 0.06
-    const lng = center.lng + (Math.random() - 0.5) * 0.06
-    markers.push(
-      new google.maps.Marker({
-        position: { lat, lng },
-      }),
-    )
-  }
-  return markers
-}
-
-export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true }: Props) {
+export function AdminLgaMapPicker({ apiKey, onPick }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const mapHostRef = useRef<HTMLDivElement>(null)
 
-  const clustererRef = useRef<MarkerClusterer | null>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const selectedMarkerRef = useRef<google.maps.Marker | null>(null)
   const selectedInfoRef = useRef<google.maps.InfoWindow | null>(null)
@@ -168,14 +150,8 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
           map.setZoom(11)
         }
       }
-
-      clustererRef.current?.clearMarkers()
-      if (showDemoVendorCluster) {
-        const markers = randomDemoMarkers(center, 28)
-        clustererRef.current?.addMarkers(markers)
-      }
     },
-    [onPick, showDemoVendorCluster],
+    [onPick],
   )
 
   // Initialize map + geocoder + places session token once API key is available.
@@ -225,9 +201,6 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
         })
         geocoderRef.current = new google.maps.Geocoder()
 
-        const clusterer = new MarkerClusterer({ map, markers: [] })
-        clustererRef.current = clusterer
-
         try {
           sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken()
         } catch {
@@ -273,8 +246,6 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
       cancelled = true
       mapClickListener?.remove()
       mapClickListener = null
-      clustererRef.current?.clearMarkers()
-      clustererRef.current = null
       selectedMarkerRef.current?.setMap(null)
       selectedMarkerRef.current = null
       selectedInfoRef.current?.close()
@@ -706,11 +677,6 @@ export function AdminLgaMapPicker({ apiKey, onPick, showDemoVendorCluster = true
         className="h-[300px] w-full overflow-hidden rounded-md border border-gray-200 bg-gray-100"
         aria-label="Map preview"
       />
-      {showDemoVendorCluster && status === 'ready' && (
-        <p className="text-[11px] text-gray-500">
-          Demo orange clusters show sample density. Replace with real vendor coordinates from your API when ready.
-        </p>
-      )}
     </div>
   )
 }

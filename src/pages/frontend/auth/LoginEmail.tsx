@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
-import { getUserRoles } from "@/auth/roles";
-import { extractUserFromAuthPayload } from "@/api/laravelResponse";
 import { signUpPathForRole } from "@/features/vendor/vendorPlanStorage";
 import {
   buildNewDeviceOtpVerificationPath,
@@ -104,18 +102,11 @@ export default function LoginEmail() {
           state: {
             twoFactorToken: loginResult.twoFactorToken,
             role,
+            verificationChannel: loginResult.verificationChannel,
+            maskedEmail: loginResult.maskedEmail,
+            maskedPhone: loginResult.maskedPhone,
             from: returnTo,
           },
-        });
-        return;
-      }
-
-      const roles = getUserRoles(extractUserFromAuthPayload(loginResult.user));
-      const isVendor = roles.includes("vendor") || role === "vendor";
-
-      if (isVendor) {
-        navigate(await resolvePostLoginPath(loginResult.user, role), {
-          replace: true,
         });
         return;
       }

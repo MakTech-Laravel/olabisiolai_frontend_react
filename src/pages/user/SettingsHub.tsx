@@ -124,15 +124,15 @@ export default function SettingsHub() {
             <HubRow
               icon={<Star className="size-4" />}
               label="Write a Review"
-              description="Leave feedback for a business you used"
-              to="/reviews"
+              description="Browse businesses and leave feedback"
+              to="/filters"
             />
             {isVendorMode ? (
               <HubRow
                 icon={<MessageSquareQuote className="size-4" />}
                 label="Reviews Received"
                 description="See and reply to customer reviews"
-                to="/vendor/reviews"
+                to="/user/business-reviews"
               />
             ) : null}
           </HubSection>

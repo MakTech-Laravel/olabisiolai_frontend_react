@@ -2,8 +2,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
-import { QUERY_KEYS } from '@/constants/queryKeys'
 import { startDirectConversationWithVendor } from '@/features/messaging/startDirectConversation'
+import { seedNewConversationInCache } from '@/features/messaging/conversationCache'
+import { moveCatalogDraftToConversation, peekPendingCatalogForConversation, prepareCatalogMessageWithImage } from '@/features/catalog/catalogMessageContext'
 import {
   hasPendingDirectMessageState,
   type DirectMessageLocationState,
@@ -14,6 +15,7 @@ type Options = {
   isAuthenticated: boolean
   conversationQueryParam?: string
   messagesPath?: '/messages' | '/user/messages'
+  inboxScope?: 'personal'
 }
 
 /**
@@ -24,6 +26,7 @@ export function useStartDirectConversation({
   isAuthenticated,
   conversationQueryParam = 'c',
   messagesPath = '/messages',
+  inboxScope = 'personal',
 }: Options) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -51,9 +54,17 @@ export function useStartDirectConversation({
         })
         if (cancelled) return
 
-        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+        seedNewConversationInCache(queryClient, conv, 'personal')
+        moveCatalogDraftToConversation(conv.uuid)
+        const catalogPending = peekPendingCatalogForConversation(conv.uuid)
+        if (catalogPending) {
+          await prepareCatalogMessageWithImage(conv.uuid, catalogPending)
+        }
 
         const next = new URLSearchParams(searchParams)
+        if (inboxScope === 'personal') {
+          next.set('scope', 'personal')
+        }
         next.set(conversationQueryParam, conv.uuid)
         navigate(
           {
@@ -89,6 +100,7 @@ export function useStartDirectConversation({
     navigate,
     queryClient,
     searchParams,
+    inboxScope,
   ])
 
   return { starting, pendingPeer: pending && !paramC }

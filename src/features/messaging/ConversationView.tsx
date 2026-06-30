@@ -9,7 +9,15 @@ import { TypingIndicator } from '@/components/chat/TypingIndicator'
 import { ChatErrorBoundary } from '@/components/ui/ChatErrorBoundary'
 import type { AuthUser } from '@/auth/types'
 import { sendMessageWithAttachments } from '@/api/messages'
-import { QUERY_KEYS } from '@/constants/queryKeys'
+import {
+  buildCatalogEnquiryBody,
+  clearPendingCatalogForConversation,
+  fetchCatalogImageFile,
+  moveCatalogDraftToConversation,
+  peekPendingCatalogForConversation,
+  takePendingCatalogImageFile,
+  type CatalogMessagePayload,
+} from '@/features/catalog/catalogMessageContext'
 import { appendOrMergeMessageInCache } from '@/features/messaging/messageCache'
 import { applyNewMessagePreview } from '@/features/messaging/conversationCache'
 import { useConversation } from '@/hooks/useConversation'
@@ -40,10 +48,12 @@ export function ConversationView({
   conversationUuid,
   selfUser,
   onOpenSidebar,
+  onBack,
 }: {
   conversationUuid: string | null
   selfUser: AuthUser | null
   onOpenSidebar?: () => void
+  onBack?: () => void
 }) {
   const queryClient = useQueryClient()
   const { data: conversation, isLoading: convLoading } =
@@ -78,6 +88,80 @@ export function ConversationView({
 
   const [draft, setDraft] = React.useState('')
   const [fileBusy, setFileBusy] = React.useState(false)
+  const [catalogAttachment, setCatalogAttachment] = React.useState<CatalogMessagePayload | null>(
+    null,
+  )
+  const [catalogImageLoading, setCatalogImageLoading] = React.useState(false)
+  const catalogFetchKeyRef = React.useRef<string | null>(null)
+  const addFilesRef = React.useRef(addFiles)
+  const clearFilesRef = React.useRef(clearFiles)
+
+  addFilesRef.current = addFiles
+  clearFilesRef.current = clearFiles
+
+  React.useEffect(() => {
+    if (!conversationUuid) {
+      catalogFetchKeyRef.current = null
+      setCatalogAttachment(null)
+      setCatalogImageLoading(false)
+      return
+    }
+
+    let pending = peekPendingCatalogForConversation(conversationUuid)
+    if (!pending) {
+      moveCatalogDraftToConversation(conversationUuid)
+      pending = peekPendingCatalogForConversation(conversationUuid)
+    }
+    if (!pending) return
+
+    setCatalogAttachment(pending)
+
+    const fetchKey = `${conversationUuid}:${pending.item.id}`
+    if (catalogFetchKeyRef.current === fetchKey) return
+    catalogFetchKeyRef.current = fetchKey
+
+    const finishImageLoad = (file: File | null) => {
+      setCatalogImageLoading(false)
+      if (!file) return
+      clearFilesRef.current()
+      addFilesRef.current([file])
+    }
+
+    const cachedFile = takePendingCatalogImageFile(conversationUuid)
+    if (cachedFile) {
+      finishImageLoad(cachedFile)
+      return
+    }
+
+    if (!pending.item.imageUrl) {
+      setCatalogImageLoading(false)
+      return
+    }
+
+    setCatalogImageLoading(true)
+    let cancelled = false
+
+    void fetchCatalogImageFile(pending.item.imageUrl, pending.item.name).then((file) => {
+      if (cancelled) return
+      finishImageLoad(file)
+    })
+
+    return () => {
+      cancelled = true
+      setCatalogImageLoading(false)
+      catalogFetchKeyRef.current = null
+    }
+  }, [conversationUuid])
+
+  const handleDismissCatalog = React.useCallback(() => {
+    setCatalogAttachment(null)
+    setCatalogImageLoading(false)
+    clearFiles()
+    if (conversationUuid) {
+      clearPendingCatalogForConversation(conversationUuid)
+      catalogFetchKeyRef.current = `${conversationUuid}:dismissed`
+    }
+  }, [conversationUuid, clearFiles])
 
   React.useEffect(() => {
     if (editingMessage) {
@@ -88,7 +172,7 @@ export function ConversationView({
   const onSend = React.useCallback(async () => {
     const text = draft.trim()
     if (!conversationUuid) return
-    if (!text && files.length === 0) return
+    if (!text && files.length === 0 && !catalogAttachment) return
 
     if (editingMessage) {
       try {
@@ -104,15 +188,20 @@ export function ConversationView({
     if (files.length > 0) {
       try {
         setFileBusy(true)
+        const bodyWithCatalog = catalogAttachment
+          ? buildCatalogEnquiryBody(catalogAttachment, text)
+          : text || null
         const sent = await sendMessageWithAttachments(
           conversationUuid,
-          text || null,
+          bodyWithCatalog,
           files,
           replyingTo?.uuid ?? null,
         )
         clearFiles()
         setDraft('')
         setReplyingTo(null)
+        setCatalogAttachment(null)
+        if (conversationUuid) clearPendingCatalogForConversation(conversationUuid)
         appendOrMergeMessageInCache(queryClient, conversationUuid, sent)
         if (me) {
           applyNewMessagePreview(queryClient, conversationUuid, sent, {
@@ -120,7 +209,7 @@ export function ConversationView({
             isActiveConversation: true,
           })
         }
-        void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
       } catch {
         showError('Failed to send with attachments')
       } finally {
@@ -129,17 +218,60 @@ export function ConversationView({
       return
     }
 
+    if (catalogAttachment?.item.imageUrl) {
+      const imageFile = await fetchCatalogImageFile(
+        catalogAttachment.item.imageUrl,
+        catalogAttachment.item.name,
+      )
+      if (imageFile) {
+        try {
+          setFileBusy(true)
+          const bodyWithCatalog = buildCatalogEnquiryBody(catalogAttachment, text)
+          const sent = await sendMessageWithAttachments(
+            conversationUuid,
+            bodyWithCatalog,
+            [imageFile],
+            replyingTo?.uuid ?? null,
+          )
+          setDraft('')
+          setReplyingTo(null)
+          setCatalogAttachment(null)
+          if (conversationUuid) clearPendingCatalogForConversation(conversationUuid)
+          appendOrMergeMessageInCache(queryClient, conversationUuid, sent)
+          if (me) {
+            applyNewMessagePreview(queryClient, conversationUuid, sent, {
+              selfUserId: me.id,
+              isActiveConversation: true,
+            })
+          }
+          void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        } catch {
+          showError('Failed to send with attachments')
+        } finally {
+          setFileBusy(false)
+        }
+        return
+      }
+    }
+
+    const outboundText = catalogAttachment
+      ? buildCatalogEnquiryBody(catalogAttachment, text)
+      : text
+
     await sendMessage(
-      text,
+      outboundText,
       undefined,
       replyingTo?.uuid ?? null,
       replyingTo,
     )
     setDraft('')
     setReplyingTo(null)
+    setCatalogAttachment(null)
+    if (conversationUuid) clearPendingCatalogForConversation(conversationUuid)
   }, [
     draft,
     files,
+    catalogAttachment,
     conversationUuid,
     editingMessage,
     editMessage,
@@ -168,34 +300,62 @@ export function ConversationView({
 
   if (!conversationUuid) {
     return (
-      <div className="flex flex-1 items-center justify-center text-chat-meta">
-        Select a conversation
+      <div className="flex h-full flex-1 items-center justify-center bg-chat-surface p-6 text-center text-chat-meta">
+        <div>
+          <p className="font-heading text-lg font-bold text-ink">Select a conversation</p>
+          <p className="mt-1 text-sm">Choose a thread from the list to start chatting.</p>
+        </div>
       </div>
     )
   }
 
   if (convLoading || !conversation) {
     return (
-      <div className="flex flex-1 items-center justify-center text-chat-meta">
-        Loading…
+      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-chat-surface">
+        <div className="flex flex-1 items-center justify-center text-chat-meta">
+          Loading…
+        </div>
+        {catalogAttachment ? (
+          <div className="shrink-0 border-t border-chat-border-footer bg-card">
+            <MessageInput
+              value={draft}
+              onChange={setDraft}
+              onSend={() => void onSend()}
+              disabled={isSending || fileBusy}
+              replyingTo={null}
+              onCancelReply={() => {}}
+              editingMessage={null}
+              onCancelEdit={() => {}}
+              onTyping={() => {}}
+              onFiles={(list) => list && addFiles(list)}
+              pendingFiles={files}
+              onRemoveFile={removeFile}
+              catalogAttachment={catalogAttachment}
+              catalogImageLoading={catalogImageLoading}
+              onDismissCatalog={handleDismissCatalog}
+            />
+          </div>
+        ) : null}
       </div>
     )
   }
 
   return (
     <ChatErrorBoundary>
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-chat-surface">
+      <section className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-chat-surface">
         <ChatHeader
           conversation={conversation}
           selfUserId={selfId}
           onOpenSidebar={onOpenSidebar}
+          onBack={onBack}
         />
         {inf.isLoading && pages.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center text-chat-meta">
+          <div className="flex min-h-0 items-center justify-center overflow-hidden text-chat-meta">
             Loading messages…
           </div>
         ) : (
-          <InfiniteMessageList
+          <div className="h-full min-h-0 overflow-hidden">
+            <InfiniteMessageList
             key={conversationUuid}
             pages={pages}
             hasNextPage={Boolean(inf.hasNextPage)}
@@ -209,8 +369,9 @@ export function ConversationView({
             onDelete={onDelete}
             onMarkPeerMessageRead={markAsRead}
           />
+          </div>
         )}
-        <div className="shrink-0">
+        <div className="shrink-0 border-t border-chat-border-footer bg-card">
           <TypingIndicator users={typingUsers} />
           <MessageInput
             value={draft}
@@ -228,6 +389,9 @@ export function ConversationView({
             onFiles={(list) => list && addFiles(list)}
             pendingFiles={files}
             onRemoveFile={removeFile}
+            catalogAttachment={catalogAttachment}
+            catalogImageLoading={catalogImageLoading}
+            onDismissCatalog={handleDismissCatalog}
           />
         </div>
       </section>

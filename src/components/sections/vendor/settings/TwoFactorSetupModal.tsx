@@ -13,9 +13,10 @@ type Props = {
   secret: string
   onClose: () => void
   onConfirmed: (recoveryCodes: string[]) => void
+  confirmFn?: (code: string) => Promise<{ recovery_codes: string[] }>
 }
 
-export function TwoFactorSetupModal({ open, qrCode, secret, onClose, onConfirmed }: Props) {
+export function TwoFactorSetupModal({ open, qrCode, secret, onClose, onConfirmed, confirmFn }: Props) {
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,7 +31,7 @@ export function TwoFactorSetupModal({ open, qrCode, secret, onClose, onConfirmed
 
     setSubmitting(true)
     try {
-      const result = await confirmTwoFactor(trimmed)
+      const result = await (confirmFn ?? confirmTwoFactor)(trimmed)
       onConfirmed(result.recovery_codes)
       setCode('')
     } catch (error) {

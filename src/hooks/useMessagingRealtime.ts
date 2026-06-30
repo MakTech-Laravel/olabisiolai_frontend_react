@@ -26,7 +26,7 @@ export function useMessagingRealtime(
   conversation: Conversation | null,
   selfUserId?: number,
 ) {
-  const echo = useEcho()
+  const { echo } = useEcho()
   const queryClient = useQueryClient()
   const setTypingUser = useMessagingStore((s) => s.setTypingUser)
   const clearTypingUser = useMessagingStore((s) => s.clearTypingUser)

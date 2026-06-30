@@ -1,7 +1,6 @@
-import { FiltersResultsMap, type MapBusinessPin } from "@/components/maps/FiltersResultsMap";
+import { FiltersResultsMap } from "@/components/maps/FiltersResultsMap";
 import FiltersSection from "@/components/sections/filters/FiltersSection";
 import ServiceCard from "@/components/sections/filters/ServiceCard";
-import { env } from "@/config/env";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCategoryCatalog } from "@/features/categories/useCategoryCatalog";
 import { useLocationCatalog } from "@/features/locations/useLocationCatalog";
@@ -22,50 +21,6 @@ function parseCoord(raw: string | null): number | null {
 function hasGeoSearchParams(searchParams: URLSearchParams): boolean {
   return searchParams.has("lat") && searchParams.has("lng");
 }
-
-const fallbackBusiness = (
-  id: number,
-  name: string,
-  category: string,
-  location: string,
-  image: string,
-): PublicBusiness => ({
-  id,
-  name,
-  category,
-  location,
-  rating: 4.8,
-  reviews: 100,
-  description: "",
-  image,
-  logoUrl: image,
-  coverPhotoUrls: [image],
-  servicesOffered: [],
-  verified: true,
-  memberSince: null,
-  verifiedSince: null,
-  responseTimeLabel: null,
-  socialAccounts: [],
-  isFavorite: false,
-  followersCount: 0,
-  isFollowing: false,
-  boostStatus: 'none',
-  isPremium: false,
-  vendorUserId: null,
-  vendorUserUuid: null,
-  businessHours: [],
-  businessHoursDisplay: [],
-  catalogItems: [],
-  catalogLocked: true,
-  catalogCount: 0,
-});
-
-const FALLBACK_BUSINESSES: PublicBusiness[] = [
-  fallbackBusiness(1, "Premium Plumbing Services", "Plumbing", "Lagos, Ikeja", "/images/feature/1.jpg"),
-  fallbackBusiness(2, "Sparkle Clean Services", "Cleaning", "Lagos, Surulere", "/images/feature/1-1.jpg"),
-  fallbackBusiness(3, "Elite Electrical Solutions", "Electrical", "Lagos, Victoria Island", "/images/feature/1-2.jpg"),
-  fallbackBusiness(4, "Glamour Beauty Spa", "Beauty & Spa", "Lagos, Lekki", "/images/feature/1-3.jpg"),
-];
 
 const FILTERS_BASE_PATH = "/filters";
 
@@ -178,24 +133,10 @@ export default function Filters() {
 
   const businesses = useMemo<PublicBusiness[]>(() => {
     if (businessesQuery.isError) {
-      const hasActiveFilters =
-        filterCategoryId != null ||
-        selectedLocationId != null ||
-        hasGeoSearch ||
-        searchTerm.length > 0 ||
-        verifiedOnly;
-      return hasActiveFilters ? [] : FALLBACK_BUSINESSES;
+      return [];
     }
     return businessesQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  }, [
-    businessesQuery.data?.pages,
-    businessesQuery.isError,
-    filterCategoryId,
-    selectedLocationId,
-    hasGeoSearch,
-    searchTerm,
-    verifiedOnly,
-  ]);
+  }, [businessesQuery.data?.pages, businessesQuery.isError]);
   const businessesLoading = businessesQuery.isPending;
 
   const handleSelectCategory = (categoryId: number | null) => {
@@ -315,33 +256,33 @@ export default function Filters() {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [catalogLocations, businesses]);
 
-  const mapPins = useMemo<MapBusinessPin[]>(() => {
-    return visibleBusinesses
-      .filter(
-        (b) =>
-          b.latitude != null &&
-          b.longitude != null &&
-          Number.isFinite(b.latitude) &&
-          Number.isFinite(b.longitude),
-      )
-      .map((b) => ({
-        id: b.id,
-        name: b.name,
-        lat: b.latitude as number,
-        lng: b.longitude as number,
-      }));
-  }, [visibleBusinesses]);
-
-  const mapFallbackQuery = useMemo(() => {
+  const primaryMapLocation = useMemo(() => {
     if (mapPlaceLabel) return mapPlaceLabel;
-    if (mapCenter) return `${mapCenter.lat},${mapCenter.lng}`;
     if (visibleBusinesses[0]) return visibleBusinesses[0].location;
     if (selectedLocationId) {
       const option = locationOptions.find((opt) => opt.id === selectedLocationId);
       if (option) return option.label;
     }
-    return "Nigeria";
-  }, [mapPlaceLabel, mapCenter, visibleBusinesses, selectedLocationId, locationOptions]);
+    return null;
+  }, [mapPlaceLabel, visibleBusinesses, selectedLocationId, locationOptions]);
+
+  const mapViewCenter = useMemo(() => {
+    if (mapCenter) return mapCenter;
+    const first = visibleBusinesses[0];
+    if (
+      first?.latitude != null &&
+      first?.longitude != null &&
+      Number.isFinite(first.latitude) &&
+      Number.isFinite(first.longitude)
+    ) {
+      return { lat: first.latitude, lng: first.longitude };
+    }
+    return { lat: 9.082, lng: 8.6753 };
+  }, [mapCenter, visibleBusinesses]);
+
+  const showResultsMap = hasGeoSearch || primaryMapLocation != null;
+
+  const mapFallbackQuery = useMemo(() => primaryMapLocation ?? "Nigeria", [primaryMapLocation]);
 
   useEffect(() => {
     if (hasGeoSearch && searchParams.get("map") === "1") {
@@ -543,12 +484,10 @@ export default function Filters() {
               </button>
             </div>
             <div className="h-[calc(100%-4rem)]">
-              {mapCenter ? (
+              {showResultsMap ? (
                 <FiltersResultsMap
-                  apiKey={env.googleMapsApiKey}
-                  center={mapCenter}
-                  centerLabel={mapPlaceLabel || undefined}
-                  businesses={mapPins}
+                  center={mapViewCenter}
+                  centerLabel={primaryMapLocation ?? undefined}
                   className="h-full w-full"
                 />
               ) : (
@@ -631,6 +570,7 @@ export default function Filters() {
                   logoUrl={business.logoUrl}
                   coverPhotoUrls={business.coverPhotoUrls}
                   verified={business.verified}
+                  isPremium={business.isPremium}
                   boostStatus={business.boostStatus}
                   isFollowing={business.isFollowing}
                   followersCount={business.followersCount}
@@ -655,13 +595,10 @@ export default function Filters() {
         <aside className="hidden lg:block w-2/6 shrink-0">
           <div className="bg-card rounded-lg shadow-md overflow-hidden sticky top-20">
             <div className="h-[750px] bg-muted relative">
-              {mapCenter ? (
+              {showResultsMap ? (
                 <FiltersResultsMap
-                  key={`geo-${mapLat}-${mapLng}`}
-                  apiKey={env.googleMapsApiKey}
-                  center={mapCenter}
-                  centerLabel={mapPlaceLabel || undefined}
-                  businesses={mapPins}
+                  center={mapViewCenter}
+                  centerLabel={primaryMapLocation ?? undefined}
                   className="h-full w-full"
                 />
               ) : (

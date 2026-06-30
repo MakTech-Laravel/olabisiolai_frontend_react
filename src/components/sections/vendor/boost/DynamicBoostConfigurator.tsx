@@ -1,33 +1,44 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Loader2, Rocket } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+import { DynamicBoostBudgetFields } from '@/components/sections/vendor/boost/DynamicBoostBudgetFields'
 import { TargetLocationCard } from '@/components/sections/vendor/boost/boostConfigure/TargetLocationCard'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { saveBoostCheckoutSelection } from '@/features/boost/boostCheckoutSession'
 import {
   clampBoostBudget,
+  computeBoostTotal,
   DYNAMIC_BOOST_BUDGET_MAX,
   DYNAMIC_BOOST_BUDGET_MIN,
-  DYNAMIC_BOOST_BUDGET_STEP,
   DYNAMIC_BOOST_DURATIONS,
   DYNAMIC_BOOST_TIER_KEY,
   formatBoostBudget,
+  normalizeBoostDurations,
   type DynamicBoostDuration,
 } from '@/features/boost/dynamicBoostConfig'
+import type { BoostRenewalContext } from '@/features/boost/boostRenewalContext'
 import { initVendorBoostPayment, type VendorBoostCatalog } from '@/features/boost/vendorBoostApi'
 import { useVendorBusinessFormOptions } from '@/features/categories/useVendorBusinessFormOptions'
 import { parseVendorLocationOptions } from '@/features/locations/vendorLocationOptions'
 import { showError } from '@/lib/sweetAlert'
-import { cn } from '@/lib/utils'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 
 type DynamicBoostConfiguratorProps = {
   catalog: VendorBoostCatalog | undefined
   catalogLoading: boolean
+  renewalContext?: BoostRenewalContext | null
+  onClearRenewalContext?: () => void
+  initialLocationId?: string
 }
 
-export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoostConfiguratorProps) {
+export function DynamicBoostConfigurator({
+  catalog,
+  catalogLoading,
+  renewalContext = null,
+  onClearRenewalContext,
+  initialLocationId = '',
+}: DynamicBoostConfiguratorProps) {
   const navigate = useNavigate()
   const { data: formOptions } = useVendorBusinessFormOptions()
   const parsedLocations = useMemo(
@@ -36,61 +47,106 @@ export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoo
   )
 
   const defaultLocationId = catalog?.location?.id ?? parsedLocations[0]?.id ?? ''
-  const [selectedLocationId, setSelectedLocationId] = useState('')
+  const [selectedLocationId, setSelectedLocationId] = useState(initialLocationId)
   const [durationDays, setDurationDays] = useState<DynamicBoostDuration>(3)
-  const [budgetAmount, setBudgetAmount] = useState(1500)
+  const [dailyBudget, setDailyBudget] = useState(1500)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
 
+  useEffect(() => {
+    if (initialLocationId) {
+      setSelectedLocationId(initialLocationId)
+    }
+  }, [initialLocationId])
+
   const dynamicConfig = catalog?.dynamic
-  const durations = dynamicConfig?.durations ?? [...DYNAMIC_BOOST_DURATIONS]
+  const durations = useMemo(
+    () => normalizeBoostDurations(dynamicConfig?.durations),
+    [dynamicConfig?.durations],
+  )
   const budgetMin = dynamicConfig?.budgetMin ?? DYNAMIC_BOOST_BUDGET_MIN
   const budgetMax = dynamicConfig?.budgetMax ?? DYNAMIC_BOOST_BUDGET_MAX
 
   const activeLocation = useMemo(() => {
-    const id = selectedLocationId || defaultLocationId
+    const id = renewalContext?.locationId || selectedLocationId || defaultLocationId
     if (id) {
-      return parsedLocations.find((entry) => entry.id === id) ?? catalog?.location ?? null
+      const fromList = parsedLocations.find((entry) => entry.id === id)
+      if (fromList) {
+        return fromList
+      }
+      if (renewalContext && catalog?.location?.id === id) {
+        return catalog.location
+      }
+      if (renewalContext) {
+        return {
+          id: renewalContext.locationId,
+          location: 'Nigeria',
+          state: '',
+          city: '',
+          lga: renewalContext.locationLabel,
+          label: renewalContext.locationLabel,
+          boost: null,
+        }
+      }
     }
     return catalog?.location ?? parsedLocations[0] ?? null
-  }, [selectedLocationId, defaultLocationId, parsedLocations, catalog?.location])
+  }, [
+    renewalContext,
+    selectedLocationId,
+    defaultLocationId,
+    parsedLocations,
+    catalog?.location,
+  ])
+
+  const clampedDaily = clampBoostBudget(dailyBudget)
+  const totalCost = computeBoostTotal(clampedDaily, durationDays)
+  const isExtending = renewalContext?.renewType === 'extend'
+  const isBoostAgain = renewalContext?.renewType === 'boost_again'
 
   async function handleCheckout() {
-    if (!activeLocation) {
+    const checkoutLocationId = renewalContext?.locationId || activeLocation?.id
+
+    if (!checkoutLocationId || !activeLocation) {
       showError('Select a target LGA first.')
       return
     }
 
-    if (catalog?.pendingRequest?.status === 'pending_admin') {
+    if (!renewalContext && catalog?.pendingRequest?.status === 'pending_admin') {
       showError('You already have a boost waiting for admin approval.')
       return
     }
 
-    const amount = clampBoostBudget(budgetAmount)
     setIsCheckingOut(true)
 
     try {
-      const { payment } = await initVendorBoostPayment({
+      const { payment, requestId } = await initVendorBoostPayment({
         durationDays,
-        budgetAmount: amount,
-        locationId: activeLocation.id,
+        budgetAmount: clampedDaily,
+        locationId: checkoutLocationId,
+        renewType: renewalContext?.renewType,
+        sourceCampaignId: renewalContext?.sourceCampaignId,
       })
 
       saveBoostCheckoutSelection(
         {
-          locationId: activeLocation.id,
-          locationLabel: activeLocation.label,
-          tierKey: DYNAMIC_BOOST_TIER_KEY,
-          tierLabel: dynamicConfig?.tierLabel ?? 'Dynamic Boost',
+          locationId: checkoutLocationId,
+          locationLabel: renewalContext?.locationLabel ?? activeLocation.label,
+          tierKey: renewalContext?.tierKey ?? DYNAMIC_BOOST_TIER_KEY,
+          tierLabel: renewalContext?.tierLabel ?? dynamicConfig?.tierLabel ?? 'Dynamic Boost',
           durationDays,
-          amount,
+          amount: totalCost,
+          budgetAmount: clampedDaily,
           paymentId: payment.id,
+          requestId,
+          renewType: renewalContext?.renewType,
+          sourceCampaignId: renewalContext?.sourceCampaignId,
         },
         { standalonePayment: true },
       )
 
+      onClearRenewalContext?.()
       navigate('/vendor/review-pay')
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Could not start boost checkout.')
+      showError(getLaravelErrorMessage(error, 'Could not start boost checkout.'))
     } finally {
       setIsCheckingOut(false)
     }
@@ -114,8 +170,7 @@ export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoo
           <div>
             <h2 className="text-lg font-semibold text-ink">Dynamic Boost</h2>
             <p className="mt-1 text-sm text-body-secondary">
-              Increase visibility in your target LGA. Choose duration and budget — no slot limits. Multiple vendors can
-              boost the same area and rotate fairly in search results.
+              Increase visibility in your target LGA. Choose daily budget and duration — available in all Nigerian LGAs.
             </p>
           </div>
         </div>
@@ -125,67 +180,40 @@ export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoo
         locations={parsedLocations}
         location={activeLocation}
         selectedLocationId={selectedLocationId || defaultLocationId}
-        onLocationChange={setSelectedLocationId}
+        onLocationChange={renewalContext ? undefined : setSelectedLocationId}
+        readOnly={Boolean(renewalContext)}
       />
 
-      <section className="rounded-2xl border border-border-light bg-card p-5 shadow-sm sm:p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-chat-meta">Duration</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {durations.map((days) => (
+      {renewalContext ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+          <p className="font-semibold">
+            {isExtending ? 'Extend boost' : isBoostAgain ? 'Boost again' : 'Renew boost'} for{' '}
+            {renewalContext.locationLabel}
+          </p>
+          <p className="mt-1 text-emerald-900">
+            Choose how many extra days and your daily budget, then continue to payment.
+          </p>
+          {onClearRenewalContext ? (
             <button
-              key={days}
               type="button"
-              onClick={() => setDurationDays(days as DynamicBoostDuration)}
-              className={cn(
-                'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                durationDays === days
-                  ? 'border-brand bg-brand text-white'
-                  : 'border-border-light bg-surface-soft text-ink hover:border-brand/40',
-              )}
+              className="mt-2 text-xs font-semibold underline"
+              onClick={onClearRenewalContext}
             >
-              {days} {days === 1 ? 'day' : 'days'}
+              Cancel {isExtending ? 'extension' : 'renewal'}
             </button>
-          ))}
+          ) : null}
         </div>
-      </section>
+      ) : null}
 
-      <section className="rounded-2xl border border-border-light bg-card p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-chat-meta">Budget</h3>
-            <p className="mt-1 text-sm text-body-secondary">
-              {formatBoostBudget(budgetMin)} – {formatBoostBudget(budgetMax)}
-            </p>
-          </div>
-          <p className="text-lg font-semibold text-brand">{formatBoostBudget(clampBoostBudget(budgetAmount))}</p>
-        </div>
-
-        <Input
-          type="range"
-          min={budgetMin}
-          max={budgetMax}
-          step={DYNAMIC_BOOST_BUDGET_STEP}
-          value={budgetAmount}
-          onChange={(event) => setBudgetAmount(Number(event.target.value))}
-          className="mt-4"
-          aria-label="Boost budget"
-        />
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {[500, 1500, 5000].map((preset) => (
-            <Button
-              key={preset}
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn(clampBoostBudget(budgetAmount) === preset && 'border-brand text-brand')}
-              onClick={() => setBudgetAmount(preset)}
-            >
-              {formatBoostBudget(preset)}
-            </Button>
-          ))}
-        </div>
-      </section>
+      <DynamicBoostBudgetFields
+        dailyBudget={dailyBudget}
+        durationDays={durationDays}
+        onDailyBudgetChange={setDailyBudget}
+        onDurationChange={setDurationDays}
+        durations={durations.length > 0 ? durations : DYNAMIC_BOOST_DURATIONS}
+        budgetMin={budgetMin}
+        budgetMax={budgetMax}
+      />
 
       <Button
         type="button"
@@ -201,7 +229,13 @@ export function DynamicBoostConfigurator({ catalog, catalogLoading }: DynamicBoo
         ) : (
           <>
             <Rocket className="mr-2 size-5" aria-hidden />
-            Boost for {formatBoostBudget(clampBoostBudget(budgetAmount))}
+            {isExtending ? (
+              <>Extend boost for {formatBoostBudget(totalCost)}</>
+            ) : isBoostAgain ? (
+              <>Boost again for {formatBoostBudget(totalCost)}</>
+            ) : (
+              <>Boost for {formatBoostBudget(totalCost)}</>
+            )}
           </>
         )}
       </Button>

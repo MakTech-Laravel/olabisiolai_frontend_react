@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
   ChevronRight,
@@ -9,13 +9,11 @@ import {
   MessageSquare,
   Pencil,
   Rocket,
-  Settings,
   Share2,
   Trash2,
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
-import { ProfileManageReviewsSection } from '@/components/profile/hub/ProfileManageReviewsSection'
 import { ProfileContactLeadsBreakdown } from '@/components/profile/hub/ProfileContactLeadsBreakdown'
 import { ProfileInsightsPanel } from '@/components/profile/hub/ProfileInsightsPanel'
 import {
@@ -26,6 +24,7 @@ import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } fr
 import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
 import { VENDOR_PREMIUM_INFO_PATH } from '@/hooks/useVendorSubscriptionAccess'
+import { fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { alert, showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -102,6 +101,33 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   const [isDeleting, setIsDeleting] = useState(false)
   const isPremiumActive = business?.isPremiumActive === true
   const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
+
+  const subscriptionQuery = useQuery({
+    queryKey: ['vendor', 'subscription', 'status', 'profile-manage', business?.id],
+    queryFn: () => fetchSubscriptionStatus({ businessId: business!.id }),
+    enabled: open && business !== null && isPremiumActive,
+    staleTime: 60_000,
+  })
+
+  const premiumSubscription = subscriptionQuery.data?.subscription
+  const premiumRenewalLabel = (() => {
+    if (!premiumSubscription?.expires_at) {
+      return 'Analytics & badge active'
+    }
+
+    const daysRemaining =
+      typeof premiumSubscription.days_remaining === 'number' ? premiumSubscription.days_remaining : null
+
+    if (daysRemaining !== null && daysRemaining > 0) {
+      return `Renews ${premiumSubscription.expires_at} · ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`
+    }
+
+    if (premiumSubscription.is_expired) {
+      return `Expired ${premiumSubscription.expires_at}`
+    }
+
+    return `Renews ${premiumSubscription.expires_at}`
+  })()
 
   const publicUrl = business ? `${appOrigin()}${businessProfilePath(business.id)}` : ''
 
@@ -206,18 +232,26 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                 {business.locationLabel ? ` · ${business.locationLabel}` : ''}
               </p>
               <div className="mt-3 flex gap-6">
-                <p className="text-left">
+                <Link
+                  to={`/user/business-followers?business_id=${business.id}`}
+                  onClick={onClose}
+                  className="text-left transition-opacity hover:opacity-80"
+                >
                   <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.followersCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">followers</span>
-                </p>
-                <p className="text-left">
+                </Link>
+                <Link
+                  to={`/user/business-reviews?business_id=${business.id}`}
+                  onClick={onClose}
+                  className="text-left transition-opacity hover:opacity-80"
+                >
                   <b className="font-heading text-[17px] font-bold text-ink">
                     {(business.reviewsCount ?? 0).toLocaleString()}
                   </b>
                   <span className="ml-1.5 text-[12.5px] text-chat-meta">reviews</span>
-                </p>
+                </Link>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {isPremiumActive ? (
@@ -250,12 +284,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
             <ProfileContactLeadsBreakdown businessId={business.id} isPremiumActive={isPremiumActive} />
 
             <div className="px-[18px] pb-6 pt-2">
-              <ProfileManageReviewsSection
-                businessId={business.id}
-                reviewsCount={business.reviewsCount ?? 0}
-                onNavigate={onClose}
-              />
-
               <div className="mb-3 overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,22,32,0.05)]">
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
@@ -277,18 +305,18 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   }
                 />
                 {isPremiumActive ? (
-                  <div className="flex w-full items-center gap-3.5 border-b border-border-light px-4 py-[15px]">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]">
-                      <Crown className="size-5" strokeWidth={2} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <b className="block text-[15px] font-semibold text-ink">Premium</b>
-                      <small className="block text-[12.5px] text-chat-meta">Analytics & badge active</small>
-                    </span>
-                    <span className="rounded-full bg-[#E7F6EF] px-2.5 py-1 text-[11px] font-bold text-[#13a36b]">
-                      Active
-                    </span>
-                  </div>
+                  <ManageToolRow
+                    iconClass="bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]"
+                    icon={<Crown className="size-5" strokeWidth={2} />}
+                    title="Premium"
+                    subtitle={premiumRenewalLabel}
+                    onClick={() => void openVendorRoute(VENDOR_PREMIUM_INFO_PATH)}
+                    trailing={
+                      <span className="rounded-full bg-[#E7F6EF] px-2.5 py-1 text-[11px] font-bold text-[#13a36b]">
+                        {premiumSubscription?.is_expired ? 'Expired' : 'Active'}
+                      </span>
+                    }
+                  />
                 ) : (
                   <ManageToolRow
                     iconClass="bg-gradient-to-br from-[#FBF1DC] to-[#F6E4BC] text-[#9A6B1F]"
@@ -336,14 +364,6 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   title="Share page"
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
-                />
-                <ManageToolRow
-                  iconClass="bg-auth-bg text-body-secondary"
-                  icon={<Settings className="size-5" strokeWidth={2} />}
-                  title="Business settings"
-                  subtitle="Hours, contact, category"
-                  to={`/vendor/settings?business_id=${business.id}`}
-                  onNavigate={onClose}
                 />
               </div>
 

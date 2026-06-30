@@ -1,13 +1,9 @@
 import { Rocket } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DynamicBoostBudgetFields } from '@/components/sections/vendor/boost/DynamicBoostBudgetFields'
 import {
   clampBoostBudget,
-  DYNAMIC_BOOST_BUDGET_MAX,
-  DYNAMIC_BOOST_BUDGET_MIN,
-  DYNAMIC_BOOST_BUDGET_STEP,
-  DYNAMIC_BOOST_DURATIONS,
+  computeBoostTotal,
   formatBoostBudget,
   type DynamicBoostDuration,
 } from '@/features/boost/dynamicBoostConfig'
@@ -32,7 +28,8 @@ export function DynamicBoostSelectionFields({
   onIncludeBoostChange,
   className,
 }: DynamicBoostSelectionFieldsProps) {
-  const clampedBudget = clampBoostBudget(budgetAmount)
+  const clampedDaily = clampBoostBudget(budgetAmount)
+  const totalCost = computeBoostTotal(clampedDaily, durationDays)
   const showFields = onIncludeBoostChange ? includeBoost === true : true
 
   return (
@@ -44,7 +41,7 @@ export function DynamicBoostSelectionFields({
         <div>
           <p className="text-sm font-semibold text-foreground">Dynamic Boost (optional)</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Increase visibility in your target LGA. Choose duration and budget — no slot limits.
+            Increase visibility in your target LGA. Set daily budget and duration.
           </p>
         </div>
       </div>
@@ -63,68 +60,21 @@ export function DynamicBoostSelectionFields({
 
       {showFields ? (
         <>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Duration</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {DYNAMIC_BOOST_DURATIONS.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => onDurationChange(days)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                    durationDays === days
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-border-light bg-white text-ink hover:border-brand/40',
-                  )}
-                >
-                  {days} {days === 1 ? 'day' : 'days'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Budget</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatBoostBudget(DYNAMIC_BOOST_BUDGET_MIN)} – {formatBoostBudget(DYNAMIC_BOOST_BUDGET_MAX)}
-                </p>
-              </div>
-              <p className="text-base font-semibold text-brand">{formatBoostBudget(clampedBudget)}</p>
-            </div>
-
-            <Input
-              type="range"
-              min={DYNAMIC_BOOST_BUDGET_MIN}
-              max={DYNAMIC_BOOST_BUDGET_MAX}
-              step={DYNAMIC_BOOST_BUDGET_STEP}
-              value={budgetAmount}
-              onChange={(event) => onBudgetChange(Number(event.target.value))}
-              className="mt-3"
-              aria-label="Boost budget"
-            />
-
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {[500, 1500, 5000].map((preset) => (
-                <Button
-                  key={preset}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={cn(clampedBudget === preset && 'border-brand text-brand')}
-                  onClick={() => onBudgetChange(preset)}
-                >
-                  {formatBoostBudget(preset)}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <DynamicBoostBudgetFields
+            compact
+            dailyBudget={budgetAmount}
+            durationDays={durationDays}
+            onDailyBudgetChange={onBudgetChange}
+            onDurationChange={onDurationChange}
+          />
 
           <div className="rounded-md border border-sky-200 bg-white px-3 py-2">
             <p className="text-[11px] uppercase text-muted-foreground">Boost add-on total</p>
-            <p className="text-base font-semibold text-foreground">{formatBoostBudget(clampedBudget)}</p>
+            <p className="text-base font-semibold text-foreground">{formatBoostBudget(totalCost)}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Daily budget: {formatBoostBudget(clampedDaily)} · {durationDays}{' '}
+              {durationDays === 1 ? 'day' : 'days'}
+            </p>
           </div>
         </>
       ) : null}

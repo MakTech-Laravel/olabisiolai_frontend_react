@@ -7,7 +7,6 @@ import { createConversation, searchMessageRecipients, type MessageRecipient } fr
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/button'
 import { SEARCH_DEBOUNCE_MS } from '@/constants/config'
-import { QUERY_KEYS } from '@/constants/queryKeys'
 import { cn } from '@/lib/utils'
 
 function resetModalState(
@@ -55,7 +54,7 @@ export function NewConversationModal({
   const startConversation = useMutation({
     mutationFn: (recipient: MessageRecipient) => createConversation([recipient.uuid]),
     onSuccess: (c) => {
-      void qc.invalidateQueries({ queryKey: QUERY_KEYS.conversations })
+      void qc.invalidateQueries({ queryKey: ['conversations'] })
       onCreated(c.uuid)
       onClose()
       resetModalState(setQuery, setDebounced, setSelected)

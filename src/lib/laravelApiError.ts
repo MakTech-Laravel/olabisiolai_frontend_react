@@ -21,5 +21,16 @@ export function getLaravelErrorMessage(error: unknown, fallback = 'Something wen
       }
     }
   }
+  const payload = o.data
+  if (payload && typeof payload === 'object') {
+    const nestedErrors = (payload as Record<string, unknown>).errors
+    if (nestedErrors && typeof nestedErrors === 'object') {
+      for (const v of Object.values(nestedErrors as Record<string, unknown>)) {
+        if (Array.isArray(v) && typeof v[0] === 'string') {
+          return v[0]
+        }
+      }
+    }
+  }
   return fallback
 }

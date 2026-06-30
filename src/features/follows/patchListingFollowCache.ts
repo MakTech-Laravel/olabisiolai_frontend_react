@@ -3,7 +3,8 @@ import type { InfiniteData, QueryClient } from '@tanstack/react-query'
 import type { PublicBusiness, PublicBusinessesPage } from '@/features/business/publicBusinessApi'
 
 export type ListingFollowCachePatch = {
-  followingUserId: number
+  businessId: number
+  followingUserId?: number
   following: boolean
   followersCount?: number
 }
@@ -23,7 +24,7 @@ function patchBusiness(
   business: PublicBusiness,
   patch: ListingFollowCachePatch,
 ): PublicBusiness {
-  if (business.vendorUserId !== patch.followingUserId) {
+  if (business.id !== patch.businessId) {
     return business
   }
 

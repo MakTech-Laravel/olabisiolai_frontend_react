@@ -67,7 +67,7 @@ export function AdminHeader({ sidebarOpen = false, onToggleSidebar }: AdminHeade
           <DropdownMenuLabel>Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link to="/admin/dashboard" className="flex cursor-pointer items-center gap-2">
+            <Link to="/admin/settings" className="flex cursor-pointer items-center gap-2">
               <User className="size-4" aria-hidden />
               Profile
             </Link>
