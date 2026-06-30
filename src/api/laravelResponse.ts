@@ -91,6 +91,19 @@ export function extractTwoFactorLoginToken(body: unknown): string | null {
   return typeof data?.two_factor_token === 'string' ? data.two_factor_token : null
 }
 
+export function extractTwoFactorDeliveryMeta(body: unknown): {
+  verificationChannel: 'email' | 'phone'
+  maskedEmail?: string
+  maskedPhone?: string
+} {
+  const data = unwrapLaravelData<Record<string, unknown>>(body)
+  return {
+    verificationChannel: data?.verification_channel === 'phone' ? 'phone' : 'email',
+    maskedEmail: typeof data?.masked_email === 'string' ? data.masked_email : undefined,
+    maskedPhone: typeof data?.masked_phone === 'string' ? data.masked_phone : undefined,
+  }
+}
+
 export function isDeviceVerificationRequired(body: unknown): boolean {
   const data = unwrapLaravelData<Record<string, unknown>>(body)
   return (

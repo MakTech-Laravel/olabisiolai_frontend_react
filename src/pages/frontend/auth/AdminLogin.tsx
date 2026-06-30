@@ -27,10 +27,24 @@ export default function AdminLogin() {
     setFieldErrors({});
 
     try {
-      await loginAdmin(
+      const loginResult = await loginAdmin(
         { email, password },
         { authStrategy, setToken, setUser, refreshSession, resetAuthState },
       );
+
+      if (loginResult.kind === "two_factor") {
+        navigate("/login/two-factor", {
+          replace: true,
+          state: {
+            twoFactorToken: loginResult.twoFactorToken,
+            role: "admin",
+            verificationChannel: loginResult.verificationChannel,
+            maskedEmail: loginResult.maskedEmail,
+            maskedPhone: loginResult.maskedPhone,
+          },
+        });
+        return;
+      }
 
       navigate("/admin/dashboard", { replace: true });
     } catch (err) {

@@ -6,10 +6,19 @@ import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getAuthErrorMessage, getAuthFieldErrors } from '@/features/auth/errorMessage'
-import { resolvePostLoginPath, verifyLoginTwoFactor } from '@/features/auth/service'
-import { type AuthRole } from '@/features/auth/types'
 import { type LoginReturnTarget } from '@/features/auth/loginReturn'
 import { navigateAfterLogin } from '@/features/auth/navigateAfterLogin'
+import {
+  resendTwoFactorLoginOtp,
+  resolvePostLoginPath,
+  verifyAdminLoginTwoFactor,
+  verifyLoginTwoFactor,
+} from '@/features/auth/service'
+import {
+  getTwoFactorLoginSession,
+  saveTwoFactorLoginSession,
+} from '@/features/auth/twoFactorLoginStorage'
+import { type AuthRole } from '@/features/auth/types'
 import {
   applyOtpInputAtIndex,
   applyOtpPasteAtIndex,
@@ -20,7 +29,10 @@ const CODE_LENGTH = 6
 
 type LocationState = {
   twoFactorToken?: string
-  role?: AuthRole
+  role?: AuthRole | 'admin'
+  verificationChannel?: 'email' | 'phone'
+  maskedEmail?: string
+  maskedPhone?: string
   from?: LoginReturnTarget
 }
 
@@ -30,30 +42,80 @@ export default function LoginTwoFactor() {
   const state = (location.state ?? {}) as LocationState
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth()
 
+  const storedSession = React.useMemo(() => getTwoFactorLoginSession(), [])
+
+  const isAdmin =
+    state.role === 'admin' || storedSession?.role === 'admin' || location.pathname.startsWith('/admin/login/two-factor')
+
+  const twoFactorToken = state.twoFactorToken ?? storedSession?.token
+  const role: AuthRole | 'admin' = isAdmin ? 'admin' : state.role === 'vendor' ? 'vendor' : storedSession?.role ?? 'user'
+  const marketplaceRole: AuthRole = role === 'vendor' ? 'vendor' : 'user'
+
+  const [verificationChannel, setVerificationChannel] = React.useState<'email' | 'phone'>(
+    state.verificationChannel ?? storedSession?.verificationChannel ?? 'email',
+  )
+  const [maskedEmail, setMaskedEmail] = React.useState(state.maskedEmail ?? storedSession?.maskedEmail)
+  const [maskedPhone, setMaskedPhone] = React.useState(state.maskedPhone ?? storedSession?.maskedPhone)
+
   const [digits, setDigits] = React.useState<string[]>(() => createEmptyOtpDigits(CODE_LENGTH))
   const [recoveryMode, setRecoveryMode] = React.useState(false)
   const [recoveryCode, setRecoveryCode] = React.useState('')
   const [loading, setLoading] = React.useState(false)
+  const [resending, setResending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({})
 
   const inputRefs = React.useRef<Array<HTMLInputElement | null>>([])
 
   React.useEffect(() => {
-    if (!state.twoFactorToken) {
-      navigate('/login/email', { replace: true })
+    if (!twoFactorToken) {
+      navigate(isAdmin ? '/admin/login' : '/login/email', { replace: true })
+      return
     }
-  }, [navigate, state.twoFactorToken])
 
-  const role: AuthRole = state.role === 'vendor' ? 'vendor' : 'user'
+    saveTwoFactorLoginSession({
+      token: twoFactorToken,
+      role,
+      verificationChannel,
+      maskedEmail,
+      maskedPhone,
+    })
+  }, [isAdmin, maskedEmail, maskedPhone, navigate, role, twoFactorToken, verificationChannel])
+
   const code = recoveryMode ? recoveryCode.trim() : digits.join('')
+
+  const deliveryHint =
+    verificationChannel === 'phone'
+      ? maskedPhone
+        ? `We sent a 6-digit code to ${maskedPhone}.`
+        : 'We sent a 6-digit code to your phone.'
+      : maskedEmail
+        ? `We sent a 6-digit code to ${maskedEmail}.`
+        : 'We sent a 6-digit code to your email.'
+
+  async function onResend() {
+    if (!twoFactorToken || resending) return
+
+    setResending(true)
+    setError(null)
+    try {
+      const delivery = await resendTwoFactorLoginOtp(twoFactorToken, isAdmin)
+      setVerificationChannel(delivery.verificationChannel)
+      if (delivery.maskedEmail) setMaskedEmail(delivery.maskedEmail)
+      if (delivery.maskedPhone) setMaskedPhone(delivery.maskedPhone)
+    } catch (err) {
+      setError(getAuthErrorMessage(err, 'Could not resend the verification code.'))
+    } finally {
+      setResending(false)
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!state.twoFactorToken) return
+    if (!twoFactorToken) return
 
     if (!recoveryMode && code.length !== CODE_LENGTH) {
-      setError('Enter the 6-digit code from your authenticator app.')
+      setError('Enter the 6-digit verification code.')
       return
     }
 
@@ -67,17 +129,32 @@ export default function LoginTwoFactor() {
     setFieldErrors({})
 
     try {
-      const loginResult = await verifyLoginTwoFactor(
-        {
-          two_factor_token: state.twoFactorToken,
-          code,
-          role,
-        },
-        { authStrategy, setToken, setUser, refreshSession, resetAuthState },
-      )
+      const handlers = { authStrategy, setToken, setUser, refreshSession, resetAuthState }
+
+      const loginResult = isAdmin
+        ? await verifyAdminLoginTwoFactor(
+            {
+              two_factor_token: twoFactorToken,
+              code,
+            },
+            handlers,
+          )
+        : await verifyLoginTwoFactor(
+            {
+              two_factor_token: twoFactorToken,
+              code,
+              role: marketplaceRole,
+            },
+            handlers,
+          )
 
       if (loginResult.kind !== 'authenticated') {
         throw new Error('Unable to restore your session after two-factor verification.')
+      }
+
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true })
+        return
       }
 
       const loggedInUser = loginResult.user
@@ -86,7 +163,7 @@ export default function LoginTwoFactor() {
         return
       }
 
-      navigate(await resolvePostLoginPath(loggedInUser, role), { replace: true })
+      navigate(await resolvePostLoginPath(loggedInUser, marketplaceRole), { replace: true })
     } catch (err) {
       const errors = getAuthFieldErrors(err)
       setFieldErrors(errors)
@@ -122,7 +199,7 @@ export default function LoginTwoFactor() {
     }
   }
 
-  if (!state.twoFactorToken) {
+  if (!twoFactorToken) {
     return null
   }
 
@@ -130,11 +207,13 @@ export default function LoginTwoFactor() {
     <div className="flex min-h-[60vh] items-center justify-center bg-auth-bg p-4">
       <div className="w-full max-w-md rounded-lg bg-card p-8 shadow-lg">
         <div className="mb-8 space-y-2 text-center">
-          <h2 className="font-inter text-2xl font-semibold text-foreground">Two-factor authentication</h2>
+          <h2 className="font-inter text-2xl font-semibold text-foreground">
+            {isAdmin ? 'Admin two-factor authentication' : 'Two-factor authentication'}
+          </h2>
           <p className="text-sm text-muted-foreground">
             {recoveryMode
               ? 'Enter one of your recovery codes to sign in.'
-              : 'Open your authenticator app and enter the 6-digit code.'}
+              : `${deliveryHint} You can also use a code from your authenticator app.`}
           </p>
         </div>
 
@@ -195,6 +274,19 @@ export default function LoginTwoFactor() {
             </span>
           </Button>
 
+          {!recoveryMode ? (
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline disabled:opacity-50"
+                disabled={resending}
+                onClick={() => void onResend()}
+              >
+                {resending ? 'Sending code...' : 'Resend verification code'}
+              </button>
+            </div>
+          ) : null}
+
           <div className="text-center">
             <button
               type="button"
@@ -205,12 +297,12 @@ export default function LoginTwoFactor() {
                 setFieldErrors({})
               }}
             >
-              {recoveryMode ? 'Use authenticator code instead' : 'Use a recovery code instead'}
+              {recoveryMode ? 'Use verification or authenticator code instead' : 'Use a recovery code instead'}
             </button>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link to="/login/email" className="text-primary hover:underline">
+            <Link to={isAdmin ? '/admin/login' : '/login/email'} className="text-primary hover:underline">
               Back to login
             </Link>
           </p>

@@ -102,6 +102,9 @@ export default function LoginPhone() {
           state: {
             twoFactorToken: loginResult.twoFactorToken,
             role,
+            verificationChannel: loginResult.verificationChannel,
+            maskedEmail: loginResult.maskedEmail,
+            maskedPhone: loginResult.maskedPhone,
             from: returnTo,
           },
         });
