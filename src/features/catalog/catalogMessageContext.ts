@@ -188,15 +188,13 @@ export function moveCatalogDraftToConversation(conversationUuid: string): Catalo
   return draft
 }
 
-/** Derive a human-readable catalog title from an uploaded image filename. */
-export function catalogTitleFromImageFile(file: File): string {
-  const withoutExt = file.name.replace(/\.[^.]+$/, '').trim()
-  const normalized = withoutExt.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
-  return normalized || file.name.trim() || 'Catalog item'
-}
-
-export function catalogImageFileName(itemName: string, imageUrl: string | null): string {
-  if (imageUrl) {
+/** Build a safe storage filename from the catalog item title (not the original upload name). */
+export function catalogImageFileName(
+  itemName: string,
+  imageUrl: string | null,
+  sourceFile?: File | null,
+): string {
+  if (imageUrl && !sourceFile) {
     try {
       const pathname = new URL(imageUrl, window.location.origin).pathname
       const segment = pathname.split('/').filter(Boolean).pop()
@@ -208,8 +206,32 @@ export function catalogImageFileName(itemName: string, imageUrl: string | null):
     }
   }
 
-  const safe = itemName.trim().replace(/\s+/g, '-').toLowerCase() || 'catalog-item'
-  return `${safe}.jpg`
+  const ext = catalogImageExtension(sourceFile)
+  const safe = itemName
+    .trim()
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'catalog-item'
+
+  return `${safe.slice(0, 80)}${ext}`
+}
+
+function catalogImageExtension(source?: Pick<File, 'name' | 'type'> | null): string {
+  const fromName = source?.name?.match(/\.([a-zA-Z0-9]+)$/)?.[0]?.toLowerCase()
+  if (fromName === '.jpeg' || fromName === '.jpg') return '.jpg'
+  if (fromName === '.png' || fromName === '.webp' || fromName === '.gif') return fromName
+  if (source?.type === 'image/png') return '.png'
+  if (source?.type === 'image/webp') return '.webp'
+  return '.jpg'
+}
+
+/** Rename an uploaded catalog image so its filename matches the item title. */
+export function catalogImageFileForUpload(file: File, itemName: string): File {
+  const fileName = catalogImageFileName(itemName, null, file)
+  if (file.name === fileName) return file
+  return new File([file], fileName, { type: file.type, lastModified: file.lastModified })
 }
 
 const IMAGE_FETCH_TIMEOUT_MS = 8000

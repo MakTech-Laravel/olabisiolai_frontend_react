@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  CATALOG_DESCRIPTION_MAX_LENGTH,
+  CATALOG_NAME_MAX_LENGTH,
+  CATALOG_PRICE_LABEL_MAX_LENGTH,
   createCatalogItem,
   deleteCatalogItem,
   fetchVendorCatalog,
@@ -18,9 +21,9 @@ import {
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
-import { catalogTitleFromImageFile } from '@/features/catalog/catalogMessageContext'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
@@ -139,20 +142,35 @@ export function VendorOwnerCatalogSection({
   }
 
   async function handleSave() {
-    const resolvedName =
-      editor.name.trim() ||
-      (editor.image ? catalogTitleFromImageFile(editor.image) : '')
+    const resolvedName = editor.name.trim()
 
     if (!resolvedName) {
-      showError('Enter a name for this catalog item or upload a photo.')
+      showError('Enter a name for this catalog item.')
+      return
+    }
+
+    if (resolvedName.length > CATALOG_NAME_MAX_LENGTH) {
+      showError(`Name must be ${CATALOG_NAME_MAX_LENGTH} characters or fewer.`)
+      return
+    }
+
+    const description = editor.description.trim()
+    if (description.length > CATALOG_DESCRIPTION_MAX_LENGTH) {
+      showError(`Description must be ${CATALOG_DESCRIPTION_MAX_LENGTH} characters or fewer.`)
+      return
+    }
+
+    const priceLabel = editor.priceLabel.trim()
+    if (priceLabel.length > CATALOG_PRICE_LABEL_MAX_LENGTH) {
+      showError(`Price must be ${CATALOG_PRICE_LABEL_MAX_LENGTH} characters or fewer.`)
       return
     }
 
     const input: CatalogItemInput = {
       type: editor.type,
       name: resolvedName,
-      description: editor.description,
-      priceLabel: editor.priceLabel,
+      description,
+      priceLabel,
       priceFrom: editor.priceFrom,
       image: editor.image,
       removeImage: editor.removeImage,
@@ -170,7 +188,7 @@ export function VendorOwnerCatalogSection({
       setSheetOpen(false)
       await refreshCatalog()
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Could not save catalog item.')
+      showError(getLaravelErrorMessage(error, 'Could not save catalog item.'))
     } finally {
       setSaving(false)
     }
@@ -186,7 +204,7 @@ export function VendorOwnerCatalogSection({
       setSheetOpen(false)
       await refreshCatalog()
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Could not delete catalog item.')
+      showError(getLaravelErrorMessage(error, 'Could not delete catalog item.'))
     } finally {
       setSaving(false)
     }
@@ -228,15 +246,20 @@ export function VendorOwnerCatalogSection({
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">Name</label>
           <Input
             value={editor.name}
+            maxLength={CATALOG_NAME_MAX_LENGTH}
             onChange={(event) => setEditor((current) => ({ ...current, name: event.target.value }))}
             placeholder="e.g. Full house rewiring"
           />
+          <p className="mt-1 text-xs text-stat-muted">
+            {editor.name.length}/{CATALOG_NAME_MAX_LENGTH} characters
+          </p>
         </div>
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">Description</label>
           <Textarea
             value={editor.description}
+            maxLength={CATALOG_DESCRIPTION_MAX_LENGTH}
             onChange={(event) => setEditor((current) => ({ ...current, description: event.target.value }))}
             placeholder="Short description"
             rows={3}
@@ -247,6 +270,7 @@ export function VendorOwnerCatalogSection({
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">Price</label>
           <Input
             value={editor.priceLabel}
+            maxLength={CATALOG_PRICE_LABEL_MAX_LENGTH}
             onChange={(event) => setEditor((current) => ({ ...current, priceLabel: event.target.value }))}
             placeholder="e.g. ₦250,000"
           />
@@ -273,10 +297,6 @@ export function VendorOwnerCatalogSection({
                 ...current,
                 image: file,
                 removeImage: false,
-                name:
-                  file && (!current.item || !current.name.trim())
-                    ? catalogTitleFromImageFile(file)
-                    : current.name,
               }))
             }}
           />

@@ -1,6 +1,11 @@
 import { request } from '@/api/request'
+import { catalogImageFileForUpload } from '@/features/catalog/catalogMessageContext'
 
 export type CatalogItemType = 'product' | 'service'
+
+export const CATALOG_NAME_MAX_LENGTH = 120
+export const CATALOG_DESCRIPTION_MAX_LENGTH = 500
+export const CATALOG_PRICE_LABEL_MAX_LENGTH = 64
 
 export type BusinessCatalogItem = {
   id: number
@@ -120,7 +125,9 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
   if (input.description?.trim()) formData.append('description', input.description.trim())
   if (input.priceLabel?.trim()) formData.append('price_label', input.priceLabel.trim())
   formData.append('price_from', input.priceFrom ? '1' : '0')
-  if (input.image) formData.append('image', input.image)
+  if (input.image) {
+    formData.append('image', catalogImageFileForUpload(input.image, input.name.trim()))
+  }
   if (input.removeImage) formData.append('remove_image', '1')
 }
 
