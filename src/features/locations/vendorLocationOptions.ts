@@ -239,6 +239,36 @@ export function uniqueLocationCities(locations: ParsedLocationOption[], state: s
   );
 }
 
+export function uniqueLocationLgas(locations: ParsedLocationOption[], state: string): string[] {
+  if (!state) return [];
+  return [...new Set(locations.filter((entry) => entry.state === state).map((entry) => entry.lga))].sort(
+    (a, b) => a.localeCompare(b),
+  );
+}
+
+export function uniqueLocationCitiesForStateLga(
+  locations: ParsedLocationOption[],
+  state: string,
+  lga: string,
+): string[] {
+  if (!state || !lga) return [];
+  return [
+    ...new Set(
+      locations.filter((entry) => entry.state === state && entry.lga === lga).map((entry) => entry.city),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+}
+
+export function locationEntryForStateLgaCity(
+  locations: ParsedLocationOption[],
+  state: string,
+  lga: string,
+  city: string,
+): ParsedLocationOption | null {
+  if (!state || !lga || !city) return null;
+  return locations.find((entry) => entry.state === state && entry.lga === lga && entry.city === city) ?? null;
+}
+
 export function locationEntriesForStateCity(
   locations: ParsedLocationOption[],
   state: string,

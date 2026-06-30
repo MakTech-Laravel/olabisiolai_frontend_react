@@ -11,14 +11,14 @@ function Label({ children }: { children: ReactNode }) {
 
 type LocationCascadeSelectsProps = {
   state: string
+  lga: string
   city: string
-  locationId: string
   states: string[]
+  lgas: string[]
   cities: string[]
-  lgaOptions: Array<{ id: string; lga: string }>
   onStateChange: (state: string) => void
+  onLgaChange: (lga: string) => void
   onCityChange: (city: string) => void
-  onLocationChange: (locationId: string) => void
   disabled?: boolean
   stateLoading?: boolean
   savedLocationOption?: { id: string; state: string; city: string; lga: string } | null
@@ -64,14 +64,14 @@ function SelectShell({
 
 export function LocationCascadeSelects({
   state,
+  lga,
   city,
-  locationId,
   states,
+  lgas,
   cities,
-  lgaOptions,
   onStateChange,
+  onLgaChange,
   onCityChange,
-  onLocationChange,
   disabled,
   stateLoading,
   savedLocationOption,
@@ -95,20 +95,20 @@ export function LocationCascadeSelects({
         ))}
       </SelectShell>
 
-      <div className="grid gap-5 sm:grid-cols-2 mt-2">
+      <div className="mt-2 grid gap-5 sm:grid-cols-2">
         <SelectShell
-          label="City"
-          value={city}
-          disabled={disabled || !state || cities.length === 0}
-          onChange={onCityChange}
+          label="LGA (Local Government Area)"
+          value={lga}
+          disabled={disabled || !state || lgas.length === 0}
+          onChange={onLgaChange}
         >
-          <option value="">Select city</option>
+          <option value="">Select LGA</option>
           {savedLocationOption &&
           savedLocationOption.state === state &&
-          !cities.includes(savedLocationOption.city) ? (
-            <option value={savedLocationOption.city}>{savedLocationOption.city}</option>
+          !lgas.includes(savedLocationOption.lga) ? (
+            <option value={savedLocationOption.lga}>{savedLocationOption.lga}</option>
           ) : null}
-          {cities.map((option) => (
+          {lgas.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -116,21 +116,21 @@ export function LocationCascadeSelects({
         </SelectShell>
 
         <SelectShell
-          label="LGA (Local Government Area)"
-          value={locationId}
-          disabled={disabled || !city || lgaOptions.length === 0}
-          onChange={onLocationChange}
+          label="City"
+          value={city}
+          disabled={disabled || !lga || cities.length === 0}
+          onChange={onCityChange}
         >
-          <option value="">Select LGA</option>
+          <option value="">Select city</option>
           {savedLocationOption &&
           savedLocationOption.state === state &&
-          savedLocationOption.city === city &&
-          !lgaOptions.some((entry) => entry.id === savedLocationOption.id) ? (
-            <option value={savedLocationOption.id}>{savedLocationOption.lga}</option>
+          savedLocationOption.lga === lga &&
+          !cities.includes(savedLocationOption.city) ? (
+            <option value={savedLocationOption.city}>{savedLocationOption.city}</option>
           ) : null}
-          {lgaOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.lga}
+          {cities.map((option) => (
+            <option key={option} value={option}>
+              {option}
             </option>
           ))}
         </SelectShell>

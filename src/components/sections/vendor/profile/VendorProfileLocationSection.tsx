@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { LocationCascadeSelects } from "@/components/locations/LocationCascadeSelects";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import {
-  locationEntriesForStateCity,
+  locationEntryForStateLgaCity,
   parseVendorLocationOptions,
-  uniqueLocationCities,
+  uniqueLocationCitiesForStateLga,
+  uniqueLocationLgas,
   uniqueLocationStates,
 } from "@/features/locations/vendorLocationOptions";
 import { fetchVendorBoostCatalog } from "@/features/boost/vendorBoostApi";
@@ -41,31 +42,33 @@ export function VendorProfileLocationSection() {
   );
 
   const [draftState, setDraftState] = useState("");
+  const [draftLga, setDraftLga] = useState("");
   const [draftCity, setDraftCity] = useState("");
 
   useEffect(() => {
     if (!isEditing) return;
     setDraftState(selectedLocation?.state || profile?.state || "");
+    setDraftLga(selectedLocation?.lga || profile?.lga || "");
     setDraftCity(selectedLocation?.city || profile?.city || "");
-  }, [isEditing, selectedLocation?.id, profile?.state, profile?.city]);
+  }, [isEditing, selectedLocation?.id, profile?.state, profile?.lga, profile?.city]);
 
   const profileState = isEditing ? draftState : selectedLocation?.state || profile?.state || "";
+  const profileLga = isEditing ? draftLga : selectedLocation?.lga || profile?.lga || "";
   const profileCity = isEditing ? draftCity : selectedLocation?.city || profile?.city || "";
-  const profileLga = selectedLocation?.lga || profile?.lga || "";
 
   const allStates = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations]);
-  const citiesForState = useMemo(
-    () => uniqueLocationCities(parsedLocations, isEditing ? draftState : profileState),
+  const lgasForState = useMemo(
+    () => uniqueLocationLgas(parsedLocations, isEditing ? draftState : profileState),
     [parsedLocations, isEditing, draftState, profileState],
   );
-  const lgaOptions = useMemo(
+  const citiesForStateLga = useMemo(
     () =>
-      locationEntriesForStateCity(
+      uniqueLocationCitiesForStateLga(
         parsedLocations,
         isEditing ? draftState : profileState,
-        isEditing ? draftCity : profileCity,
+        isEditing ? draftLga : profileLga,
       ),
-    [parsedLocations, isEditing, draftState, draftCity, profileState, profileCity],
+    [parsedLocations, isEditing, draftState, draftLga, profileState, profileLga],
   );
 
   const { data: boostCatalog } = useQuery({
@@ -111,17 +114,26 @@ export function VendorProfileLocationSection() {
 
   const handleStateChange = (nextState: string) => {
     if (!draft) return;
-    const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
-    const nextEntry = locationEntriesForStateCity(parsedLocations, nextState, nextCity)[0];
     setDraftState(nextState);
+    setDraftLga("");
+    setDraftCity("");
+    setDraftField("locationId", "");
+  };
+
+  const handleLgaChange = (nextLga: string) => {
+    if (!draft) return;
+    setDraftLga(nextLga);
+    const nextCities = uniqueLocationCitiesForStateLga(parsedLocations, draftState, nextLga);
+    const nextCity = nextCities.length === 1 ? nextCities[0] : "";
     setDraftCity(nextCity);
+    const nextEntry = locationEntryForStateLgaCity(parsedLocations, draftState, nextLga, nextCity);
     setDraftField("locationId", nextEntry?.id ?? "");
   };
 
   const handleCityChange = (nextCity: string) => {
     if (!draft) return;
-    const nextEntry = locationEntriesForStateCity(parsedLocations, draftState, nextCity)[0];
     setDraftCity(nextCity);
+    const nextEntry = locationEntryForStateLgaCity(parsedLocations, draftState, draftLga, nextCity);
     setDraftField("locationId", nextEntry?.id ?? "");
   };
 
@@ -149,14 +161,14 @@ export function VendorProfileLocationSection() {
       {isEditing && draft ? (
         <LocationCascadeSelects
           state={draftState}
+          lga={draftLga}
           city={draftCity}
-          locationId={locationId}
           states={allStates}
-          cities={citiesForState}
-          lgaOptions={lgaOptions}
+          lgas={lgasForState}
+          cities={citiesForStateLga}
           onStateChange={handleStateChange}
+          onLgaChange={handleLgaChange}
           onCityChange={handleCityChange}
-          onLocationChange={(nextId) => setDraftField("locationId", nextId)}
           disabled={isPending}
           stateLoading={isPending}
           savedLocationOption={savedLocationOption}
@@ -169,13 +181,13 @@ export function VendorProfileLocationSection() {
               <Input value={profileState || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
             </div>
             <div>
-              <Label>City</Label>
-              <Input value={profileCity || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
+              <Label>LGA (Local Government Area)</Label>
+              <Input value={profileLga || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
             </div>
           </div>
           <div>
-            <Label>LGA (Local Government Area)</Label>
-            <Input value={profileLga || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
+            <Label>City</Label>
+            <Input value={profileCity || "—"} readOnly className="h-11 border-border-light bg-background text-sm shadow-sm" />
           </div>
         </>
       )}
@@ -197,7 +209,7 @@ export function VendorProfileLocationSection() {
         />
       ) : locationId && !selectedLocation && !savedLocationOption ? (
         <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-900">
-          Location details could not be matched to the catalog. Please pick state, city, and LGA from the list, or
+          Location details could not be matched to the catalog. Please pick state, LGA, and city from the list, or
           keep your saved address:{" "}
           <span className="font-medium">{profile.locationFullName || profile.locationLabel}</span>
         </div>
