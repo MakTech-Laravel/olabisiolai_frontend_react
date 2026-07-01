@@ -9,20 +9,26 @@ import {
   Banknote,
   BarChart2,
   Bell,
-  LayoutGrid,
   Lock,
-  MessageSquare,
   MessageSquareCheck,
   Rocket,
-  Settings,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useVendorSubscriptionAccess } from "@/hooks/useVendorSubscriptionAccess";
 import { useVendorBusinessProfile } from "@/features/business/useVendorBusinessProfile";
 
 const VENDOR_LOGO_SRC = "/images/landing/gidira-logo-header.svg";
 
-const items = [
+type VendorNavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  premiumOnly: boolean;
+  end?: boolean;
+};
+
+const items: VendorNavItem[] = [
   // { to: "/user/profile", label: "My profile", icon: LayoutGrid, end: true, premiumOnly: false },
   // { to: "/vendor/leads", label: "Leads", icon: MessageSquare, premiumOnly: false },
   { to: "/vendor/notifications", label: "Notifications", icon: Bell, premiumOnly: false },
@@ -197,7 +203,6 @@ export function VendorSidebar({
               <NavLink
                 key={i.to}
                 to={i.to}
-                end={i.end}
                 className={() =>
                   cn(
                     "flex items-center gap-2 rounded-md px-3 py-2 text-base font-normal font-inter transition-all",
