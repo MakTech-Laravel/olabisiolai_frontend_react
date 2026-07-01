@@ -46,9 +46,10 @@ import {
 } from "@/features/business/socialAccounts";
 import { useVendorBusinessFormOptions } from "@/features/categories/useVendorBusinessFormOptions";
 import {
-  locationEntriesForStateCity,
+  locationEntryForStateLgaCity,
   parseVendorLocationOptions,
-  uniqueLocationCities,
+  uniqueLocationCitiesForStateLga,
+  uniqueLocationLgas,
   uniqueLocationStates,
 } from "@/features/locations/vendorLocationOptions";
 
@@ -196,8 +197,8 @@ export default function ChoosePlanForm() {
   const [subcategory, setSubcategory] = useState("");
   const [locationId, setLocationId] = useState("");
   const [state, setState] = useState("");
+  const [lga, setLga] = useState("");
   const [city, setCity] = useState("");
-  const [lgaInput, setLgaInput] = useState("");
   const [includeBoost, setIncludeBoost] = useState(false);
   const [boostDurationDays, setBoostDurationDays] = useState<DynamicBoostDuration>(3);
   const [boostBudgetAmount, setBoostBudgetAmount] = useState(1500);
@@ -213,13 +214,13 @@ export default function ChoosePlanForm() {
   /** Server or client validation messages keyed by API field name (e.g. location_id, services). */
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const showLocationSection = true;
-  const citiesForState = useMemo(
-    () => uniqueLocationCities(parsedLocations, state),
+  const lgasForState = useMemo(
+    () => uniqueLocationLgas(parsedLocations, state),
     [parsedLocations, state],
   );
-  const lgaOptions = useMemo(
-    () => locationEntriesForStateCity(parsedLocations, state, city),
-    [parsedLocations, state, city],
+  const citiesForStateLga = useMemo(
+    () => uniqueLocationCitiesForStateLga(parsedLocations, state, lga),
+    [parsedLocations, state, lga],
   );
 
   const addService = () => setServices((s) => [...s, ""]);
@@ -239,7 +240,8 @@ export default function ChoosePlanForm() {
     [locationId, parsedLocations],
   );
   const stateOptions = allStates;
-  const cityOptions = citiesForState;
+  const lgaOptions = lgasForState;
+  const cityOptions = citiesForStateLga;
   const premiumSelected = isPremiumPlanSelected();
 
   const orphanFieldErrorSummary = useMemo(() => {
@@ -273,23 +275,28 @@ export default function ChoosePlanForm() {
       return;
     }
     setState(selectedLocation.state);
+    setLga(selectedLocation.lga);
     setCity(selectedLocation.city);
-    setLgaInput(selectedLocation.lga);
   }, [selectedLocation?.id]);
 
   useEffect(() => {
     if (!state) {
+      setLga("");
       setCity("");
-      setLgaInput("");
       setLocationId("");
       return;
     }
-    if (city && !citiesForState.includes(city)) {
+    if (lga && !lgasForState.includes(lga)) {
+      setLga("");
       setCity("");
-      setLgaInput("");
+      setLocationId("");
+      return;
+    }
+    if (city && !citiesForStateLga.includes(city)) {
+      setCity("");
       setLocationId("");
     }
-  }, [state, city, citiesForState]);
+  }, [state, lga, city, lgasForState, citiesForStateLga]);
 
   useEffect(() => {
     if (!logo) {
@@ -345,7 +352,7 @@ export default function ChoosePlanForm() {
     const formData = new FormData(e.currentTarget);
     const normalizedServices = services.map((service) => service.trim()).filter(Boolean);
 
-    const lga = showLocationSection ? (selectedLocation?.lga ?? lgaInput).trim() : "";
+    const resolvedLga = showLocationSection ? (selectedLocation?.lga ?? lga).trim() : "";
     if (!categoryId && !locationId) {
       setFieldErrors({
         category_id: "Please select a category.",
@@ -365,9 +372,9 @@ export default function ChoosePlanForm() {
       setFieldErrors({ location_id: "Please select a location." });
       return;
     }
-    if (showLocationSection && (!state || !city || !lga)) {
+    if (showLocationSection && (!state || !lga || !city)) {
       setFieldErrors({
-        location_id: "Please complete location details (state, city, and LGA).",
+        location_id: "Please complete location details (state, LGA, and city).",
       });
       return;
     }
@@ -427,7 +434,7 @@ export default function ChoosePlanForm() {
       location: selectedLocation?.location ?? "",
       state: showLocationSection ? state : "",
       city: showLocationSection ? city : "",
-      lga,
+      lga: resolvedLga,
       full_address: showLocationSection ? String(formData.get("fullAddress") ?? "") : "",
       business_description: clampBusinessOverview(String(formData.get("description") ?? "")),
       services: normalizedServices,
@@ -561,41 +568,43 @@ export default function ChoosePlanForm() {
 
           <LocationCascadeSelects
             state={state}
+            lga={lga}
             city={city}
-            locationId={locationId}
             states={stateOptions}
+            lgas={lgaOptions}
             cities={cityOptions}
-            lgaOptions={lgaOptions}
             disabled={formOptionsLoading}
             stateLoading={formOptionsLoading}
             onStateChange={(nextState) => {
               setState(nextState);
-              const nextCity = uniqueLocationCities(parsedLocations, nextState)[0] ?? "";
-              setCity(nextCity);
-              const nextEntry = locationEntriesForStateCity(parsedLocations, nextState, nextCity)[0];
-              setLocationId(nextEntry?.id ?? "");
-              setLgaInput(nextEntry?.lga ?? "");
+              setLga("");
+              setCity("");
+              setLocationId("");
               setFieldErrors((prev) => {
                 const next = { ...prev };
                 delete next.location_id;
+                delete next.lga;
+                return next;
+              });
+            }}
+            onLgaChange={(nextLga) => {
+              setLga(nextLga);
+              const nextCities = uniqueLocationCitiesForStateLga(parsedLocations, state, nextLga);
+              const nextCity = nextCities.length === 1 ? nextCities[0] : "";
+              setCity(nextCity);
+              const nextEntry = locationEntryForStateLgaCity(parsedLocations, state, nextLga, nextCity);
+              setLocationId(nextEntry?.id ?? "");
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.location_id;
+                delete next.lga;
                 return next;
               });
             }}
             onCityChange={(nextCity) => {
               setCity(nextCity);
-              const nextEntry = locationEntriesForStateCity(parsedLocations, state, nextCity)[0];
+              const nextEntry = locationEntryForStateLgaCity(parsedLocations, state, lga, nextCity);
               setLocationId(nextEntry?.id ?? "");
-              setLgaInput(nextEntry?.lga ?? "");
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next.location_id;
-                return next;
-              });
-            }}
-            onLocationChange={(nextId) => {
-              setLocationId(nextId);
-              const entry = parsedLocations.find((item) => item.id === nextId);
-              setLgaInput(entry?.lga ?? "");
               setFieldErrors((prev) => {
                 const next = { ...prev };
                 delete next.location_id;
@@ -610,7 +619,7 @@ export default function ChoosePlanForm() {
           {selectedLocation && premiumSelected ? (
             <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
               <p className="text-xs text-muted-foreground">
-                {selectedLocation.state} / {selectedLocation.city} / {selectedLocation.lga}
+                {selectedLocation.state} / {selectedLocation.lga} / {selectedLocation.city}
               </p>
 
               <DynamicBoostSelectionFields

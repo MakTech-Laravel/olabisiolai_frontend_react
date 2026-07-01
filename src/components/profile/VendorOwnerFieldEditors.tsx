@@ -19,9 +19,10 @@ import {
   type VendorBusinessProfile,
 } from '@/features/business/vendorBusinessProfileApi'
 import {
-  locationEntriesForStateCity,
+  locationEntryForStateLgaCity,
   parseVendorLocationOptions,
-  uniqueLocationCities,
+  uniqueLocationCitiesForStateLga,
+  uniqueLocationLgas,
   uniqueLocationStates,
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
@@ -126,6 +127,7 @@ export function VendorOwnerLocationEditButton({
   )
   const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
   const [state, setState] = useState('')
+  const [lga, setLga] = useState('')
   const [city, setCity] = useState('')
   const [locationId, setLocationId] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
@@ -137,6 +139,7 @@ export function VendorOwnerLocationEditButton({
     if (!profile || !open) return
     const selected = parsedLocations.find((entry) => entry.id === String(profile.locationId)) ?? null
     setState(selected?.state || profile.state || '')
+    setLga(selected?.lga || profile.lga || '')
     setCity(selected?.city || profile.city || '')
     setLocationId(selected?.id || String(profile.locationId || ''))
     setStreetAddress(profile.streetAddress || '')
@@ -157,21 +160,32 @@ export function VendorOwnerLocationEditButton({
     const matched = matchVendorLocationFromGoogle(pick, parsedLocations)
     if (matched) {
       setState(matched.state)
+      setLga(matched.lga)
       setCity(matched.city)
       setLocationId(matched.id)
     }
   }
 
   const states = useMemo(() => uniqueLocationStates(parsedLocations), [parsedLocations])
+  const lgas = useMemo(() => uniqueLocationLgas(parsedLocations, state), [parsedLocations, state])
   const cities = useMemo(
-    () => uniqueLocationCities(parsedLocations, state),
-    [parsedLocations, state],
-  )
-  const lgaOptions = useMemo(
-    () => locationEntriesForStateCity(parsedLocations, state, city),
-    [parsedLocations, state, city],
+    () => uniqueLocationCitiesForStateLga(parsedLocations, state, lga),
+    [parsedLocations, state, lga],
   )
   const selectedEntry = parsedLocations.find((entry) => entry.id === locationId) ?? null
+
+  function applyCitySelection(nextCity: string, nextState = state, nextLga = lga) {
+    setCity(nextCity)
+    const entry = locationEntryForStateLgaCity(parsedLocations, nextState, nextLga, nextCity)
+    setLocationId(entry?.id ?? '')
+  }
+
+  function applyLgaSelection(nextLga: string, nextState = state) {
+    setLga(nextLga)
+    const nextCities = uniqueLocationCitiesForStateLga(parsedLocations, nextState, nextLga)
+    const nextCity = nextCities.length === 1 ? nextCities[0] : ''
+    applyCitySelection(nextCity, nextState, nextLga)
+  }
 
   return (
     <>
@@ -183,7 +197,7 @@ export function VendorOwnerLocationEditButton({
         onClose={() => setOpen(false)}
         onSave={() => {
           if (!locationId) {
-            showError('Please select your state, city, and LGA.')
+            showError('Please select your state, LGA, and city.')
             return
           }
           void saveProfile(
@@ -214,27 +228,25 @@ export function VendorOwnerLocationEditButton({
             placeholder="e.g. 7 Adeola Odeku Street, Victoria Island"
           />
           <p className="mt-2 text-[12px] text-body-secondary">
-            Type to search — Google suggestions appear as you type. State, city, and LGA below are filled
+            Type to search — Google suggestions appear as you type. State, LGA, and city below are filled
             automatically when possible.
           </p>
         </div>
         <LocationCascadeSelects
           state={state}
+          lga={lga}
           city={city}
-          locationId={locationId}
           states={states}
+          lgas={lgas}
           cities={cities}
-          lgaOptions={lgaOptions.map((entry) => ({ id: entry.id, lga: entry.lga }))}
           onStateChange={(nextState) => {
             setState(nextState)
+            setLga('')
             setCity('')
             setLocationId('')
           }}
-          onCityChange={(nextCity) => {
-            setCity(nextCity)
-            setLocationId('')
-          }}
-          onLocationChange={setLocationId}
+          onLgaChange={(nextLga) => applyLgaSelection(nextLga)}
+          onCityChange={(nextCity) => applyCitySelection(nextCity)}
           disabled={loading || formOptionsLoading}
           stateLoading={formOptionsLoading}
         />
