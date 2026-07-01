@@ -6,10 +6,12 @@ function RedToggle({
   checked,
   onCheckedChange,
   id,
+  disabled = false,
 }: {
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
   id?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -17,9 +19,10 @@ function RedToggle({
       id={id}
       role="switch"
       aria-checked={checked}
+      disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40 focus-visible:ring-offset-2",
+        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         checked ? "bg-brand-red" : "bg-muted",
       )}
     >
@@ -40,6 +43,7 @@ export function NotificationChannelsCard({
   setNotifySms,
   notifyWhatsapp,
   setNotifyWhatsapp,
+  disabled = false,
 }: {
   notifyEmail: boolean;
   setNotifyEmail: (v: boolean) => void;
@@ -47,6 +51,7 @@ export function NotificationChannelsCard({
   setNotifySms: (v: boolean) => void;
   notifyWhatsapp: boolean;
   setNotifyWhatsapp: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <Card className="overflow-hidden rounded-xl border-sky-100/80 bg-[#D3E4FE] shadow-sm">
@@ -61,21 +66,21 @@ export function NotificationChannelsCard({
             <Mail className="size-4" aria-hidden />
             <span className="text-sm font-medium text-foreground font-inter">Email alerts</span>
           </div>
-          <RedToggle checked={notifyEmail} onCheckedChange={setNotifyEmail} />
+          <RedToggle checked={notifyEmail} onCheckedChange={setNotifyEmail} disabled={disabled} />
         </div>
         <div className="flex items-center justify-between gap-3 pb-3">
           <div className="flex items-center gap-3">
             <MessageSquare className="size-4" aria-hidden />
             <span className="text-sm font-medium text-foreground font-inter">SMS notifications</span>
           </div>
-          <RedToggle checked={notifySms} onCheckedChange={setNotifySms} />
+          <RedToggle checked={notifySms} onCheckedChange={setNotifySms} disabled={disabled} />
         </div>
         <div className="flex items-center justify-between gap-3 pb-3">
           <div className="flex items-center gap-3">
             <MessageCircle className="size-4" aria-hidden />
             <span className="text-sm font-medium text-foreground font-inter">WhatsApp updates</span>
           </div>
-          <RedToggle checked={notifyWhatsapp} onCheckedChange={setNotifyWhatsapp} />
+          <RedToggle checked={notifyWhatsapp} onCheckedChange={setNotifyWhatsapp} disabled={disabled} />
         </div>
         <p className="mt-4 text-xs italic text-muted-foreground font-inter leading-relaxed">
           Premium members may receive priority routing for urgent booking alerts.
