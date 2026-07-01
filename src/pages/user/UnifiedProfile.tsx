@@ -16,6 +16,7 @@ import { ProfileHubFooter } from '@/components/profile/hub/ProfileHubFooter'
 import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
 import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
+import { resolveActiveProfileMode } from '@/features/profile/profileViewMode'
 import { useProfilePhotoUpload } from '@/hooks/useProfilePhotoUpload'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 import { showError, showSuccess, alert } from '@/lib/sweetAlert'
@@ -48,6 +49,8 @@ export default function UnifiedProfile() {
     error: profilePhotoError,
   } = useProfilePhotoUpload()
 
+  const activeProfileMode = resolveActiveProfileMode(user)
+
   const settingsQuery = useQuery({
     queryKey: ['user-settings'],
     queryFn: fetchUserSettings,
@@ -65,7 +68,7 @@ export default function UnifiedProfile() {
   const reviewsQuery = useQuery({
     queryKey: ['user-reviews-count', user?.id],
     queryFn: () => fetchUserReviews(1),
-    enabled: Boolean(user?.id),
+    enabled: Boolean(user?.id) && activeProfileMode === 'customer',
     staleTime: 60_000,
   })
 
