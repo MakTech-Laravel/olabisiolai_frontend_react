@@ -133,26 +133,6 @@ function parseBoostDurations(raw: unknown): { days: number; enabled: boolean; pr
   return out
 }
 
-function mergeBoostFromForm(saved: AdminSavedLocation, form: LgaBoostFormState): AdminSavedLocation {
-  const stats: LgaBoostStats = { ...EMPTY_STATS }
-  return {
-    ...saved,
-    lga: {
-      ...saved.lga,
-      boost: {
-        enabled: form.enabled,
-        tiers: normalizeBoostTiers(form.tiers, form.durations).map((t) => ({ ...t })),
-        durations: aggregateDurationsFromTiers(form.tiers).map((d) => ({
-          days: d.days,
-          enabled: d.enabled,
-          priceAmount: d.priceAmount,
-        })),
-        stats,
-      },
-    },
-  }
-}
-
 function asObjectArrayFromJsonString(value: string): unknown[] {
   try {
     const parsed = JSON.parse(value)
