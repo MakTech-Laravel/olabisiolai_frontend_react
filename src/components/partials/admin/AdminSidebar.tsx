@@ -7,6 +7,7 @@ import {
   Gauge,
   KeyRound,
   Mail,
+  MapPin,
   MessageSquare,
   ShieldCheck,
   ShieldUser,
@@ -50,7 +51,7 @@ const staticItems: SidebarItem[] = [
   { label: "Boost System", to: "/admin/boost-system", icon: Wrench, badgeKey: "pending_boosts" },
   { label: "Categories", to: "/admin/categories", icon: Tags, permission: "view products" },
   // { label: "Career", to: "/admin/career", icon: UserRound },
-  // { label: "Locations", to: "/admin/locations", icon: MapPin },
+  { label: "Locations", to: "/admin/locations", icon: MapPin },
   // { label: "Notifications", to: "/admin/notifications", icon: Bell },
   { label: "Settings", to: "/admin/settings", icon: ShieldCheck },
 ];

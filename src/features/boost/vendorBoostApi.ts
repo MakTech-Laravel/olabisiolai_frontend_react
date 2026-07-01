@@ -1,7 +1,10 @@
 import { request } from "@/api/request";
 import type { BoostCampaignRow } from "@/features/boost/boostCampaignTypes";
 import { locationFromCatalogResponse } from "@/features/boost/locationBoostPlans";
-import type { ParsedLocationOption } from "@/features/locations/vendorLocationOptions";
+import {
+  parseVendorBoostLocationList,
+  type ParsedLocationOption,
+} from "@/features/locations/vendorLocationOptions";
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -39,6 +42,8 @@ export type VendorBoostCatalog = {
     budgetMax: number;
   };
   campaigns: BoostCampaignRow[];
+  /** Admin-enabled LGAs available for vendor boost targeting. */
+  boostLocations?: ParsedLocationOption[];
 };
 
 export async function fetchVendorBoostCatalog(): Promise<VendorBoostCatalog> {
@@ -50,6 +55,7 @@ export async function fetchVendorBoostCatalog(): Promise<VendorBoostCatalog> {
       is_verified?: boolean;
       can_boost?: boolean;
       boost_model?: string;
+      boost_locations?: unknown[];
       dynamic?: {
         tier_key: string;
         tier_label: string;
@@ -66,6 +72,7 @@ export async function fetchVendorBoostCatalog(): Promise<VendorBoostCatalog> {
 
   return {
     location: locationFromCatalogResponse(data.location),
+    boostLocations: parseVendorBoostLocationList(data.boost_locations, true),
     pendingRequest: data.pending_request,
     isPremiumActive: Boolean(data.is_premium_active),
     isVerified: data.is_verified,

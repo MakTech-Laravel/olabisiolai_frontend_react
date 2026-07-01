@@ -20,7 +20,7 @@ import {
 import type { BoostRenewalContext } from '@/features/boost/boostRenewalContext'
 import { initVendorBoostPayment, type VendorBoostCatalog } from '@/features/boost/vendorBoostApi'
 import { useVendorBusinessFormOptions } from '@/features/categories/useVendorBusinessFormOptions'
-import { parseVendorLocationOptions } from '@/features/locations/vendorLocationOptions'
+import { parseVendorBoostLocationList } from '@/features/locations/vendorLocationOptions'
 import { showError } from '@/lib/sweetAlert'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 
@@ -41,13 +41,14 @@ export function DynamicBoostConfigurator({
 }: DynamicBoostConfiguratorProps) {
   const navigate = useNavigate()
   const { data: formOptions } = useVendorBusinessFormOptions()
-  const parsedLocations = useMemo(
-    () => parseVendorLocationOptions(formOptions?.locations),
-    [formOptions?.locations],
-  )
+  const parsedLocations = useMemo(() => {
+    const fromCatalog = parseVendorBoostLocationList(catalog?.boostLocations, true)
+    if (fromCatalog.length > 0) return fromCatalog
+    return parseVendorBoostLocationList(formOptions?.locations)
+  }, [catalog?.boostLocations, formOptions?.locations])
 
   const defaultLocationId = catalog?.location?.id ?? parsedLocations[0]?.id ?? ''
-  const [selectedLocationId, setSelectedLocationId] = useState(initialLocationId)
+  const [selectedLocationId, setSelectedLocationId] = useState(initialLocationId || defaultLocationId)
   const [durationDays, setDurationDays] = useState<DynamicBoostDuration>(3)
   const [dailyBudget, setDailyBudget] = useState(1500)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
@@ -55,8 +56,12 @@ export function DynamicBoostConfigurator({
   useEffect(() => {
     if (initialLocationId) {
       setSelectedLocationId(initialLocationId)
+      return
     }
-  }, [initialLocationId])
+    if (!selectedLocationId && parsedLocations[0]?.id) {
+      setSelectedLocationId(parsedLocations[0].id)
+    }
+  }, [initialLocationId, parsedLocations, selectedLocationId])
 
   const dynamicConfig = catalog?.dynamic
   const durations = useMemo(
@@ -170,7 +175,7 @@ export function DynamicBoostConfigurator({
           <div>
             <h2 className="text-lg font-semibold text-ink">Dynamic Boost</h2>
             <p className="mt-1 text-sm text-body-secondary">
-              Increase visibility in your target LGA. Choose daily budget and duration — available in all Nigerian LGAs.
+              Increase visibility in your target LGA. Choose daily budget and duration for admin-enabled locations.
             </p>
           </div>
         </div>

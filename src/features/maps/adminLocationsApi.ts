@@ -82,9 +82,6 @@ function asBoolean(value: unknown, fallback = false): boolean {
 }
 
 const EMPTY_STATS: LgaBoostStats = {
-  totalSlots: 0,
-  slotsSold: 0,
-  slotsRemaining: 0,
   activeBoosts: 0,
   expiredBoosts: 0,
 }
@@ -93,9 +90,6 @@ function parseBoostStats(raw: unknown): LgaBoostStats {
   const o = asRecord(raw)
   if (!o) return { ...EMPTY_STATS }
   return {
-    totalSlots: asNumber(o.total_slots ?? o.totalSlots, 0),
-    slotsSold: asNumber(o.slots_sold ?? o.slotsSold, 0),
-    slotsRemaining: asNumber(o.slots_remaining ?? o.slotsRemaining, 0),
     activeBoosts: asNumber(o.active_boosts ?? o.activeBoosts, 0),
     expiredBoosts: asNumber(o.expired_boosts ?? o.expiredBoosts, 0),
   }
@@ -114,7 +108,7 @@ function parseBoostTiers(
     out.push({
       key,
       label: asString(o.label ?? o.title ?? o.name, ''),
-      totalSlots: asNumber(o.total_slots ?? o.totalSlots, 0),
+      totalSlots: 0,
       priceAmount: asNumber(o.price_amount ?? o.priceAmount ?? o.price, 0),
       durations: parseTierDurationsFromRaw(o.durations, key, globalDurations),
     })
@@ -140,15 +134,7 @@ function parseBoostDurations(raw: unknown): { days: number; enabled: boolean; pr
 }
 
 function mergeBoostFromForm(saved: AdminSavedLocation, form: LgaBoostFormState): AdminSavedLocation {
-  const tierTotals = form.tiers.reduce((sum, t) => sum + Math.max(0, t.totalSlots), 0)
-  const stats: LgaBoostStats = {
-    ...EMPTY_STATS,
-    totalSlots: tierTotals,
-    slotsSold: 0,
-    slotsRemaining: tierTotals,
-    activeBoosts: 0,
-    expiredBoosts: 0,
-  }
+  const stats: LgaBoostStats = { ...EMPTY_STATS }
   return {
     ...saved,
     lga: {
@@ -176,28 +162,16 @@ function asObjectArrayFromJsonString(value: string): unknown[] {
   }
 }
 
-function boostFormToApiPayload(form: LgaBoostFormState) {
-  const tiers = normalizeBoostTiers(form.tiers, form.durations)
-  const durations = aggregateDurationsFromTiers(tiers)
+function boostAvailabilityPayload(enabled: boolean) {
   return {
-    enabled: form.enabled,
-    tiers: tiers.map((t) => ({
-      key: t.key,
-      label: t.label,
-      total_slots: t.totalSlots,
-      price_amount: t.priceAmount,
-      durations: t.durations.map((d) => ({
-        days: d.days,
-        enabled: d.enabled,
-        price_amount: d.priceAmount,
-      })),
-    })),
-    durations: durations.map((d) => ({
-      days: d.days,
-      enabled: d.enabled,
-      price_amount: d.priceAmount,
-    })),
+    enabled,
+    tiers: [] as const,
+    durations: [] as const,
   }
+}
+
+function boostFormToApiPayload(form: LgaBoostFormState) {
+  return boostAvailabilityPayload(form.enabled)
 }
 
 function toApiPayload(
@@ -207,11 +181,12 @@ function toApiPayload(
   lgaName: string,
   fullAddress: string | undefined,
   mapPick: LgaMapPickResult,
-  boostForm: LgaBoostFormState | undefined,
+  boostEnabled: boolean,
 ) {
   const city = cityName.trim()
   const country = countryName.trim()
   const address = fullAddress?.trim()
+  const boostConfig = boostAvailabilityPayload(boostEnabled)
 
   const payload = {
     location: {
@@ -228,17 +203,9 @@ function toApiPayload(
       viewport: mapPick.viewport ?? undefined,
       address_components: asObjectArrayFromJsonString(mapPick.addressComponentsJson),
     },
-    is_boost_active: boostForm?.enabled ?? false,
-    boost_enabled: boostForm?.enabled ?? false,
-    boost_tiers: boostForm
-      ? boostFormToApiPayload(boostForm).tiers
-      : undefined,
-    boost_durations: boostForm?.durations.map((d) => ({
-      duration_days: d.days,
-      enabled: d.enabled,
-      price_amount: d.priceAmount,
-    })),
-    boost_config: boostForm ? boostFormToApiPayload(boostForm) : undefined,
+    is_boost_active: boostEnabled,
+    boost_enabled: boostEnabled,
+    boost_config: boostConfig,
   }
 
   return payload
@@ -286,16 +253,10 @@ function parseSavedLocationResponse(body: unknown): AdminSavedLocation {
   const statsFromApi = parseBoostStats(boostRoot?.stats ?? lga.boost_stats)
   const enabledFromApi = asBoolean(
     boostRoot?.enabled ?? lga.boost_enabled ?? lga.is_boost_active,
-    true,
+    false,
   )
 
-  const totalFromTiers = tiersFromApi.reduce((s, t) => s + t.totalSlots, 0)
   const stats: LgaBoostStats = {
-    totalSlots: statsFromApi.totalSlots || totalFromTiers,
-    slotsSold: statsFromApi.slotsSold,
-    slotsRemaining:
-      statsFromApi.slotsRemaining ||
-      Math.max(0, (statsFromApi.totalSlots || totalFromTiers) - statsFromApi.slotsSold),
     activeBoosts: statsFromApi.activeBoosts,
     expiredBoosts: statsFromApi.expiredBoosts,
   }
@@ -342,6 +303,22 @@ function parseSavedLocationResponse(body: unknown): AdminSavedLocation {
   }
 }
 
+function formatApiValidationError(error: unknown, fallback: string): never {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const axiosError = error as { response?: { status?: number; data?: unknown } }
+    if (axiosError.response?.status === 422) {
+      const data = asRecord(axiosError.response.data)
+      const message = asString(data?.message, 'Validation failed.')
+      const fieldErrors = asRecord(data?.errors)
+      const details = fieldErrors
+        ? ': ' + Object.values(fieldErrors).flat().map((v) => asString(v)).filter(Boolean).join(', ')
+        : ''
+      throw new Error(`${message}${details}`)
+    }
+  }
+  throw error instanceof Error ? error : new Error(fallback)
+}
+
 export async function adminStoreLocation(params: {
   countryName: string
   stateName: string
@@ -349,8 +326,11 @@ export async function adminStoreLocation(params: {
   lgaName: string
   fullAddress?: string
   mapPick: LgaMapPickResult
+  boostEnabled?: boolean
+  /** @deprecated use boostEnabled */
   boostConfig?: LgaBoostFormState
 }): Promise<AdminSavedLocation> {
+  const boostEnabled = params.boostEnabled ?? params.boostConfig?.enabled ?? true
   const payload = toApiPayload(
     params.countryName,
     params.stateName,
@@ -358,15 +338,12 @@ export async function adminStoreLocation(params: {
     params.lgaName,
     params.fullAddress,
     params.mapPick,
-    params.boostConfig,
+    boostEnabled,
   )
 
   try {
     const res = await request.post('/admin/locations/store', payload)
     let parsed = parseSavedLocationResponse(res.data)
-    if (params.boostConfig) {
-      parsed = mergeBoostFromForm(parsed, params.boostConfig)
-    }
     const fa = params.fullAddress?.trim() || params.mapPick.formattedAddress || null
     return {
       ...parsed,
@@ -376,14 +353,8 @@ export async function adminStoreLocation(params: {
         formattedAddress: parsed.lga.formattedAddress ?? fa,
       },
     }
-  } catch (error: any) {
-    if (error.response?.status === 422) {
-      const data = error.response.data
-      const message = data.message || 'Validation failed'
-      const errors = data.errors ? ': ' + Object.values(data.errors).flat().join(', ') : ''
-      throw new Error(`${message}${errors}`)
-    }
-    throw error
+  } catch (error: unknown) {
+    formatApiValidationError(error, 'Failed to save location.')
   }
 }
 
@@ -443,22 +414,26 @@ export async function adminUpdateLocation(params: {
   googlePlaceId?: string | null
   boostConfig?: LgaBoostFormState
 }): Promise<AdminSavedLocation> {
-  const res = await request.post('/admin/locations/update', {
-    id: params.locationId,
-    location: {
-      country_name: params.countryName.trim() || 'Nigeria',
-      country_iso_code: 'NG',
-      state_name: params.stateName.trim(),
-      city_name: params.cityName?.trim() || undefined,
-      lga_name: params.lgaName.trim(),
-      latitude: params.latitude,
-      longitude: params.longitude,
-      formatted_address: params.fullAddress?.trim() || undefined,
-      google_place_id: params.googlePlaceId ?? undefined,
-    },
-    boost_config: params.boostConfig ? boostFormToApiPayload(params.boostConfig) : undefined,
-  })
-  return parseSavedLocationResponse(res.data)
+  try {
+    const res = await request.post('/admin/locations/update', {
+      id: params.locationId,
+      location: {
+        country_name: params.countryName.trim() || 'Nigeria',
+        country_iso_code: 'NG',
+        state_name: params.stateName.trim(),
+        city_name: params.cityName?.trim() || undefined,
+        lga_name: params.lgaName.trim(),
+        latitude: params.latitude,
+        longitude: params.longitude,
+        formatted_address: params.fullAddress?.trim() || undefined,
+        google_place_id: params.googlePlaceId ?? undefined,
+      },
+      boost_config: params.boostConfig ? boostFormToApiPayload(params.boostConfig) : undefined,
+    })
+    return parseSavedLocationResponse(res.data)
+  } catch (error: unknown) {
+    formatApiValidationError(error, 'Failed to update location.')
+  }
 }
 
 /** @deprecated Use adminUpdateLocation with boostConfig */

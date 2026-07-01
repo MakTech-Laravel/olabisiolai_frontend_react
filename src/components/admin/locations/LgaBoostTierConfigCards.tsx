@@ -88,7 +88,7 @@ export function LgaBoostTierConfigCards({ tiers, onChange, disabled }: Props) {
                   onChange={(e) => patchTier(tier.key, { label: e.target.value })}
                 />
                 <p className={`mt-0.5 text-[11px] font-medium ${theme.accent}`}>
-                  {tier.totalSlots} slot{tier.totalSlots === 1 ? '' : 's'} · {tier.key}
+                  {tier.key}
                 </p>
               </div>
             </div>

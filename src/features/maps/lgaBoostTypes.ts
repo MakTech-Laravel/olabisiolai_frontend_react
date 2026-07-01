@@ -1,8 +1,9 @@
-/** Per-tier boost slot configuration (Top 10 / Top 5 / Top 1). */
+/** Per-tier boost pricing configuration (duration-based). */
 export type LgaBoostTierForm = {
   key: string
   label: string
-  totalSlots: number
+  /** Legacy field — no longer used; kept for API compatibility. */
+  totalSlots?: number
   /** Legacy single price — not used when per-duration prices are set. */
   priceAmount: number
   durations: LgaBoostDurationForm[]
@@ -27,11 +28,11 @@ export const LGA_BOOST_TIER_ORDER = ['top_10', 'top_5', 'top_1'] as const
 
 const TIER_DEFAULTS: Record<
   (typeof LGA_BOOST_TIER_ORDER)[number],
-  { label: string; totalSlots: number; prices: [number, number, number] }
+  { label: string; prices: [number, number, number] }
 > = {
-  top_10: { label: 'Top 10 Boost', totalSlots: 10, prices: [3000, 5000, 10000] },
-  top_5: { label: 'Top 5 Boost', totalSlots: 5, prices: [5000, 10000, 15000] },
-  top_1: { label: 'Top 1 Exclusive', totalSlots: 1, prices: [10000, 15000, 20000] },
+  top_10: { label: 'Top 10 Boost', prices: [3000, 5000, 10000] },
+  top_5: { label: 'Top 5 Boost', prices: [5000, 10000, 15000] },
+  top_1: { label: 'Top 1 Exclusive', prices: [10000, 15000, 20000] },
 }
 
 const DURATION_DAYS: (7 | 14 | 30)[] = [7, 14, 30]
@@ -81,7 +82,7 @@ export function parseTierDurationsFromRaw(
     : buildTierDurations([0, 0, 0], globalDurations)
 }
 
-/** Normalize to fixed tiers (top_10 / top_5 / top_1) with slots 10 / 5 / 1. */
+/** Normalize to fixed tiers (top_10 / top_5 / top_1) with duration pricing. */
 export function normalizeBoostTiers(
   tiers: LgaBoostTierForm[],
   globalDurations?: { days: number; enabled: boolean; priceAmount: number }[],
@@ -113,7 +114,7 @@ export function normalizeBoostTiers(
     return {
       key,
       label: existing?.label?.trim() || def.label,
-      totalSlots: def.totalSlots,
+      totalSlots: 0,
       priceAmount: existing?.priceAmount ?? 0,
       durations,
     }
@@ -153,9 +154,6 @@ export function boostFormFromSaved(boost: {
 }
 
 export type LgaBoostStats = {
-  totalSlots: number
-  slotsSold: number
-  slotsRemaining: number
   activeBoosts: number
   expiredBoosts: number
 }

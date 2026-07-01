@@ -5,6 +5,7 @@ import {
 } from "@/features/boost/boostSlotAvailability";
 import {
   formatNaira,
+  formatLocationLabel,
   parseBoostData,
   resolveBoostSelectionPrice,
   tierDurationPrice,
@@ -125,7 +126,7 @@ export function locationFromCatalogResponse(raw: unknown): ParsedLocationOption 
     state,
     city,
     lga,
-    label: `${state} / ${city} / ${lga}`,
+    label: formatLocationLabel(state, lga, city),
     boost: parseBoostData(
       typeof record.lga === "object" && record.lga
         ? (record.lga as Record<string, unknown>).boost

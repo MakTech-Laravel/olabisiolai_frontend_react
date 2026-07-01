@@ -22,7 +22,7 @@ export function ensureGoogleMapsConfigured(apiKey: string): void {
     )
     return
   }
-  setOptions({ key: trimmed, v: 'weekly' })
+  setOptions({ key: trimmed, v: 'weekly', region: 'NG', language: 'en' })
   configuredKey = trimmed
 }
 

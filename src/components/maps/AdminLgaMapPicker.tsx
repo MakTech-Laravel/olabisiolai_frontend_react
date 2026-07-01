@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 
 import { parsePlaceToLgaPick } from '@/features/maps/parsePlaceToLgaPick'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
-import { ensureGoogleMapsConfigured } from '@/lib/googleMapsInit'
+import { ensureGoogleMapsConfigured, onGoogleMapsAuthFailure } from '@/lib/googleMapsInit'
 
 const NG_BIAS_CENTER: google.maps.LatLngLiteral = { lat: 9.082, lng: 8.6753 }
 const NG_BIAS_RADIUS_METERS = 900_000
@@ -109,6 +109,15 @@ export function AdminLgaMapPicker({ apiKey, onPick }: Props) {
     { top: number; left: number; width: number } | null
   >(null)
 
+  useEffect(() => {
+    return onGoogleMapsAuthFailure(() => {
+      setErrorMessage(
+        'Google Maps could not authenticate this API key. In Google Cloud Console, enable Maps JavaScript API, Places API, and Geocoding API, turn on billing, and allow this site in HTTP referrer restrictions (e.g. http://localhost:5173/* for local dev).',
+      )
+      setStatus('error')
+    })
+  }, [])
+
   const applyPick = useCallback(
     (pick: LgaMapPickResult, opts?: { preserveMapView?: boolean }) => {
       onPick(pick)
@@ -164,6 +173,7 @@ export function AdminLgaMapPicker({ apiKey, onPick }: Props) {
 
     let cancelled = false
     let mapClickListener: google.maps.MapsEventListener | null = null
+    let resizeObserver: ResizeObserver | null = null
 
     setStatus('loading')
     setErrorMessage(null)
@@ -231,6 +241,20 @@ export function AdminLgaMapPicker({ apiKey, onPick }: Props) {
           void onMapPick(ev.latLng)
         })
 
+        const triggerResize = () => {
+          if (!mapRef.current) return
+          google.maps.event.trigger(mapRef.current, 'resize')
+        }
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(triggerResize)
+        })
+
+        if (typeof ResizeObserver !== 'undefined') {
+          resizeObserver = new ResizeObserver(() => triggerResize())
+          resizeObserver.observe(mapHost)
+        }
+
         if (!cancelled) setStatus('ready')
       } catch (e) {
         if (cancelled) return
@@ -244,6 +268,7 @@ export function AdminLgaMapPicker({ apiKey, onPick }: Props) {
 
     return () => {
       cancelled = true
+      resizeObserver?.disconnect()
       mapClickListener?.remove()
       mapClickListener = null
       selectedMarkerRef.current?.setMap(null)

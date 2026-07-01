@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 
-import { LgaBoostTierConfigCards } from '@/components/admin/locations/LgaBoostTierConfigCards'
 import { AdminLgaMapPicker } from '@/components/maps/AdminLgaMapPicker'
-import {
-  aggregateDurationsFromTiers,
-  defaultLgaBoostFormState,
-  type LgaBoostFormState,
-  type LgaBoostTierForm,
-} from '@/features/maps/lgaBoostTypes'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
 
 const STEPS = [
   { id: 1, title: 'Map & coordinates', short: 'Map' },
   { id: 2, title: 'Location details', short: 'Details' },
-  { id: 3, title: 'Boost configuration', short: 'Boost' },
 ] as const
 
 export type AddLocationWizardSubmit = {
@@ -24,7 +16,7 @@ export type AddLocationWizardSubmit = {
   lgaName: string
   fullAddress: string
   mapPick: LgaMapPickResult
-  boostConfig: LgaBoostFormState
+  boostEnabled: boolean
 }
 
 type Props = {
@@ -55,7 +47,7 @@ export function AddLocationWizardModal({
   const [cityName, setCityName] = useState('')
   const [lgaName, setLgaName] = useState('')
   const [fullAddress, setFullAddress] = useState('')
-  const [boostConfig, setBoostConfig] = useState<LgaBoostFormState>(() => defaultLgaBoostFormState())
+  const [boostEnabled, setBoostEnabled] = useState(true)
 
   useEffect(() => {
     if (!open) return
@@ -66,7 +58,7 @@ export function AddLocationWizardModal({
     setCityName('')
     setLgaName('')
     setFullAddress('')
-    setBoostConfig(defaultLgaBoostFormState())
+    setBoostEnabled(true)
   }, [open])
 
   const handleMapPick = (pick: LgaMapPickResult) => {
@@ -79,26 +71,17 @@ export function AddLocationWizardModal({
   }
 
   const canGoStep2 = Boolean(mapPick)
-  const canGoStep3 = stateName.trim().length > 0 && lgaName.trim().length > 0
+  const canSubmit = stateName.trim().length > 0 && lgaName.trim().length > 0
 
   const goNext = () => {
     if (step === 1 && !canGoStep2) return
-    if (step === 2 && !canGoStep3) return
-    setStep((s) => Math.min(3, s + 1))
+    setStep(2)
   }
 
-  const goBack = () => setStep((s) => Math.max(1, s - 1))
-
-  const updateTiers = (tiers: LgaBoostTierForm[]) => {
-    setBoostConfig((prev) => ({
-      ...prev,
-      tiers,
-      durations: aggregateDurationsFromTiers(tiers),
-    }))
-  }
+  const goBack = () => setStep(1)
 
   const handleSubmit = async () => {
-    if (!mapPick) return
+    if (!mapPick || !canSubmit) return
     await onSubmit({
       countryName,
       stateName,
@@ -106,7 +89,7 @@ export function AddLocationWizardModal({
       lgaName,
       fullAddress,
       mapPick,
-      boostConfig,
+      boostEnabled,
     })
   }
 
@@ -119,7 +102,7 @@ export function AddLocationWizardModal({
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Add location</h2>
             <p className="mt-0.5 text-xs text-gray-500">
-              Pick on the map, confirm names and address, then configure boost for this LGA.
+              Pick on the map, confirm the LGA details, and choose whether vendors can boost here.
             </p>
           </div>
           <button
@@ -132,7 +115,6 @@ export function AddLocationWizardModal({
           </button>
         </div>
 
-        {/* Step strip */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-100 bg-gray-50/80 px-5 py-3">
           {STEPS.map((s, i) => {
             const active = step === s.id
@@ -140,12 +122,13 @@ export function AddLocationWizardModal({
             return (
               <div key={s.id} className="flex min-w-0 flex-1 items-center gap-2">
                 <div
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${active
-                    ? 'bg-blue-600 text-white'
-                    : done
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                    }`}
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                    active
+                      ? 'bg-blue-600 text-white'
+                      : done
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                  }`}
                 >
                   {done ? '✓' : s.id}
                 </div>
@@ -167,8 +150,7 @@ export function AddLocationWizardModal({
             <div className="space-y-3">
               <p className="text-xs font-medium text-gray-700">Search or click the map</p>
               <p className="text-[11px] text-gray-500">
-                Coordinates and Google Place data from Geocoding / Places are stored with the LGA for validation,
-                previews, and future regions.
+                Coordinates and Google Place data are stored with the LGA for validation and map previews.
               </p>
               <AdminLgaMapPicker apiKey={googleMapsApiKey} onPick={handleMapPick} />
               {mapPick && (
@@ -248,41 +230,23 @@ export function AddLocationWizardModal({
                   placeholder="Full formatted address"
                 />
               </div>
-              {!canGoStep3 && (
-                <p className="text-xs text-blue-700">State and LGA are required to continue.</p>
-              )}
-            </div>
-          )}
 
-          {step === 3 && (
-            <div className="space-y-5">
               <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
                 <input
                   type="checkbox"
                   className="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  checked={boostConfig.enabled}
-                  onChange={(e) => setBoostConfig((p) => ({ ...p, enabled: e.target.checked }))}
+                  checked={boostEnabled}
+                  onChange={(e) => setBoostEnabled(e.target.checked)}
                 />
-                <span className="text-sm font-medium text-gray-900">Boost enabled for this LGA</span>
+                <span className="text-sm font-medium text-gray-900">Allow vendors to boost in this LGA</span>
               </label>
               <p className="text-[11px] text-gray-500">
-                When disabled, vendors cannot purchase boosts here until you turn this on.
+                When unchecked, this LGA is saved but vendors cannot purchase boosts here until you activate it.
               </p>
 
-              <div>
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Boost plans for this LGA
-                </p>
-                <LgaBoostTierConfigCards
-                  tiers={boostConfig.tiers}
-                  onChange={updateTiers}
-                  disabled={!boostConfig.enabled}
-                />
-                <p className="mt-2 text-[11px] text-gray-500">
-                  Top 10 (10 slots), Top 5 (5 slots), and Top 1 (1 slot). Set 7 / 14 / 30 day prices per plan.
-                  Slot availability is tracked automatically once boosts go live.
-                </p>
-              </div>
+              {!canSubmit && (
+                <p className="text-xs text-blue-700">State and LGA are required to save.</p>
+              )}
             </div>
           )}
 
@@ -295,7 +259,7 @@ export function AddLocationWizardModal({
 
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-gray-50/80 px-5 py-3">
           <div className="text-[11px] text-gray-500">
-            {step < 3 ? 'Complete each step to save.' : 'Submit sends data to the admin locations API.'}
+            {step < 2 ? 'Complete each step to save.' : 'Save adds this LGA to the boost location list.'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {step > 1 && (
@@ -309,11 +273,11 @@ export function AddLocationWizardModal({
                 Back
               </button>
             )}
-            {step < 3 ? (
+            {step < 2 ? (
               <button
                 type="button"
                 onClick={goNext}
-                disabled={(step === 1 && !canGoStep2) || (step === 2 && !canGoStep3) || saving}
+                disabled={(step === 1 && !canGoStep2) || saving}
                 className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
@@ -323,7 +287,7 @@ export function AddLocationWizardModal({
               <button
                 type="button"
                 onClick={() => void handleSubmit()}
-                disabled={saving || !mapPick}
+                disabled={saving || !mapPick || !canSubmit}
                 className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save location'}

@@ -1,8 +1,7 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Building2,
   ChevronDown,
-  DollarSign,
   ExternalLink,
   Globe,
   Map as MapIcon,
@@ -18,8 +17,8 @@ import {
   type AddLocationWizardSubmit,
 } from '@/components/admin/locations/AddLocationWizardModal'
 import { env } from '@/config/env'
-import { formatNaira as formatNairaAmount } from '@/lib/currency'
 import { alert, showError } from '@/lib/sweetAlert'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import {
   adminStoreLocation,
   adminListLocations,
@@ -29,14 +28,9 @@ import {
   type AdminSavedLocation,
 } from '@/features/maps/adminLocationsApi'
 import type { LgaMapPickResult } from '@/features/maps/lgaMapPickTypes'
-import { LgaBoostTierConfigCards } from '@/components/admin/locations/LgaBoostTierConfigCards'
-import {
-  aggregateDurationsFromTiers,
-  boostFormFromSaved,
-} from '@/features/maps/lgaBoostTypes'
 
 type LGA = AdminSavedLocation['lga']
-type StateEntry = { id: string; name: string; lgas: LGA[]; pricingMultiplier?: number }
+type StateEntry = { id: string; name: string; lgas: LGA[] }
 
 const COUNTRY_ID = 'country-ng'
 const COUNTRY_NAME = 'Nigeria'
@@ -51,12 +45,6 @@ function toLgaId(saved: AdminSavedLocation) {
   return `lga-${seed}`
 }
 
-function pricingMultiplierForState(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i) * (i + 1)) % 97
-  return Math.round((1.15 + (h % 45) / 100) * 10) / 10
-}
-
 function upsertStateLocation(prev: StateEntry[], saved: AdminSavedLocation): StateEntry[] {
   const stateId = toStateId(saved)
   const lgaId = toLgaId(saved)
@@ -69,7 +57,6 @@ function upsertStateLocation(prev: StateEntry[], saved: AdminSavedLocation): Sta
         id: stateId,
         name: saved.state.name,
         lgas: [nextLga],
-        pricingMultiplier: pricingMultiplierForState(saved.state.name),
       },
       ...prev,
     ]
@@ -93,7 +80,6 @@ function upsertStateLocation(prev: StateEntry[], saved: AdminSavedLocation): Sta
       ...state,
       name: saved.state.name,
       lgas: updatedLgas,
-      pricingMultiplier: state.pricingMultiplier ?? pricingMultiplierForState(saved.state.name),
     }
   })
 }
@@ -155,21 +141,6 @@ function mapsPreviewUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
 }
 
-function formatNaira(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return "—";
-  return formatNairaAmount(n, { freeLabel: false });
-}
-
-/** Representative boost price for table column (max tier price). */
-function primaryBoostPrice(lga: LGA): number {
-  if (!lga.boost.tiers.length) return 0
-  const fromDurations = lga.boost.tiers.flatMap((t) =>
-    (t.durations ?? []).filter((d) => d.enabled).map((d) => d.priceAmount),
-  )
-  if (fromDurations.length) return Math.max(...fromDurations)
-  return Math.max(...lga.boost.tiers.map((t) => t.priceAmount))
-}
-
 export default function LocationHierarchy() {
   const [locations, setLocations] = useState<StateEntry[]>([])
   const [loadingLocations, setLoadingLocations] = useState(true)
@@ -181,7 +152,6 @@ export default function LocationHierarchy() {
   const [openStates, setOpenStates] = useState<Set<string>>(new Set())
   const [detailLgaKey, setDetailLgaKey] = useState<string | null>(null)
   const [detailSaving, setDetailSaving] = useState(false)
-  const boostSaveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Load locations on component mount
   useEffect(() => {
@@ -199,7 +169,7 @@ export default function LocationHierarchy() {
         setLocations(stateEntries)
       } catch (error) {
         console.error('Failed to load locations:', error)
-        setSaveError(error instanceof Error ? error.message : 'Failed to load locations.')
+        setSaveError(getLaravelErrorMessage(error, 'Failed to load locations.'))
       } finally {
         setLoadingLocations(false)
       }
@@ -271,7 +241,6 @@ export default function LocationHierarchy() {
           latitude: updatedLga.latitude,
           longitude: updatedLga.longitude,
           googlePlaceId: updatedLga.googlePlaceId,
-          boostConfig: boostFormFromSaved(updatedLga.boost),
         })
         setLocations((prev) => upsertStateLocation(prev, saved))
         setLastSavedMessage(options?.message ?? `Updated ${saved.lga.name}`)
@@ -280,7 +249,7 @@ export default function LocationHierarchy() {
         }
       } catch (error) {
         applyLgaPatch(stateId, lgaRowId, () => currentLga)
-        const message = error instanceof Error ? error.message : 'Failed to update location.'
+        const message = getLaravelErrorMessage(error, 'Failed to update location.')
         setSaveError(message)
         showError(message)
         throw error
@@ -296,7 +265,6 @@ export default function LocationHierarchy() {
       stateId: string,
       lgaRowId: string,
       updater: (current: LGA) => LGA,
-      options?: { debounceMs?: number; boostToggleOnly?: boolean },
     ) => {
       const currentState = locations.find((s) => s.id === stateId)
       if (!currentState) return
@@ -310,57 +278,39 @@ export default function LocationHierarchy() {
       }
 
       const updatedLga = updater(currentLga)
-      applyLgaPatch(stateId, lgaRowId, () => updatedLga)
-
-      const saveKey = detailKey(stateId, lgaRowId)
-      const existingTimer = boostSaveTimersRef.current.get(saveKey)
-      if (existingTimer) clearTimeout(existingTimer)
-
-      const runSave = async () => {
-        boostSaveTimersRef.current.delete(saveKey)
-        const boostToggled = currentLga.boost.enabled !== updatedLga.boost.enabled
-
-        if (boostToggled) {
-          if (currentLga.id == null) {
-            setSaveError('Save the location before changing boost status.')
-            applyLgaPatch(stateId, lgaRowId, () => currentLga)
-            return
-          }
-          setDetailSaving(true)
-          setSaveError(null)
-          try {
-            await adminUpdateLocationStatus({
-              lgaId: currentLga.id,
-              boostEnabled: updatedLga.boost.enabled,
-            })
-            setLastSavedMessage(
-              `Boost ${updatedLga.boost.enabled ? 'enabled' : 'disabled'} for ${updatedLga.name}`,
-            )
-            alert.crud.updated('Location boost status')
-          } catch (error) {
-            applyLgaPatch(stateId, lgaRowId, () => currentLga)
-            const message = error instanceof Error ? error.message : 'Failed to update location.'
-            setSaveError(message)
-            showError(message)
-          } finally {
-            setDetailSaving(false)
-          }
-          return
-        }
-
-        await persistLgaUpdate(stateId, lgaRowId, updatedLga, {
-          message: `Updated boost configuration for ${updatedLga.name}`,
-        })
+      const boostToggled = currentLga.boost.enabled !== updatedLga.boost.enabled
+      if (!boostToggled) {
+        applyLgaPatch(stateId, lgaRowId, () => updatedLga)
+        return
       }
 
-      const debounceMs = options?.debounceMs ?? 700
-      if (debounceMs > 0 && !options?.boostToggleOnly) {
-        boostSaveTimersRef.current.set(saveKey, setTimeout(() => void runSave(), debounceMs))
-      } else {
-        await runSave()
+      applyLgaPatch(stateId, lgaRowId, () => updatedLga)
+      setDetailSaving(true)
+      setSaveError(null)
+      try {
+        await adminUpdateLocationStatus({
+          lgaId: currentLga.id,
+          boostEnabled: updatedLga.boost.enabled,
+        })
+        setLastSavedMessage(
+          `Boost ${updatedLga.boost.enabled ? 'enabled' : 'disabled'} for ${updatedLga.name}`,
+        )
+        alert.crud.updated('Location boost status')
+      } catch (error) {
+        applyLgaPatch(stateId, lgaRowId, () => currentLga)
+        const message = getLaravelErrorMessage(
+          error,
+          updatedLga.boost.enabled
+            ? 'Could not enable boost for this LGA.'
+            : 'Could not disable boost for this LGA.',
+        )
+        setSaveError(message)
+        showError(message)
+      } finally {
+        setDetailSaving(false)
       }
     },
-    [locations, applyLgaPatch, persistLgaUpdate],
+    [locations, applyLgaPatch],
   )
 
   const saveLocationDetails = useCallback(
@@ -412,9 +362,10 @@ export default function LocationHierarchy() {
   const filteredStates = useMemo(() => {
     return locations.filter((s) => {
       if (filterState !== 'all' && s.name !== filterState) return false
-      return true
+      if (filterBoost === 'all') return true
+      return s.lgas.some((lga) => lgaPassesBoostFilter(lga))
     })
-  }, [locations, filterState])
+  }, [locations, filterState, filterBoost])
 
   function lgaPassesBoostFilter(lga: LGA): boolean {
     if (filterBoost === 'all') return true
@@ -443,7 +394,7 @@ export default function LocationHierarchy() {
         lgaName: input.lgaName,
         fullAddress: address,
         mapPick: input.mapPick,
-        boostConfig: input.boostConfig,
+        boostEnabled: input.boostEnabled,
       })
 
       const stateId = toStateId(saved)
@@ -454,7 +405,7 @@ export default function LocationHierarchy() {
       setLastSavedMessage(`Saved: ${saved.state.name} → ${saved.lga.name}`)
       alert.crud.created('Location')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save location.'
+      const message = getLaravelErrorMessage(error, 'Failed to save location.')
       setSaveError(message)
       showError(message)
     } finally {
@@ -493,7 +444,7 @@ export default function LocationHierarchy() {
       setLastSavedMessage(`Deleted: ${lgaName}`)
       alert.crud.deleted('Location')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete location.'
+      const message = getLaravelErrorMessage(error, 'Failed to delete location.')
       setSaveError(message)
       showError(message)
     }
@@ -506,7 +457,9 @@ export default function LocationHierarchy() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[26px]">Locations</h1>
-            <p className="mt-1 text-sm text-slate-500">Manage global geography: Country → State → City → LGA</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Add LGAs and control which areas vendors can boost in.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             <button
@@ -609,9 +562,9 @@ export default function LocationHierarchy() {
                 onChange={(e) => setFilterBoost(e.target.value as 'all' | 'enabled' | 'disabled')}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="all">Boost Status</option>
-                <option value="enabled">Boost enabled</option>
-                <option value="disabled">Boost disabled</option>
+                <option value="all">All boost statuses</option>
+                <option value="enabled">Boost enabled only</option>
+                <option value="disabled">Boost disabled only</option>
               </select>
             </div>
           </div>
@@ -627,7 +580,7 @@ export default function LocationHierarchy() {
                 <Globe className="mx-auto size-10 text-slate-300" />
                 <p className="mt-3 text-sm font-medium text-slate-600">No locations yet</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Add a location to capture coordinates from Google Maps and configure boost slots.
+                  Add an LGA from the map to make it available for vendor boosts.
                 </p>
               </div>
             ) : (
@@ -662,15 +615,6 @@ export default function LocationHierarchy() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded-lg p-2 text-sky-600 hover:bg-sky-50"
-                        title="Edit country"
-                        aria-label="Edit country"
-                      >
-                        <Pencil className="size-4" />
-                      </button>
                       <ChevronDown
                         className={`size-5 text-slate-400 transition-transform ${openCountry ? '' : '-rotate-90'}`}
                       />
@@ -680,11 +624,15 @@ export default function LocationHierarchy() {
 
                 {openCountry && (
                   <div className="bg-slate-50/50">
-                    {filteredStates.map((state) => {
+                    {filteredStates.length === 0 ? (
+                      <p className="px-6 py-8 text-center text-sm text-slate-500">
+                        No states match the current filters. Try &quot;All boost statuses&quot; or another state.
+                      </p>
+                    ) : (
+                    filteredStates.map((state) => {
                       const stateOpen = openStates.has(state.id)
                       const stateLgas = state.lgas.filter(lgaPassesBoostFilter)
                       const stateVendorSum = state.lgas.reduce((sum, l) => sum + l.vendorCount, 0)
-                      const mult = state.pricingMultiplier ?? pricingMultiplierForState(state.name)
                       const stateBoostEnabled = state.lgas.some((l) => l.boost.enabled)
 
                       return (
@@ -712,22 +660,27 @@ export default function LocationHierarchy() {
                               </div>
                               <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                                 <span>
-                                  <span className="font-medium text-slate-700">{state.lgas.length}</span> LGAs
+                                  <span className="font-medium text-slate-700">
+                                    {filterBoost === 'all' ? state.lgas.length : stateLgas.length}
+                                  </span>{' '}
+                                  {filterBoost === 'all' ? 'LGAs' : 'matching LGAs'}
                                 </span>
                                 <span>
                                   <span className="font-medium text-slate-700">{stateVendorSum.toLocaleString()}</span>{' '}
                                   Vendors
                                 </span>
-                                <span className="font-semibold text-violet-700">x{mult} Pricing</span>
                               </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-1">
                               <button
                                 type="button"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleStateOpen(state.id)
+                                }}
                                 className="rounded-lg p-2 text-sky-600 hover:bg-sky-50"
-                                title="Edit state"
-                                aria-label="Edit state"
+                                title={stateOpen ? 'Collapse state' : 'Expand state'}
+                                aria-label={stateOpen ? 'Collapse state' : 'Expand state LGAs'}
                               >
                                 <Pencil className="size-4" />
                               </button>
@@ -742,14 +695,12 @@ export default function LocationHierarchy() {
                               {stateLgas.length === 0 ? (
                                 <p className="py-6 text-center text-xs text-slate-500">No LGAs match the current filters.</p>
                               ) : (
-                                <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                                <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                                   <thead>
                                     <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                                       <th className="whitespace-nowrap py-3 pr-3">LGA name</th>
                                       <th className="whitespace-nowrap py-3 pr-3">Vendor count</th>
-                                      <th className="whitespace-nowrap py-3 pr-3">Boost slots</th>
-                                      <th className="whitespace-nowrap py-3 pr-3">Slot occupancy</th>
-                                      <th className="whitespace-nowrap py-3 pr-3">Boost pricing</th>
+                                      <th className="whitespace-nowrap py-3 pr-3">Boost count</th>
                                       <th className="whitespace-nowrap py-3 pr-3">Status</th>
                                       <th className="whitespace-nowrap py-3 text-right">Actions</th>
                                     </tr>
@@ -759,9 +710,7 @@ export default function LocationHierarchy() {
                                       const lgaRowId = toLgaEntryId(lga, state.name)
                                       const dk = detailKey(state.id, lgaRowId)
                                       const open = detailLgaKey === dk
-                                      const total = lga.boost.stats.totalSlots
-                                      const sold = lga.boost.stats.slotsSold
-                                      const price = primaryBoostPrice(lga)
+                                      const boostCount = lga.boost.stats.activeBoosts
 
                                       return (
                                         <Fragment key={lgaRowId}>
@@ -770,15 +719,7 @@ export default function LocationHierarchy() {
                                             <td className="py-3.5 pr-3 tabular-nums text-slate-700">
                                               {lga.vendorCount.toLocaleString()}
                                             </td>
-                                            <td className="py-3.5 pr-3 tabular-nums text-slate-700">{total}</td>
-                                            <td className="py-3.5 pr-3">
-                                              <span className="font-semibold tabular-nums text-blue-600">
-                                                {sold}/{total}
-                                              </span>
-                                            </td>
-                                            <td className="py-3.5 pr-3 font-medium tabular-nums text-slate-800">
-                                              {formatNaira(price)}
-                                            </td>
+                                            <td className="py-3.5 pr-3 tabular-nums text-slate-700">{boostCount}</td>
                                             <td className="py-3.5 pr-3">
                                               <span
                                                 className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${lga.boost.enabled
@@ -802,22 +743,6 @@ export default function LocationHierarchy() {
                                                 </button>
                                                 <button
                                                   type="button"
-                                                  onClick={() => {
-                                                    setDetailLgaKey(dk)
-                                                    requestAnimationFrame(() => {
-                                                      document
-                                                        .getElementById(`pricing-${dk}`)
-                                                        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                                                    })
-                                                  }}
-                                                  className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
-                                                  title="Pricing & slots"
-                                                  aria-label="Pricing and slots"
-                                                >
-                                                  <DollarSign className="size-4" />
-                                                </button>
-                                                <button
-                                                  type="button"
                                                   onClick={() => handleDeleteLocation(state.id, lgaRowId, lga.name)}
                                                   className="rounded-lg p-2 text-red-600 hover:bg-red-50"
                                                   title="Delete location"
@@ -830,13 +755,12 @@ export default function LocationHierarchy() {
                                           </tr>
                                           {open && (
                                             <tr className="bg-slate-50/90">
-                                              <td colSpan={7} className="px-3 py-4 sm:px-4">
+                                              <td colSpan={5} className="px-3 py-4 sm:px-4">
                                                 <LgaDetailPanel
                                                   lga={lga}
                                                   stateName={state.name}
                                                   stateId={state.id}
                                                   lgaRowId={lgaRowId}
-                                                  detailId={`pricing-${dk}`}
                                                   patchLga={patchLga}
                                                   onSaveDetails={saveLocationDetails}
                                                   saving={detailSaving}
@@ -855,9 +779,10 @@ export default function LocationHierarchy() {
                           )}
                         </div>
                       )
-                    })}
+                    })
+                  )}
                   </div>
-                )}
+                )}  
               </div>
             )}
           </div>
@@ -884,13 +809,7 @@ type DetailProps = {
   stateName: string
   stateId: string
   lgaRowId: string
-  detailId: string
-  patchLga: (
-    stateId: string,
-    lgaRowId: string,
-    u: (c: LGA) => LGA,
-    options?: { debounceMs?: number; boostToggleOnly?: boolean },
-  ) => void | Promise<void>
+  patchLga: (stateId: string, lgaRowId: string, u: (c: LGA) => LGA) => void | Promise<void>
   onSaveDetails: (
     stateId: string,
     lgaRowId: string,
@@ -905,7 +824,6 @@ function LgaDetailPanel({
   stateName,
   stateId,
   lgaRowId,
-  detailId,
   patchLga,
   onSaveDetails,
   saving,
@@ -997,8 +915,10 @@ function LgaDetailPanel({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase text-slate-500">Boost for this LGA</p>
-          <p className="text-xs text-slate-500">Deactivate if this area is not ready for paid boosts.</p>
+          <p className="text-[11px] font-semibold uppercase text-slate-500">Boost availability</p>
+          <p className="text-xs text-slate-500">
+            When active, vendors can target this LGA in their boost campaigns.
+          </p>
         </div>
         <label className="flex cursor-pointer items-center gap-2">
           <span className="text-xs text-slate-600">{lga.boost.enabled ? 'Active' : 'Inactive'}</span>
@@ -1008,62 +928,18 @@ function LgaDetailPanel({
             checked={lga.boost.enabled}
             disabled={saving}
             onChange={(e) =>
-              void patchLga(
-                stateId,
-                lgaRowId,
-                (cur) => ({
-                  ...cur,
-                  boost: { ...cur.boost, enabled: e.target.checked },
-                }),
-                { debounceMs: 0, boostToggleOnly: true },
-              )
+              void patchLga(stateId, lgaRowId, (cur) => ({
+                ...cur,
+                boost: { ...cur.boost, enabled: e.target.checked },
+              }))
             }
           />
         </label>
       </div>
 
-      <div id={detailId}>
-        <p className="mb-3 text-[11px] font-semibold uppercase text-slate-500">Boost plans & pricing</p>
-        <LgaBoostTierConfigCards
-          tiers={lga.boost.tiers}
-          disabled={!lga.boost.enabled}
-          onChange={(tiers) => {
-            patchLga(stateId, lgaRowId, (cur) => {
-              const totalSlots = tiers.reduce((sum, x) => sum + x.totalSlots, 0)
-              const sold = cur.boost.stats.slotsSold
-              return {
-                ...cur,
-                boost: {
-                  ...cur.boost,
-                  tiers,
-                  durations: aggregateDurationsFromTiers(tiers),
-                  stats: {
-                    ...cur.boost.stats,
-                    totalSlots,
-                    slotsRemaining: Math.max(0, totalSlots - sold),
-                  },
-                },
-              }
-            })
-          }}
-        />
-      </div>
-
       <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-4">
-        <p className="mb-2 text-[11px] font-semibold uppercase text-violet-900">Slot availability</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div>
-            <p className="text-[10px] text-violet-800">Total slots</p>
-            <p className="text-lg font-semibold text-violet-950">{lga.boost.stats.totalSlots}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-violet-800">Sold</p>
-            <p className="text-lg font-semibold text-violet-950">{lga.boost.stats.slotsSold}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-violet-800">Remaining</p>
-            <p className="text-lg font-semibold text-violet-950">{lga.boost.stats.slotsRemaining}</p>
-          </div>
+        <p className="mb-2 text-[11px] font-semibold uppercase text-violet-900">Boost activity</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
           <div>
             <p className="text-[10px] text-violet-800">Active boosts</p>
             <p className="text-lg font-semibold text-violet-950">{lga.boost.stats.activeBoosts}</p>

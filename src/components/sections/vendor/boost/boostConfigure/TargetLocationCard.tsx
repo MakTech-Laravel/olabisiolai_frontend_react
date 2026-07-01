@@ -16,8 +16,10 @@ export function TargetLocationCard({
   onLocationChange,
   readOnly = false,
 }: Props) {
+  const selectedEntry =
+    locations.find((entry) => entry.id === (selectedLocationId || location?.id || "")) ?? location;
   const states = Array.from(new Set(locations.map((entry) => entry.state).filter(Boolean)));
-  const selectedState = location?.state ?? "";
+  const selectedState = selectedEntry?.state ?? "";
   const lgasForState = locations.filter((entry) => entry.state === selectedState);
 
   return (
@@ -36,7 +38,14 @@ export function TargetLocationCard({
               <div className="rounded-lg border border-sky-100 bg-sky-50/80 px-3 py-3 text-sm">
                 <p className="font-semibold text-foreground">{location.label}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Boost plans below use pricing configured for this LGA.
+                  This is the LGA for your boost campaign.
+                </p>
+              </div>
+            ) : locations.length === 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+                <p className="font-semibold">No boost locations available yet</p>
+                <p className="mt-1 text-xs text-amber-900">
+                  An admin must add and activate LGAs before you can start a boost. Check back soon or contact support.
                 </p>
               </div>
             ) : (
@@ -72,7 +81,7 @@ export function TargetLocationCard({
                     <option value="">Select LGA</option>
                     {lgasForState.map((entry) => (
                       <option key={entry.id} value={entry.id}>
-                        {entry.lga} ({entry.city})
+                        {entry.city ? `${entry.lga} (${entry.city})` : entry.lga}
                       </option>
                     ))}
                   </select>

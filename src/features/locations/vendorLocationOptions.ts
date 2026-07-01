@@ -30,6 +30,8 @@ export type ParsedLocationOption = {
       totalSlots: number;
       slotsSold: number;
       slotsRemaining: number;
+      activeBoosts?: number;
+      expiredBoosts?: number;
     };
   } | null;
 };
@@ -192,8 +194,15 @@ export function parseBoostData(raw: unknown): ParsedLocationOption["boost"] {
       totalSlots: toNumber(statsRaw.total_slots ?? statsRaw.totalSlots),
       slotsSold: toNumber(statsRaw.slots_sold ?? statsRaw.slotsSold),
       slotsRemaining: toNumber(statsRaw.slots_remaining ?? statsRaw.slotsRemaining),
+      activeBoosts: toNumber(statsRaw.active_boosts ?? statsRaw.activeBoosts),
+      expiredBoosts: toNumber(statsRaw.expired_boosts ?? statsRaw.expiredBoosts),
     },
   };
+}
+
+export function formatLocationLabel(state: string, lga: string, city?: string): string {
+  const parts = [state, city?.trim() || null, lga].filter(Boolean);
+  return parts.join(" / ");
 }
 
 export function parseVendorLocationOptions(raw: unknown): ParsedLocationOption[] {
@@ -209,11 +218,11 @@ export function parseVendorLocationOptions(raw: unknown): ParsedLocationOption[]
       if (!item || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
       const state = readNestedString(record, ["state", "name"]);
-      const city = readNestedString(record, ["city", "name"]);
+      const city = readNestedString(record, ["city", "name"]) ?? "";
       const lga = readNestedString(record, ["lga", "name"]);
       const country = readNestedString(record, ["country", "name"]) ?? "Nigeria";
-      const idValue = readString(record.id) ?? String(record.id ?? `${state}-${city}-${lga}-${index}`);
-      if (!state || !city || !lga) return null;
+      const idValue = readString(record.id) ?? String(record.id ?? `${state}-${lga}-${index}`);
+      if (!state || !lga) return null;
 
       return {
         id: idValue,
@@ -221,11 +230,28 @@ export function parseVendorLocationOptions(raw: unknown): ParsedLocationOption[]
         state,
         city,
         lga,
-        label: `${state} / ${city} / ${lga}`,
+        label: formatLocationLabel(state, lga, city),
         boost: parseBoostData(readNestedValue(record, ["lga", "boost"])),
       } satisfies ParsedLocationOption;
     })
     .filter((entry): entry is ParsedLocationOption => entry !== null);
+}
+
+/** Admin-managed LGAs where boost is enabled — used for vendor boost targeting. */
+export function parseVendorBoostLocationOptions(raw: unknown): ParsedLocationOption[] {
+  return parseVendorLocationOptions(raw).filter((entry) => entry.boost?.enabled === true);
+}
+
+/** Parse boost-enabled rows even when nested boost.enabled is missing (pre-filtered API lists). */
+export function parseVendorBoostLocationList(raw: unknown, assumeBoostEnabled = false): ParsedLocationOption[] {
+  const parsed = parseVendorLocationOptions(raw);
+  if (assumeBoostEnabled) {
+    return parsed.map((entry) => ({
+      ...entry,
+      boost: entry.boost ?? { enabled: true, tiers: [], durations: [], stats: { totalSlots: 0, slotsSold: 0, slotsRemaining: 0 } },
+    }));
+  }
+  return parseVendorBoostLocationOptions(raw);
 }
 
 export function uniqueLocationStates(locations: ParsedLocationOption[]): string[] {

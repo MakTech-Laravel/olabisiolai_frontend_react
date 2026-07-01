@@ -1,8 +1,4 @@
-import {
-  formatNaira,
-  formatTierPriceRange,
-  type ParsedLocationOption,
-} from "@/features/locations/vendorLocationOptions";
+import { type ParsedLocationOption } from "@/features/locations/vendorLocationOptions";
 
 type VendorLocationBoostDetailsProps = {
   location: ParsedLocationOption;
@@ -16,69 +12,41 @@ export function VendorLocationBoostDetails({ location, readOnly = true }: Vendor
   if (!boost?.enabled) {
     return (
       <p className="mt-2 text-xs text-muted-foreground">
-        This location has no active slot configuration yet.
+        Boost is not available for this location yet. Choose another LGA or contact support.
       </p>
     );
   }
 
+  const activeBoosts = toNumber(boost.stats.activeBoosts);
+  const expiredBoosts = toNumber(boost.stats.expiredBoosts);
+
   return (
     <div className="mt-4 space-y-3">
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-          <p className="text-[11px] uppercase text-muted-foreground">Total slots</p>
-          <p className="text-lg font-semibold text-foreground">{boost.stats.totalSlots}</p>
+          <p className="text-[11px] uppercase text-muted-foreground">Active boosts</p>
+          <p className="text-lg font-semibold text-foreground">{activeBoosts}</p>
         </div>
         <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-          <p className="text-[11px] uppercase text-muted-foreground">Sold</p>
-          <p className="text-lg font-semibold text-foreground">{boost.stats.slotsSold}</p>
+          <p className="text-[11px] uppercase text-muted-foreground">Expired</p>
+          <p className="text-lg font-semibold text-foreground">{expiredBoosts}</p>
         </div>
-        <div className="rounded-md border border-sky-100 bg-white px-3 py-2">
-          <p className="text-[11px] uppercase text-muted-foreground">Remaining</p>
-          <p className="text-lg font-semibold text-foreground">{boost.stats.slotsRemaining}</p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">Top slots & pricing</p>
-        {boost.tiers.length > 0 ? (
-          <ul className="grid gap-2">
-            {boost.tiers.map((tier) => (
-              <li
-                key={tier.key}
-                className="rounded-md border border-sky-100 bg-white px-3 py-2 text-xs text-foreground"
-              >
-                <p className="font-semibold">{tier.label}</p>
-                <p className="text-muted-foreground">Slots: {tier.totalSlots}</p>
-                <p className="mt-1 text-muted-foreground">
-                  {formatTierPriceRange(tier, boost.durations)}
-                </p>
-                {tier.durations && tier.durations.length > 0 ? (
-                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                    {tier.durations
-                      .filter((d) => d.enabled && d.priceAmount > 0)
-                      .map((d) => (
-                        <li
-                          key={`${tier.key}-${d.days}`}
-                          className="rounded border border-sky-50 bg-sky-50/50 px-2 py-0.5"
-                        >
-                          {d.days}d — {formatNaira(d.priceAmount)}
-                        </li>
-                      ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-muted-foreground">No top slot config found for this location.</p>
-        )}
       </div>
 
       {readOnly ? (
         <p className="text-xs text-sky-900">
-          Boost slots are available for this LGA. Manage an active boost from the Boost page.
+          This LGA is available for vendor boosts. Start or manage a campaign from the Boost page.
         </p>
       ) : null}
     </div>
   );
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
 }
