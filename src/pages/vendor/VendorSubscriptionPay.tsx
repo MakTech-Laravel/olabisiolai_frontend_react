@@ -34,6 +34,7 @@ import {
   fetchSubscriptionPackages,
   fetchSubscriptionStatus,
   initSubscriptionPayment,
+  reconcileSubscriptionPayment,
   resumeSubscriptionPayment,
   type SubscriptionCheckoutInit,
   type SubscriptionPayment,
@@ -170,6 +171,8 @@ export default function VendorSubscriptionPayPage() {
   const [billing, setBilling] = useState<BillingFormValues>(() => billingFromUser(null));
   const [saveProfileAfterPay, setSaveProfileAfterPay] = useState(true);
   const [profileInitDone, setProfileInitDone] = useState(false);
+  const [paystackRetryReference, setPaystackRetryReference] = useState("");
+  const [isReconciling, setIsReconciling] = useState(false);
 
   const { user, isAuthenticated, isSessionLoading, isUserLoading } = useAuth();
   const hasToken = Boolean(getAccessToken());
@@ -342,11 +345,10 @@ export default function VendorSubscriptionPayPage() {
             void queryClient.invalidateQueries({ queryKey: ["vendor", "subscription", "status"] });
             void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
           } catch (error) {
-            persistCheckout(null);
             showError(
               getLaravelErrorMessage(
                 error,
-                "Payment succeeded but premium activation failed. Tap Pay again on this page to retry activation.",
+                "Payment succeeded but premium activation failed. Use “Already paid?” below to activate with your Paystack reference.",
               ),
             );
           } finally {
@@ -545,6 +547,40 @@ export default function VendorSubscriptionPayPage() {
     persistCheckout(null);
   };
 
+  const onReconcilePaid = async () => {
+    const reference = paystackRetryReference.trim() || subscriptionLine?.tx_ref?.trim() || "";
+    if (!reference) {
+      showError("Enter the Paystack reference from your receipt or bank alert.");
+      return;
+    }
+
+    try {
+      setIsReconciling(true);
+      const result = await reconcileSubscriptionPayment(reference, {
+        businessId: scopedBusinessId,
+      });
+      persistCheckout(null);
+      clearBoostCheckoutSelection();
+
+      if (result.subscription.is_premium_active) {
+        localStorage.setItem("vendorPlan", "premium");
+      } else {
+        localStorage.removeItem("vendorPlan");
+      }
+      localStorage.setItem("vendorBusinessCreated", "true");
+      primeVendorSubscriptionCaches(queryClient, result.subscription);
+
+      navigate(ownerBusinessPath, { replace: true });
+      showSuccess(result.message || "Premium subscription activated successfully.");
+
+      void queryClient.invalidateQueries({ queryKey: ["vendor"] });
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not activate premium. Contact support with your Paystack reference."));
+    } finally {
+      setIsReconciling(false);
+    }
+  };
+
   const onConfirmPay = async () => {
     if (purchaseBlockedByEmail) {
       showError("Verify your email in Settings before making a purchase.");
@@ -689,6 +725,40 @@ export default function VendorSubscriptionPayPage() {
             }
           />
         </div>
+
+        {subscriptionStatus?.subscription?.requires_payment ? (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-5">
+            <h2 className="text-base font-semibold text-amber-950">Already paid on Paystack?</h2>
+            <p className="mt-1 text-sm text-amber-900">
+              If money was deducted but premium is not active, paste the Paystack reference from your
+              receipt or bank alert below.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <input
+                type="text"
+                value={paystackRetryReference}
+                onChange={(e) => setPaystackRetryReference(e.target.value)}
+                placeholder="Paystack receipt reference"
+                className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                disabled={isReconciling || purchaseBlockedByEmail}
+                onClick={() => void onReconcilePaid()}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-60"
+              >
+                {isReconciling ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Activating…
+                  </>
+                ) : (
+                  "Activate premium"
+                )}
+              </button>
+            </div>
+          </section>
+        ) : null}
       </div>
     </div>
   );

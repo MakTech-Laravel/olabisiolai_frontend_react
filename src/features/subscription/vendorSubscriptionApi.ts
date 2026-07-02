@@ -147,3 +147,25 @@ export async function confirmSubscriptionPayment(
     message: res.data.message ?? 'Premium subscription activated.',
   };
 }
+
+export async function reconcileSubscriptionPayment(
+  paystackReference: string,
+  options?: { businessId?: number },
+): Promise<{
+  subscription: VendorSubscriptionState;
+  message: string;
+}> {
+  const res = await request.post<
+    ApiEnvelope<{ subscription: VendorSubscriptionState; payment: SubscriptionPayment }>
+  >('/vendor/subscription/payment/reconcile', {
+    paystack_reference: paystackReference,
+    ...(options?.businessId ? { business_id: options.businessId } : {}),
+  });
+  if (res.data?.success !== true || !res.data.data?.subscription) {
+    throw new Error(res.data?.message ?? 'Premium activation failed.');
+  }
+  return {
+    subscription: res.data.data.subscription,
+    message: res.data.message ?? 'Premium subscription activated.',
+  };
+}

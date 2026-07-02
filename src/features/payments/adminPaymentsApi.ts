@@ -5,6 +5,8 @@ type RawRecord = Record<string, unknown>;
 
 export type AdminPaymentTransactionType = "subscription" | "boost" | "verification";
 
+export type AdminPaymentGateway = "paystack" | "flutterwave";
+
 export type AdminPaymentsListParams = {
   page?: number;
   per_page?: number;
@@ -15,6 +17,14 @@ export type AdminPaymentsListParams = {
 
 export type AdminPaymentListItem = PaymentRow & {
   transactionType: AdminPaymentTransactionType;
+};
+
+export type AdminPaymentDetail = AdminPaymentListItem & {
+  businessId: number | null;
+  userId: number | null;
+  txRef: string;
+  gatewayTransactionId: string;
+  isConsumed: boolean;
 };
 
 export type AdminPaymentsPagination = {
@@ -104,7 +114,7 @@ function parseListItem(raw: unknown): AdminPaymentListItem | null {
     business: pickString(item, ["business"], "—"),
     payerName: pickString(item, ["payer_name", "payerName"], "—"),
     payerEmail: pickString(item, ["payer_email", "payerEmail"], ""),
-    reference: pickString(item, ["reference", "tx_ref"], "—"),
+    reference: pickString(item, ["reference_display", "reference", "tx_ref"], "—"),
     amountNgn: asNumber(item.amount) ?? asNumber(item.amount_ngn) ?? 0,
     method: parseMethod(item.method),
     status: parseStatus(item.status),
@@ -205,12 +215,64 @@ export async function fetchAdminPaymentsAnalytics(
   };
 }
 
-export async function fetchAdminPaymentDetail(paymentId: number): Promise<AdminPaymentListItem> {
+export async function fetchAdminPaymentDetail(paymentId: number): Promise<AdminPaymentDetail> {
   const res = await request.get(`/admin/payments/${paymentId}`);
   const data = unwrapData(res);
   const payment = parseListItem(data.payment);
   if (!payment) throw new Error("Payment not found.");
-  return payment;
+  const raw = asRecord(data.payment) ?? {};
+
+  return {
+    ...payment,
+    businessId: asNumber(raw.business_id),
+    userId: asNumber(raw.user_id),
+    txRef: pickString(raw, ["tx_ref", "reference"], ""),
+    gatewayTransactionId: pickString(raw, ["gateway_transaction_id", "gatewayTransactionId"], ""),
+    isConsumed: raw.is_consumed === true,
+  };
+}
+
+export async function applyAdminPayment(
+  paymentId: number,
+  body: {
+    gateway: AdminPaymentGateway;
+    gateway_transaction_id: string;
+    reason?: string;
+    verify_with_gateway?: boolean;
+  },
+): Promise<{ message: string }> {
+  const res = await request.post(`/admin/payments/${paymentId}/apply`, body);
+  const root = asRecord(res.data);
+  if (!root || root.success !== true) {
+    throw new Error((typeof root?.message === "string" && root.message) || "Could not apply payment.");
+  }
+  return { message: (typeof root.message === "string" && root.message) || "Payment applied." };
+}
+
+export async function reconcileAdminPayment(
+  paymentId: number,
+  body: { paystack_reference?: string },
+): Promise<{ message: string }> {
+  const res = await request.post(`/admin/payments/${paymentId}/reconcile`, body);
+  const root = asRecord(res.data);
+  if (!root || root.success !== true) {
+    throw new Error((typeof root?.message === "string" && root.message) || "Reconciliation failed.");
+  }
+  return { message: (typeof root.message === "string" && root.message) || "Payment reconciled." };
+}
+
+export async function grantAdminPremium(body: {
+  business_id: number;
+  reason: string;
+  duration_days?: number;
+  paystack_reference?: string;
+}): Promise<{ message: string }> {
+  const res = await request.post("/admin/subscriptions/grant-premium", body);
+  const root = asRecord(res.data);
+  if (!root || root.success !== true) {
+    throw new Error((typeof root?.message === "string" && root.message) || "Could not grant premium.");
+  }
+  return { message: (typeof root.message === "string" && root.message) || "Premium granted." };
 }
 
 export async function exportAdminPaymentsCsv(params: AdminPaymentsListParams = {}): Promise<Blob> {
