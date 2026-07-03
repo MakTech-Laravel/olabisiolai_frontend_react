@@ -3,14 +3,15 @@ import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 import PaystackPop from "@paystack/inline-js";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
+import { alert, showError, showInfo, showSuccess } from "@/lib/sweetAlert";
+import { formatNaira } from "@/lib/currency";
 
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
 import type { BillingFormValues } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
-import { PaymentMethodsCard } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
+import { PaymentMethodsCard, type CheckoutGateway } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
 import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/boostPay/SavedCheckoutProfilesCard";
 import { plans, type PlanId } from "@/components/sections/vendor/verification/verificationData";
 import { env } from "@/config/env";
@@ -66,7 +67,7 @@ function redirectToDocumentUpload(
 export default function VendorBoostReviewPayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedGateway, setSelectedGateway] = useState<"flutterwave" | "paystack">("paystack");
+  const [selectedGateway, setSelectedGateway] = useState<CheckoutGateway>("paystack");
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutPayment, setCheckoutPayment] = useState<CheckoutPayment | null>(null);
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -154,7 +155,7 @@ export default function VendorBoostReviewPayPage() {
     if (isVerification || isBoostCheckout) {
       return;
     }
-    navigate("/vendor/boost", { replace: true });
+    navigate("/vendor/verification", { replace: true });
   }, [isBoostCheckout, isVerification, navigate]);
 
   const isResumingBoostPayment = Boolean(isBoostCheckout && boostSelection?.requestId);
@@ -216,7 +217,11 @@ export default function VendorBoostReviewPayPage() {
 
   const completeBoostCheckout = useCallback(
     async (paymentId: number, gatewayTransactionId: string) => {
-      const result = await confirmVendorBoostPayment(paymentId, gatewayTransactionId, selectedGateway);
+      const result = await confirmVendorBoostPayment(
+        paymentId,
+        gatewayTransactionId,
+        selectedGateway as "flutterwave" | "paystack",
+      );
       clearBoostCheckoutSelection();
       void queryClient.invalidateQueries({ queryKey: ["vendor", "boost", "catalog"] });
       void queryClient.invalidateQueries({ queryKey: ["vendor", "business"] });
@@ -232,7 +237,11 @@ export default function VendorBoostReviewPayPage() {
 
   const completeVerificationCheckout = useCallback(
     async (paymentId: number, gatewayTransactionId: string) => {
-      const result = await confirmVerificationPayment(paymentId, gatewayTransactionId, selectedGateway);
+      const result = await confirmVerificationPayment(
+        paymentId,
+        gatewayTransactionId,
+        selectedGateway as "flutterwave" | "paystack",
+      );
 
       if (result.consumable_payment_id) {
         sessionStorage.setItem("verificationPaymentId", String(result.consumable_payment_id));
@@ -468,8 +477,80 @@ export default function VendorBoostReviewPayPage() {
       return;
     }
 
+    if (selectedGateway === "wallet") {
+      const confirmed = await alert.confirm({
+        title: "Pay with Gidira Wallet?",
+        html: `<p>${formatNaira(amountNgn, { freeLabel: false })} will be deducted from your wallet balance immediately.</p>`,
+        icon: "question",
+        confirmText: "Yes, pay",
+        cancelText: "Cancel",
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     try {
       setIsPaying(true);
+
+      if (selectedGateway === "wallet") {
+        if (isBoostCheckout && boostSelection) {
+          const { payment, requestId, message, paidFromWallet } = await initVendorBoostPayment({
+            durationDays: boostSelection.durationDays,
+            budgetAmount: boostSelection.budgetAmount,
+            locationId: boostSelection.locationId,
+            renewType: boostSelection.renewType,
+            sourceCampaignId: boostSelection.sourceCampaignId,
+            useWallet: true,
+          });
+
+          if (!paidFromWallet) {
+            setCheckoutPayment(payment);
+            if (requestId) {
+              saveBoostCheckoutSelection({
+                ...boostSelection,
+                paymentId: payment.id,
+                requestId,
+              }, { standalonePayment: true });
+            }
+            return;
+          }
+
+          clearBoostCheckoutSelection();
+          void queryClient.invalidateQueries({ queryKey: ["vendor", "boost", "catalog"] });
+          void queryClient.invalidateQueries({ queryKey: ["vendor", "business"] });
+          void queryClient.invalidateQueries({ queryKey: ["vendor", "business", "profile"] });
+          void queryClient.invalidateQueries({ queryKey: ["user", "wallet"] });
+          navigate("/vendor/boost", { replace: true });
+          showSuccess(message || "Payment received. An admin will assign your boost shortly.");
+          return;
+        }
+
+        clearVerificationPaymentSession();
+
+        const result = await initVerificationPayment(packageId, undefined, true);
+
+        if (!result.paid_from_wallet) {
+          setCheckoutPayment(result.payment);
+          return;
+        }
+
+        if (result.consumable_payment_id) {
+          sessionStorage.setItem("verificationPaymentId", String(result.consumable_payment_id));
+        }
+        void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
+        void queryClient.invalidateQueries({ queryKey: ["user", "wallet"] });
+
+        if (result.awaiting_document_submission) {
+          const status = await fetchVerificationStatus();
+          redirectToDocumentUpload(navigate, status);
+        } else {
+          navigate("/vendor/document-upload", { replace: true });
+        }
+        showSuccess("Payment confirmed. Upload your documents next.");
+        return;
+      }
 
       if (isBoostCheckout && boostSelection) {
         if (
@@ -522,16 +603,20 @@ export default function VendorBoostReviewPayPage() {
 
       clearVerificationPaymentSession();
 
-      const payment = await initVerificationPayment(packageId, selectedGateway);
-      setCheckoutPayment(payment);
+      const result = await initVerificationPayment(packageId, selectedGateway);
+      setCheckoutPayment(result.payment);
       if (selectedGateway === "flutterwave") {
         setShouldOpenFlutterwave(true);
       } else {
-        void openPaystack(payment);
+        void openPaystack(result.payment);
       }
     } catch (error) {
       setIsPaying(false);
       showError(getLaravelErrorMessage(error, "Unable to start payment."));
+    } finally {
+      if (selectedGateway === "wallet") {
+        setIsPaying(false);
+      }
     }
   };
 
@@ -555,7 +640,11 @@ export default function VendorBoostReviewPayPage() {
 
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
-            <PaymentMethodsCard selectedGateway={selectedGateway} onGatewayChange={setSelectedGateway} />
+            <PaymentMethodsCard
+              selectedGateway={selectedGateway}
+              onGatewayChange={setSelectedGateway}
+              totalAmount={amountNgn}
+            />
             <SavedCheckoutProfilesCard
               items={methods}
               selectedId={selectedProfileId}

@@ -3,8 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { createUserBusiness, fetchUserBusinesses, setActiveBusinessId as updateActiveBusinessId } from '@/api/userBusinesses'
 import { fetchFollowStats } from '@/api/follows'
+import { fetchUserReferrals } from '@/api/referrals'
 import { fetchUserSettings } from '@/api/userSettings'
 import { fetchUserReviews } from '@/api/userReviews'
+import { fetchUserWallet } from '@/api/wallet'
 import { useAuth } from '@/auth/useAuth'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 import { ProfileBusinessSection } from '@/components/profile/hub/ProfileBusinessSection'
@@ -13,6 +15,9 @@ import {
   ProfileIdentitySection,
 } from '@/components/profile/hub/ProfileIdentitySection'
 import { ProfileHubFooter } from '@/components/profile/hub/ProfileHubFooter'
+import { ProfileHubReferralCard } from '@/components/profile/hub/ProfileHubReferralCard'
+import { ProfileHubSection } from '@/components/profile/hub/ProfileHubSection'
+import { ProfileHubWalletCard } from '@/components/profile/hub/ProfileHubWalletCard'
 import { ProfileManageSheet } from '@/components/profile/hub/ProfileManageSheet'
 import { ProfilePersonalTools } from '@/components/profile/hub/ProfilePersonalTools'
 import type { ProfileHubBusiness } from '@/components/profile/hub/profileHubUtils'
@@ -75,6 +80,20 @@ export default function UnifiedProfile() {
   const businessesQuery = useQuery({
     queryKey: ['user', 'businesses'],
     queryFn: fetchUserBusinesses,
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+  })
+
+  const walletQuery = useQuery({
+    queryKey: ['user', 'wallet'],
+    queryFn: fetchUserWallet,
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+  })
+
+  const referralsQuery = useQuery({
+    queryKey: ['user', 'referrals'],
+    queryFn: fetchUserReferrals,
     enabled: Boolean(user?.id),
     staleTime: 30_000,
   })
@@ -180,6 +199,19 @@ export default function UnifiedProfile() {
                   Your profile, activity, and business pages
                 </p>
               </div>
+
+              <ProfileHubSection title="Wallet & referrals">
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <ProfileHubWalletCard
+                    balance={walletQuery.data?.balance ?? 0}
+                    isLoading={walletQuery.isLoading}
+                  />
+                  <ProfileHubReferralCard
+                    inviteCount={referralsQuery.data?.invites.length ?? 0}
+                    earned={referralsQuery.data?.total_earned ?? 0}
+                  />
+                </div>
+              </ProfileHubSection>
 
               <ProfilePersonalTools />
 

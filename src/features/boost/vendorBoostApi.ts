@@ -131,16 +131,26 @@ export async function initVendorBoostPayment(params: {
   renewType?: BoostRenewType;
   sourceCampaignId?: number;
   gateway?: PaymentGateway;
+  useWallet?: boolean;
   /** @deprecated legacy slot-tier boosts */
   tierKey?: string;
-}): Promise<{ payment: BoostPaymentSession; requestId?: number; message: string }> {
+}): Promise<{
+  payment: BoostPaymentSession;
+  requestId?: number;
+  message: string;
+  paidFromWallet: boolean;
+}> {
   const locationId =
     params.locationId !== undefined && params.locationId !== ""
       ? Number(params.locationId)
       : undefined;
 
   const res = await request.post<
-    ApiEnvelope<{ payment: BoostPaymentSession; request: { id?: number } }>
+    ApiEnvelope<{
+      payment: BoostPaymentSession;
+      request: { id?: number };
+      paid_from_wallet?: boolean;
+    }>
   >("/vendor/boost/payment/init", {
     duration_days: params.durationDays,
     budget_amount: params.budgetAmount,
@@ -148,6 +158,7 @@ export async function initVendorBoostPayment(params: {
     renew_type: params.renewType,
     source_campaign_id: params.sourceCampaignId,
     gateway: params.gateway,
+    use_wallet: params.useWallet,
   });
 
   const requestId = res.data.data.request?.id;
@@ -156,6 +167,7 @@ export async function initVendorBoostPayment(params: {
     payment: res.data.data.payment,
     requestId: typeof requestId === "number" ? requestId : undefined,
     message: res.data.message,
+    paidFromWallet: Boolean(res.data.data.paid_from_wallet),
   };
 }
 

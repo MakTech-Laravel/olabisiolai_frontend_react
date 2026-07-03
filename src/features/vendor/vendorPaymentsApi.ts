@@ -1,6 +1,6 @@
 import { request } from '@/api/request';
 
-export type PaymentGatewayCode = 'paystack' | 'flutterwave';
+export type PaymentGatewayCode = 'paystack' | 'flutterwave' | 'wallet';
 
 export type VendorPaymentListItem = {
   id: number;

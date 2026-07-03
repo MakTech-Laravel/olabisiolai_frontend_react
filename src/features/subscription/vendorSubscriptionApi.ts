@@ -114,6 +114,40 @@ export async function initSubscriptionPayment(
   return res.data.data;
 }
 
+export async function payPremiumFromWallet(args?: {
+  businessId?: number;
+  boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
+}): Promise<{
+  subscription: VendorSubscriptionState;
+  walletBalance: number;
+  message: string;
+}> {
+  const boost = args?.boost;
+  const res = await request.post<
+    ApiEnvelope<{ subscription: VendorSubscriptionState; wallet_balance: number }>
+  >('/vendor/subscription/payment/init', {
+    use_wallet: true,
+    ...(args?.businessId ? { business_id: args.businessId } : null),
+    ...(boost
+      ? {
+        boost_tier_key: boost.tierKey,
+        boost_duration_days: boost.durationDays,
+        ...(boost.budgetAmount != null
+          ? { boost_budget_amount: boost.budgetAmount }
+          : null),
+      }
+      : null),
+  });
+  if (res.data?.success !== true || !res.data.data?.subscription) {
+    throw new Error(res.data?.message ?? 'Unable to pay premium from wallet.');
+  }
+  return {
+    subscription: res.data.data.subscription,
+    walletBalance: res.data.data.wallet_balance,
+    message: res.data.message ?? 'Premium subscription activated.',
+  };
+}
+
 export async function resumeSubscriptionPayment(): Promise<SubscriptionCheckoutInit> {
   const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>(
     '/vendor/subscription/payment/resume',

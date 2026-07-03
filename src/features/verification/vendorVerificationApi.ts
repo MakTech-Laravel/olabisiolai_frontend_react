@@ -97,16 +97,38 @@ export function clearVerificationPaymentSession(): void {
   sessionStorage.removeItem(PAYMENT_ID_KEY);
 }
 
+export type InitVerificationPaymentResult = {
+  payment: VerificationPayment;
+  paid_from_wallet: boolean;
+  awaiting_document_submission: boolean;
+  consumable_payment_id: number | null;
+};
+
 export async function initVerificationPayment(
   packageId: string,
   gateway?: PaymentGateway,
-): Promise<VerificationPayment> {
-  const res = await request.post<ApiEnvelope<{ payment: VerificationPayment }>>(
-    '/vendor/verification/payment/init',
-    { package_id: packageId, gateway, ...scopedBusinessParams() },
-  );
+  useWallet?: boolean,
+): Promise<InitVerificationPaymentResult> {
+  const res = await request.post<
+    ApiEnvelope<{
+      payment: VerificationPayment;
+      paid_from_wallet?: boolean;
+      awaiting_document_submission?: boolean;
+      consumable_payment_id?: number | null;
+    }>
+  >('/vendor/verification/payment/init', {
+    package_id: packageId,
+    gateway,
+    use_wallet: useWallet,
+    ...scopedBusinessParams(),
+  });
   const data = assertApiSuccess(res.data);
-  return data.payment;
+  return {
+    payment: data.payment,
+    paid_from_wallet: Boolean(data.paid_from_wallet),
+    awaiting_document_submission: Boolean(data.awaiting_document_submission),
+    consumable_payment_id: data.consumable_payment_id ?? null,
+  };
 }
 
 export type ConfirmVerificationPaymentResult = {
