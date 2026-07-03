@@ -71,7 +71,9 @@ export default function VendorPaymentDetailPage() {
                     ? "Paystack"
                     : p.gateway === "flutterwave"
                       ? "Flutterwave"
-                      : "—"}
+                      : p.gateway === "wallet"
+                        ? "Gidira Wallet"
+                        : "—"}
                 </dd>
               </div>
               <div className="sm:col-span-2">

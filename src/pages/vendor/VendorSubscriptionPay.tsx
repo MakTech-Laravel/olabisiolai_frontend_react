@@ -4,7 +4,7 @@ import PaystackPop from "@paystack/inline-js";
 import { Loader2 } from "lucide-react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { showError, showSuccess } from "@/lib/sweetAlert";
+import { alert, showError, showSuccess } from "@/lib/sweetAlert";
 
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
@@ -12,7 +12,7 @@ import { hasAnyRole } from "@/auth/roles";
 import type { BillingFormValues } from "@/components/sections/vendor/boost/boostPay/BillingInformationCard";
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
-import { PaymentMethodsCard } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
+import { PaymentMethodsCard, type CheckoutGateway } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
 import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/boostPay/SavedCheckoutProfilesCard";
 import { env } from "@/config/env";
 import { formatNaira } from "@/lib/currency";
@@ -34,11 +34,11 @@ import {
   fetchSubscriptionPackages,
   fetchSubscriptionStatus,
   initSubscriptionPayment,
+  payPremiumFromWallet,
   reconcileSubscriptionPayment,
   resumeSubscriptionPayment,
   type SubscriptionCheckoutInit,
   type SubscriptionPayment,
-  type PaymentGateway,
 } from "@/features/subscription/vendorSubscriptionApi";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
@@ -163,7 +163,7 @@ export default function VendorSubscriptionPayPage() {
   const [searchParams] = useSearchParams();
   const scopedBusinessId = Number(searchParams.get("business_id")) || undefined;
   const queryClient = useQueryClient();
-  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>("paystack");
+  const [selectedGateway, setSelectedGateway] = useState<CheckoutGateway>("paystack");
   const [isPaying, setIsPaying] = useState(false);
   const [checkout, setCheckout] = useState<SubscriptionCheckoutInit | null>(() => readCheckoutFromSession());
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -595,8 +595,51 @@ export default function VendorSubscriptionPayPage() {
       return;
     }
 
+    if (selectedGateway === "wallet") {
+      const confirmed = await alert.confirm({
+        title: "Pay with Gidira Wallet?",
+        html: `<p>${formatNaira(amountNgn, { freeLabel: false })} will be deducted from your wallet balance immediately.</p>`,
+        icon: "question",
+        confirmText: "Yes, pay",
+        cancelText: "Cancel",
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     try {
       setIsPaying(true);
+
+      if (selectedGateway === "wallet") {
+        const result = await payPremiumFromWallet({
+          businessId: scopedBusinessId,
+          boost: subscriptionBoostPayload(boostSelection),
+        });
+
+        persistCheckout(null);
+        clearBoostCheckoutSelection();
+
+        if (result.subscription.is_premium_active) {
+          localStorage.setItem("vendorPlan", "premium");
+        } else {
+          localStorage.removeItem("vendorPlan");
+        }
+        localStorage.setItem("vendorBusinessCreated", "true");
+        primeVendorSubscriptionCaches(queryClient, result.subscription);
+
+        navigate(ownerBusinessPath, { replace: true });
+        showSuccess(result.message || "Premium subscription activated successfully.");
+
+        void queryClient.invalidateQueries({ queryKey: ["vendor"] });
+        void queryClient.invalidateQueries({ queryKey: ["vendor", "onboarding", "status"] });
+        void queryClient.invalidateQueries({ queryKey: ["vendor", "subscription", "status"] });
+        void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
+        void queryClient.invalidateQueries({ queryKey: ["user", "wallet"] });
+        setIsPaying(false);
+        return;
+      }
 
       const resumed = normalizeCheckout(await resumeSubscriptionPayment().catch(() => null));
       const fresh =
@@ -664,7 +707,11 @@ export default function VendorSubscriptionPayPage() {
 
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
-            <PaymentMethodsCard selectedGateway={selectedGateway} onGatewayChange={setSelectedGateway} />
+            <PaymentMethodsCard
+              selectedGateway={selectedGateway}
+              onGatewayChange={setSelectedGateway}
+              totalAmount={amountNgn}
+            />
             <SavedCheckoutProfilesCard
               items={methods}
               selectedId={selectedProfileId}

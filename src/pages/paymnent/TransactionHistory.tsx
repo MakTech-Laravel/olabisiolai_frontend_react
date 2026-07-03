@@ -41,12 +41,14 @@ function purposeBadgeClass(purpose: string) {
 function gatewayLabel(gateway: string | null | undefined) {
   if (gateway === "paystack") return "Paystack";
   if (gateway === "flutterwave") return "Flutterwave";
+  if (gateway === "wallet") return "Gidira Wallet";
   return null;
 }
 
 function gatewayBadgeClass(gateway: string | null | undefined) {
   if (gateway === "paystack") return "bg-emerald-100 text-emerald-900";
   if (gateway === "flutterwave") return "bg-orange-100 text-orange-900";
+  if (gateway === "wallet") return "bg-sky-100 text-sky-900";
   return "bg-slate-100 text-slate-600";
 }
 

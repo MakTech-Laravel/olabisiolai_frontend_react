@@ -23,6 +23,7 @@ export type RegisterPayload = {
   password: string
   password_confirmation: string
   role: AuthRole
+  ref?: string
 }
 
 export type PhoneLoginRequestPayload = {

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ArrowRight, Eye } from "lucide-react";
+import { ArrowRight, BadgeCheck, Eye, Gift } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,12 @@ export default function Register() {
   const [password, setPassword] = React.useState("");
   const [passwordConfirmation, setPasswordConfirmation] = React.useState("");
   const [role, setRole] = React.useState<AuthRole>("user");
+  const [referralCode, setReferralCode] = React.useState(
+    () => searchParams.get("ref")?.trim().toUpperCase() ?? "",
+  );
+  const [referralAppliedFromLink, setReferralAppliedFromLink] = React.useState(
+    () => Boolean(searchParams.get("ref")?.trim()),
+  );
   const [acceptedTerms, setAcceptedTerms] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -92,6 +98,8 @@ export default function Register() {
     saveAuthRole(role);
 
     try {
+      const trimmedReferralCode = referralCode.trim();
+
       await registerAndLoginUser({
         first_name: firstName,
         last_name: lastName,
@@ -100,6 +108,7 @@ export default function Register() {
         password,
         password_confirmation: passwordConfirmation,
         role,
+        ...(trimmedReferralCode ? { ref: trimmedReferralCode } : {}),
       });
 
       setSuccess("Registration successful. Redirecting to OTP verification...");
@@ -254,6 +263,41 @@ export default function Register() {
                 ) : null}
               </div>
             )}
+
+            <div>
+              <label className="flex items-center gap-1.5 text-sm font-normal text-muted-foreground mb-2">
+                <Gift className="w-3.5 h-3.5 text-brand-red" />
+                Referral code
+                <span className="text-xs text-muted-foreground/70">(Optional)</span>
+              </label>
+              {referralAppliedFromLink ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+                  <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-800">
+                    <BadgeCheck className="w-4 h-4 shrink-0" />
+                    {referralCode} applied — you'll both earn rewards
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setReferralAppliedFromLink(false)}
+                    className="shrink-0 text-xs font-medium text-emerald-700 hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <Input
+                  type="text"
+                  className="w-full px-3 py-2 border border-border rounded-lg uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Have a code? Enter it here"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  maxLength={32}
+                />
+              )}
+              {fieldErrors.ref ? (
+                <p className="mt-1 text-sm text-destructive">{fieldErrors.ref}</p>
+              ) : null}
+            </div>
 
             <div>
               <label className="block text-sm font-normal text-muted-foreground mb-2">
