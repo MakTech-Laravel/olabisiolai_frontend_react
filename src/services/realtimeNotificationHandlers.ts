@@ -34,6 +34,11 @@ export function handleRealtimeNotification(
     void ctx.queryClient.invalidateQueries({ queryKey: ['business'] })
   }
 
+  if (type === 'referral_reward_paid') {
+    void ctx.queryClient.invalidateQueries({ queryKey: ['user', 'wallet'] })
+    void ctx.queryClient.invalidateQueries({ queryKey: ['user', 'referrals'] })
+  }
+
   if (type === 'verification_submitted' && ctx.isAdmin) {
     void ctx.queryClient.invalidateQueries({ queryKey: ['admin', 'verification'] })
   }

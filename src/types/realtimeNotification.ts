@@ -6,6 +6,7 @@ export type RealtimeNotificationType =
   | 'verification_flagged'
   | 'verification_submitted'
   | 'payment_completed'
+  | 'referral_reward_paid'
   | 'system_announcement'
 
 export type RealtimeNotificationPayload = {

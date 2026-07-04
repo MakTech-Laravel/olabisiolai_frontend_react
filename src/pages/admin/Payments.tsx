@@ -43,6 +43,14 @@ function methodLabel(method: PaymentRow["method"]) {
   return "Wallet";
 }
 
+function transactionTypeLabel(type: AdminPaymentTransactionType): string {
+  if (type === "wallet_top_up") return "Wallet top-up";
+  if (type === "subscription") return "Subscription";
+  if (type === "boost") return "Boost";
+  if (type === "verification") return "Verification";
+  return type;
+}
+
 function GrowthLabel({ value }: { value: number | null }) {
   if (value === null) {
     return <p className="text-xs font-medium text-chat-meta">—</p>;
@@ -354,6 +362,7 @@ export default function Payments() {
               ["subscription", "Subscriptions"],
               ["boost", "Boosts"],
               ["verification", "Verification"],
+              ["wallet_top_up", "Wallet top-ups"],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
@@ -439,7 +448,7 @@ export default function Payments() {
                     <td className="px-4 py-4 font-mono text-sm text-ink">{row.reference}</td>
                     <td className="px-4 py-4 text-sm font-semibold text-ink">{formatNgn(row.amountNgn)}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{methodLabel(row.method)}</td>
-                    <td className="px-4 py-4 text-sm capitalize text-gray-600">{row.transactionType}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{transactionTypeLabel(row.transactionType)}</td>
                     <td className="px-4 py-4">
                       <StatusCell status={row.status} />
                     </td>

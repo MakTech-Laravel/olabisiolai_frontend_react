@@ -3,7 +3,7 @@ import type { PaymentMethod, PaymentRow, PaymentStatus } from "@/components/Moda
 
 type RawRecord = Record<string, unknown>;
 
-export type AdminPaymentTransactionType = "subscription" | "boost" | "verification";
+export type AdminPaymentTransactionType = "subscription" | "boost" | "verification" | "wallet_top_up";
 
 export type AdminPaymentGateway = "paystack" | "flutterwave";
 
@@ -96,8 +96,11 @@ function parseMethod(value: unknown): PaymentMethod {
 }
 
 function parseTransactionType(value: unknown): AdminPaymentTransactionType {
-  if (value === "subscription" || value === "boost" || value === "verification") return value;
-  if (value === "boosting") return "boost";
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (raw === "subscription") return "subscription";
+  if (raw === "boost" || raw === "boosting") return "boost";
+  if (raw === "verification") return "verification";
+  if (raw === "wallet_top_up" || raw === "wallet_topup") return "wallet_top_up";
   return "subscription";
 }
 

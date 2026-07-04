@@ -60,6 +60,7 @@ const VENDOR_ROUTES: Record<string, string> = {
   verification_revoked: '/vendor/verification',
   verification_submitted: '/vendor/verification',
   payment_completed: '/vendor/payments',
+  referral_reward_paid: '/user/wallet',
   system_announcement: '/vendor/notifications',
 }
 
@@ -68,6 +69,7 @@ const USER_ROUTES: Record<string, string> = {
   verification_approved: '/user/settings/account',
   verification_flagged: '/user/settings/account',
   payment_completed: '/user/dashboard',
+  referral_reward_paid: '/user/wallet',
   system_announcement: '/user/activity',
 }
 

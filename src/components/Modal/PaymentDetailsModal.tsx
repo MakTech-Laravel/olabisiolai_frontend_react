@@ -36,7 +36,16 @@ function statusLabel(status: PaymentStatus) {
 function applyOutcomeLabel(type: AdminPaymentListItem["transactionType"]) {
   if (type === "subscription") return "activate premium";
   if (type === "verification") return "unlock document upload";
+  if (type === "wallet_top_up") return "credit wallet balance";
   return "queue boost for admin approval";
+}
+
+function transactionTypeLabel(type: AdminPaymentListItem["transactionType"]): string {
+  if (type === "wallet_top_up") return "Wallet top-up";
+  if (type === "subscription") return "Subscription";
+  if (type === "boost") return "Boost";
+  if (type === "verification") return "Verification";
+  return type;
 }
 
 export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsModalProps) {
@@ -109,7 +118,7 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
     { label: "Checkout reference", value: detail?.txRef || payment.reference },
     { label: "Gateway transaction ID", value: detail?.gatewayTransactionId || "—" },
     { label: "Amount", value: formatNaira(payment.amountNgn, { freeLabel: false }) },
-    { label: "Type", value: payment.transactionType },
+    { label: "Type", value: transactionTypeLabel(payment.transactionType) },
     { label: "Method", value: methodLabel(payment.method) },
     { label: "Status", value: statusLabel(payment.status) },
     { label: "Date", value: payment.dateTimeLong || payment.dateShort || "—" },
