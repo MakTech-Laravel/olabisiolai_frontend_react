@@ -6,6 +6,7 @@ import type { AdminPaymentGateway, AdminPaymentListItem } from "@/features/payme
 import {
   applyAdminPayment,
   fetchAdminPaymentDetail,
+  grantAdminPayment,
   grantAdminPremium,
   type AdminPaymentDetail,
 } from "@/features/payments/adminPaymentsApi";
@@ -38,6 +39,22 @@ function applyOutcomeLabel(type: AdminPaymentListItem["transactionType"]) {
   if (type === "verification") return "unlock document upload";
   if (type === "wallet_top_up") return "credit wallet balance";
   return "queue boost for admin approval";
+}
+
+function manualGrantLabel(type: AdminPaymentListItem["transactionType"]) {
+  if (type === "verification") return "Grant verification manually";
+  if (type === "boost") return "Grant boost manually";
+  return "Grant premium manually";
+}
+
+function manualGrantDescription(type: AdminPaymentListItem["transactionType"]) {
+  if (type === "verification") {
+    return "Use this when the gateway cannot be verified but you confirmed payment offline. This completes the pending checkout and unlocks document upload.";
+  }
+  if (type === "boost") {
+    return "Use this when the gateway cannot be verified but you confirmed payment offline. This completes the pending checkout and queues the boost for approval.";
+  }
+  return "Use this when the gateway cannot be verified (e.g. test/live key mismatch) but you confirmed payment offline. This completes the pending checkout and activates premium.";
 }
 
 function transactionTypeLabel(type: AdminPaymentListItem["transactionType"]): string {
@@ -87,18 +104,25 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
   });
 
   const grantMutation = useMutation({
-    mutationFn: () =>
-      grantAdminPremium({
-        business_id: detail!.businessId!,
+    mutationFn: () => {
+      if (payment!.transactionType === "subscription" && detail?.businessId) {
+        return grantAdminPremium({
+          business_id: detail.businessId,
+          reason: grantReason.trim(),
+        });
+      }
+
+      return grantAdminPayment(payment!.id, {
         reason: grantReason.trim(),
-      }),
+      });
+    },
     onSuccess: (result) => {
-      showSuccess(result.message || "Premium granted.");
+      showSuccess(result.message || "Payment granted.");
       void queryClient.invalidateQueries({ queryKey: ["admin", "payments"] });
       onClose();
     },
     onError: (error) => {
-      showError(getLaravelErrorMessage(error, "Could not grant premium."));
+      showError(getLaravelErrorMessage(error, "Could not grant payment."));
     },
   });
 
@@ -107,6 +131,10 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
   const showApplyGateway = payment.status === "pending";
 
   const showManualGrant =
+    payment.status === "pending" &&
+    (payment.transactionType === "verification" || payment.transactionType === "boost");
+
+  const showManualGrantPremium =
     detail?.businessId &&
     payment.transactionType === "subscription" &&
     (payment.status === "pending" || (detail && !detail.isConsumed));
@@ -224,12 +252,13 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
                 </div>
               ) : null}
 
-              {showManualGrant ? (
+              {(showManualGrant || showManualGrantPremium) ? (
                 <div className="space-y-3 rounded-xl border border-chat-border-subtle bg-muted/30 p-4">
-                  <p className="text-sm font-semibold text-ink-heading">Manual premium grant</p>
+                  <p className="text-sm font-semibold text-ink-heading">
+                    {manualGrantLabel(payment.transactionType)}
+                  </p>
                   <p className="text-sm text-chat-meta">
-                    Use this when the gateway cannot be verified (e.g. test/live key mismatch) but you
-                    confirmed payment offline. This completes the pending checkout and activates premium.
+                    {manualGrantDescription(payment.transactionType)}
                   </p>
                   <label className="block space-y-1">
                     <span className="text-xs font-medium text-body-secondary">Reason</span>
@@ -252,7 +281,7 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
                         Granting…
                       </>
                     ) : (
-                      "Grant premium manually"
+                      manualGrantLabel(payment.transactionType)
                     )}
                   </button>
                 </div>

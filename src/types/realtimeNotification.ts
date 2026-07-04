@@ -4,6 +4,8 @@ export type RealtimeNotificationType =
   | 'new_message'
   | 'verification_approved'
   | 'verification_flagged'
+  | 'verification_revoked'
+  | 'verification_reverification_granted'
   | 'verification_submitted'
   | 'payment_completed'
   | 'referral_reward_paid'

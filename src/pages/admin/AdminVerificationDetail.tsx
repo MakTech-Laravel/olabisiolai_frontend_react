@@ -9,14 +9,17 @@ import {
   adminApproveVerification,
   adminDeleteVerification,
   adminFlagVerification,
+  adminGrantReverification,
+  adminReapproveVerification,
   adminReviewDocument,
   adminViewVerification,
   type AdminVerificationDetail,
   type AdminVerificationDocument,
 } from "@/features/verification/adminVerificationApi";
-import { groupDocumentsByType, type NestedDocFile } from "@/features/verification/verificationDocuments";
+import { groupDocumentsByType, getApproveAllBlockReason, type NestedDocFile } from "@/features/verification/verificationDocuments";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { formatNaira } from "@/lib/currency";
+import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { cn } from "@/lib/utils";
 
 const interactiveBtn =
@@ -179,6 +182,9 @@ export default function AdminVerificationDetail() {
   const [requestInfoNote, setRequestInfoNote] = useState("");
   const [rejectDoc, setRejectDoc] = useState<AdminVerificationDocument | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [reverifyReason, setReverifyReason] = useState(
+    "Free re-verification after business profile update by admin.",
+  );
   const [acting, setActing] = useState(false);
 
   const load = useCallback(async () => {
@@ -186,8 +192,8 @@ export default function AdminVerificationDetail() {
     setLoading(true);
     try {
       setDetail(await adminViewVerification(id));
-    } catch {
-      showError("Could not load verification details.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not load verification details."));
     } finally {
       setLoading(false);
     }
@@ -209,8 +215,39 @@ export default function AdminVerificationDetail() {
       await adminApproveVerification(detail.id);
       showSuccess("All documents and business verification approved.");
       await load();
-    } catch {
-      showError("Could not approve.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not approve."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleReapprove = async () => {
+    if (!detail) return;
+    setActing(true);
+    try {
+      await adminReapproveVerification(
+        detail.id,
+        "Verification re-approved after business profile update.",
+      );
+      showSuccess("Verification badge restored.");
+      await load();
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not re-approve verification."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleGrantReverification = async () => {
+    if (!detail || reverifyReason.trim().length < 3) return;
+    setActing(true);
+    try {
+      await adminGrantReverification(detail.id, reverifyReason.trim());
+      showSuccess("Free re-verification granted. Vendor can upload documents again.");
+      await load();
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not grant free re-verification."));
     } finally {
       setActing(false);
     }
@@ -229,8 +266,8 @@ export default function AdminVerificationDetail() {
       await adminDeleteVerification(detail.id);
       showSuccess("Verification removed. Vendor is no longer verified.");
       await load();
-    } catch {
-      showError("Could not remove verification.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not remove verification."));
     } finally {
       setActing(false);
     }
@@ -244,8 +281,8 @@ export default function AdminVerificationDetail() {
       showSuccess("Business flagged.");
       setFlagOpen(false);
       await load();
-    } catch {
-      showError("Could not flag.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not flag."));
     } finally {
       setActing(false);
     }
@@ -261,8 +298,8 @@ export default function AdminVerificationDetail() {
       await adminReviewDocument(doc.id, "approve");
       showSuccess(`"${doc.title}" approved.`);
       await load();
-    } catch {
-      showError("Could not update document.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not update document."));
     } finally {
       setActing(false);
     }
@@ -277,8 +314,8 @@ export default function AdminVerificationDetail() {
       setRejectDoc(null);
       setRejectReason("");
       await load();
-    } catch {
-      showError("Could not reject document.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not reject document."));
     } finally {
       setActing(false);
     }
@@ -292,8 +329,8 @@ export default function AdminVerificationDetail() {
       showSuccess("Request sent to vendor.");
       setRequestInfoNote("");
       await load();
-    } catch {
-      showError("Could not send request.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not send request."));
     } finally {
       setActing(false);
     }
@@ -322,15 +359,45 @@ export default function AdminVerificationDetail() {
   }
 
   const hasPendingDocuments = (detail.documents ?? []).some((d) => d.status === "pending");
+  const hasOpenDocumentReview = detail.has_open_document_review === true;
   const canReviewBusiness =
     !detail.is_flagged &&
     (detail.verification_status === "pending" ||
-      (detail.verification_status === "approved" && hasPendingDocuments));
+      (detail.verification_status === "approved" && hasPendingDocuments) ||
+      (detail.verification_status === "none" && hasOpenDocumentReview));
+  const approveAllBlockReason =
+    getApproveAllBlockReason(detail.documents ?? []) ?? detail.approve_all_block_reason ?? null;
+  const canApproveAll = canReviewBusiness && approveAllBlockReason === null;
+
+  const hasPriorVerificationHistory =
+    (detail.payments?.length ?? 0) > 0 || (detail.documents?.length ?? 0) > 0;
 
   const canDeleteVerification =
     detail.verification_status === "approved" ||
     detail.verification_status === "pending" ||
-    detail.is_flagged;
+    detail.is_flagged ||
+    hasOpenDocumentReview ||
+    hasPriorVerificationHistory;
+
+  const hasUnconsumedPayment =
+    detail.has_unused_verification_payment === true ||
+    detail.payments?.some((payment) => payment.status === "completed" && !payment.is_consumed);
+
+  const allDocsApproved =
+    getApproveAllBlockReason(detail.documents ?? []) === null &&
+    (detail.documents?.length ?? 0) > 0;
+
+  const canGrantReverification =
+    !detail.is_flagged &&
+    detail.verification_status === "none" &&
+    hasPriorVerificationHistory &&
+    !hasUnconsumedPayment &&
+    !allDocsApproved;
+
+  const canReapprove =
+    !detail.is_flagged &&
+    detail.verification_status === "none" &&
+    (detail.needs_admin_reapproval === true || allDocsApproved);
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -394,13 +461,66 @@ export default function AdminVerificationDetail() {
             </div>
           ) : null}
 
+          {canGrantReverification || canReapprove || hasUnconsumedPayment ? (
+            <div className="space-y-3 border-t border-border-light pt-4">
+              <h3 className="text-xs font-semibold uppercase text-chat-meta">Re-verification</h3>
+              {hasUnconsumedPayment ? (
+                <p className="text-sm text-amber-800">
+                  An unused verification payment is already on file. If documents are approved, use
+                  Re-approve now. Otherwise wait for the vendor to upload documents.
+                </p>
+              ) : (
+                <p className="text-sm text-body-secondary">
+                  Use these after a business profile change removed the verified badge.
+                </p>
+              )}
+              {canGrantReverification ? (
+                <>
+                  <textarea
+                    value={reverifyReason}
+                    onChange={(e) => setReverifyReason(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-lg border border-border-gray px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={acting || reverifyReason.trim().length < 3}
+                    onClick={() => void handleGrantReverification()}
+                    className={cn(
+                      interactiveBtn,
+                      "w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100",
+                    )}
+                  >
+                    Grant free re-verification
+                  </button>
+                </>
+              ) : null}
+              {canReapprove ? (
+                <button
+                  type="button"
+                  disabled={acting}
+                  onClick={() => void handleReapprove()}
+                  className={cn(
+                    interactiveBtn,
+                    "w-full rounded-md bg-success px-3 py-2 text-xs font-semibold text-white hover:bg-success/90",
+                  )}
+                >
+                  Re-approve now (no new payment)
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           {(canReviewBusiness || canDeleteVerification) ? (
             <div className="flex flex-wrap gap-2 border-t border-border-light pt-4">
               {canReviewBusiness ? (
                 <>
+                  {approveAllBlockReason ? (
+                    <p className="w-full text-xs text-red-700">{approveAllBlockReason}</p>
+                  ) : null}
                   <button
                     type="button"
-                    disabled={acting}
+                    disabled={acting || !canApproveAll}
                     onClick={() => void handleApproveBusiness()}
                     className={cn(
                       interactiveBtn,

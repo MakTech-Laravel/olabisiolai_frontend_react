@@ -58,6 +58,7 @@ const VENDOR_ROUTES: Record<string, string> = {
   verification_approved: '/vendor/verification',
   verification_flagged: '/vendor/verification',
   verification_revoked: '/vendor/verification',
+  verification_reverification_granted: '/vendor/verification',
   verification_submitted: '/vendor/verification',
   payment_completed: '/vendor/payments',
   referral_reward_paid: '/user/wallet',

@@ -15,10 +15,12 @@ export function ProcessSummarySection({
   packageId,
   awaitingDocumentSubmission = false,
   verificationStatus = null,
+  canInitPayment = true,
 }: {
   packageId: PlanId;
   awaitingDocumentSubmission?: boolean;
   verificationStatus?: VerificationStatusPayload | null;
+  canInitPayment?: boolean;
 }) {
   const navigate = useNavigate();
 
@@ -57,7 +59,7 @@ export function ProcessSummarySection({
             <FileUp className="mr-2 h-4 w-4" />
             <span>Go to document upload</span>
           </Button>
-        ) : (
+        ) : canInitPayment ? (
           <Button
             className="w-full bg-brand-red px-4 py-2.5 text-sm text-white hover:bg-brand-red/90 sm:py-3 sm:px-6 sm:text-base"
             onClick={() => {
@@ -69,6 +71,11 @@ export function ProcessSummarySection({
             <span>Continue to payment</span>
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
+        ) : (
+          <p className="text-sm text-[#F8F9FF]/90">
+            {verificationStatus?.payment_block_reason ??
+              "Payment is not required right now. Follow the status message above."}
+          </p>
         )}
       </div>
     </div>

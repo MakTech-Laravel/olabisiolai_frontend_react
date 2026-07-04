@@ -30,6 +30,12 @@ export type AdminVerificationDetail = {
   business_name: string;
   verification_status: 'none' | 'pending' | 'approved';
   verification_status_label: string;
+  needs_admin_reapproval?: boolean;
+  has_open_document_review?: boolean;
+  needs_document_action?: boolean;
+  has_unused_verification_payment?: boolean;
+  can_approve_all?: boolean;
+  approve_all_block_reason?: string | null;
   is_flagged: boolean;
   is_approved: boolean;
   verification_note?: string | null;
@@ -55,6 +61,8 @@ export type AdminVerificationRow = {
   business_name: string;
   verification_status: 'none' | 'pending' | 'approved';
   verification_status_label: string;
+  can_approve_all?: boolean;
+  approve_all_block_reason?: string | null;
   is_flagged: boolean;
   is_approved: boolean;
   vendor?: { id: number; name: string; email: string; phone?: string };
@@ -76,6 +84,13 @@ export type AdminVerificationListResponse = {
 };
 
 type ApiEnvelope<T> = { success: boolean; message: string; data: T };
+
+function assertAdminSuccess<T>(payload: ApiEnvelope<T>): T {
+  if (!payload.success) {
+    throw new Error(payload.message || 'Request failed.');
+  }
+  return payload.data;
+}
 
 export async function adminListVerifications(params: {
   verification_status?: string;
@@ -104,6 +119,30 @@ export async function adminViewVerification(businessInfoId: number): Promise<Adm
     { business_info_id: businessInfoId },
   );
   return res.data.data.verification;
+}
+
+export async function adminGrantReverification(
+  businessInfoId: number,
+  reason: string,
+): Promise<AdminVerificationDetail> {
+  const res = await request.post<ApiEnvelope<{ verification: AdminVerificationDetail }>>(
+    '/admin/verifications/grant-reverification',
+    { business_info_id: businessInfoId, reason },
+  );
+  const data = assertAdminSuccess(res.data);
+  return data.verification;
+}
+
+export async function adminReapproveVerification(
+  businessInfoId: number,
+  note?: string,
+): Promise<AdminVerificationDetail> {
+  const res = await request.post<ApiEnvelope<{ verification: AdminVerificationDetail }>>(
+    '/admin/verifications/reapprove',
+    { business_info_id: businessInfoId, note },
+  );
+  const data = assertAdminSuccess(res.data);
+  return data.verification;
 }
 
 export async function adminApproveVerification(

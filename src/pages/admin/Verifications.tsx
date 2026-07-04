@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { alert, showError, showSuccess } from "@/lib/sweetAlert";
+import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 
 import { FlagVerificationModal } from "@/components/Modal/FlagVerificationModal";
 import {
@@ -20,15 +21,24 @@ function formatDate(input: string) {
   return date.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" });
 }
 
-function rowDisplayStatus(row: AdminVerificationRow): VerificationStatus | "flagged" {
+function rowDisplayStatus(row: AdminVerificationRow): VerificationStatus | "flagged" | "needs_reverification" {
   if (row.is_flagged) return "flagged";
   if (row.verification_status === "approved") return "approved";
+  if (row.verification_status === "pending") return "pending";
+  if (
+    row.verification_status === "none" &&
+    (row.verification_status_label.toLowerCase().includes("re-verification") ||
+      row.verification_status_label.toLowerCase().includes("re-approval"))
+  ) {
+    return "needs_reverification";
+  }
   return "pending";
 }
 
-function statusClass(status: VerificationStatus | "flagged") {
+function statusClass(status: VerificationStatus | "flagged" | "needs_reverification") {
   if (status === "approved") return "bg-green-100 text-green-700";
   if (status === "flagged") return "bg-red-100 text-red-700";
+  if (status === "needs_reverification") return "bg-sky-100 text-sky-700";
   return "bg-amber-100 text-amber-700";
 }
 
@@ -69,8 +79,8 @@ export default function VerificationGrid() {
         per_page: 50,
       });
       setRows(result.items);
-    } catch {
-      showError("Could not load verification requests.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not load verification requests."));
     } finally {
       setLoading(false);
     }
@@ -114,8 +124,8 @@ export default function VerificationGrid() {
             : item,
         ),
       );
-    } catch {
-      showError("Could not approve verification.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not approve verification."));
     } finally {
       setActingId(null);
     }
@@ -133,8 +143,8 @@ export default function VerificationGrid() {
       await adminDeleteVerification(row.id);
       showSuccess(`${row.business_name} is no longer verified.`);
       await load();
-    } catch {
-      showError("Could not remove verification.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not remove verification."));
     } finally {
       setActingId(null);
     }
@@ -148,8 +158,8 @@ export default function VerificationGrid() {
       showSuccess(`${flagTarget.business_name} flagged.`);
       setFlagTarget(null);
       await load();
-    } catch {
-      showError("Could not flag verification.");
+    } catch (error) {
+      showError(getLaravelErrorMessage(error, "Could not flag verification."));
     } finally {
       setActingId(null);
     }
@@ -167,10 +177,11 @@ export default function VerificationGrid() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="cursor-pointer rounded-xl border border-border-gray bg-card px-3 py-2 text-sm"
         >
-          <option value="queue">Pending &amp; approved</option>
+          <option value="queue">Pending, approved &amp; re-verification</option>
           <option value="all">All</option>
           <option value="pending">Pending only</option>
           <option value="approved">Approved</option>
+          <option value="needs_reverification">Needs re-verification</option>
           <option value="flagged">Flagged</option>
         </select>
         <button
@@ -240,13 +251,14 @@ export default function VerificationGrid() {
                         to={`/admin/verifications/${row.id}`}
                         className="cursor-pointer rounded-md border border-border-gray bg-card px-3 py-1.5 text-xs font-semibold text-ink hover:bg-muted"
                       >
-                        Request Info
+                        Open
                       </Link>
                       {row.verification_status === "pending" && !row.is_flagged ? (
                         <>
                           <button
                             type="button"
-                            disabled={actingId === row.id}
+                            disabled={actingId === row.id || row.can_approve_all === false}
+                            title={row.approve_all_block_reason ?? undefined}
                             onClick={() => void handleApprove(row)}
                             className="cursor-pointer rounded-md bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -264,6 +276,7 @@ export default function VerificationGrid() {
                       ) : null}
                       {row.verification_status === "approved" ||
                         row.verification_status === "pending" ||
+                        row.verification_status === "none" ||
                         row.is_flagged ? (
                         <button
                           type="button"

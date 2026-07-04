@@ -167,7 +167,8 @@ export function RequiredDocuments({ className }: { className?: string }) {
   }, [rows]);
 
   const canInlineUpload =
-    statusPayload?.verification_status === "pending" && !statusPayload.is_flagged;
+    (statusPayload?.verification_status === "pending" && !statusPayload.is_flagged) ||
+    (statusPayload?.can_upload_documents === true && statusPayload?.needs_document_action === true);
 
   const triggerUpload = (row: DocRow, fileId?: number) => {
     if (canInlineUpload) {
@@ -244,6 +245,14 @@ export function RequiredDocuments({ className }: { className?: string }) {
             {statusPayload.verified_at ? (
               <p className="mt-1">Verified on {statusPayload.verified_at}</p>
             ) : null}
+          </div>
+        ) : statusPayload?.needs_document_action ? (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-semibold">Replacement documents required</p>
+            <p className="mt-1">
+              An admin rejected one or more files. Upload replacements below — they will be sent for
+              review. You do not need to pay again.
+            </p>
           </div>
         ) : statusPayload?.verification_status === "pending" && !statusPayload.is_flagged ? (
           <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">

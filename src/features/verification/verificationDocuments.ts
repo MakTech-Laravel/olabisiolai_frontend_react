@@ -127,3 +127,42 @@ export function groupDocumentsByType<
 
   return groups;
 }
+
+export function latestDocumentsByType<T extends { id: number; document_type: string }>(
+  documents: T[],
+): T[] {
+  const map = new Map<string, T>();
+
+  for (const doc of documents) {
+    const existing = map.get(doc.document_type);
+    if (!existing || doc.id > existing.id) {
+      map.set(doc.document_type, doc);
+    }
+  }
+
+  return [...map.values()];
+}
+
+export function getApproveAllBlockReason<
+  T extends { id: number; document_type: string; status: string },
+>(documents: T[]): string | null {
+  const latest = latestDocumentsByType(documents);
+  if (latest.length === 0) {
+    return "No verification documents have been uploaded yet.";
+  }
+
+  const requiredTypes = REQUIRED_VERIFICATION_DOCUMENTS.map((doc) => doc.documentType);
+  const missing = requiredTypes.filter(
+    (type) => !latest.some((doc) => doc.document_type === type),
+  );
+  if (missing.length > 0) {
+    return `Missing required documents: ${missing.map(documentTypeLabel).join(", ")}.`;
+  }
+
+  const rejected = latest.filter((doc) => doc.status === "rejected");
+  if (rejected.length > 0) {
+    return `Rejected documents must be re-uploaded before approval (${rejected.map((doc) => documentTypeLabel(doc.document_type)).join(", ")}).`;
+  }
+
+  return null;
+}

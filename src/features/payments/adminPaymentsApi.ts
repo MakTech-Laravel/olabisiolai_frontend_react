@@ -264,6 +264,21 @@ export async function reconcileAdminPayment(
   return { message: (typeof root.message === "string" && root.message) || "Payment reconciled." };
 }
 
+export async function grantAdminPayment(
+  paymentId: number,
+  body: {
+    reason: string;
+    paystack_reference?: string;
+  },
+): Promise<{ message: string }> {
+  const res = await request.post(`/admin/payments/${paymentId}/grant`, body);
+  const root = asRecord(res.data);
+  if (!root || root.success !== true) {
+    throw new Error((typeof root?.message === "string" && root.message) || "Could not grant payment.");
+  }
+  return { message: (typeof root.message === "string" && root.message) || "Payment granted." };
+}
+
 export async function grantAdminPremium(body: {
   business_id: number;
   reason: string;

@@ -41,6 +41,13 @@ export type VerificationStatusPayload = {
   is_approved: boolean;
   verified_at: string | null;
   awaiting_document_submission?: boolean;
+  needs_admin_reapproval?: boolean;
+  needs_document_action?: boolean;
+  can_upload_documents?: boolean;
+  has_open_document_review?: boolean;
+  can_init_payment?: boolean;
+  payment_block_reason?: string | null;
+  has_unused_verification_payment?: boolean;
   consumable_payment_id?: number | null;
   purchased_package?: PurchasedVerificationPackage | null;
   documents: Array<{
