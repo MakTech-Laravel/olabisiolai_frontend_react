@@ -6,6 +6,8 @@ type RawRecord = Record<string, unknown>;
 export type AdminBusinessInfo = {
   id: number;
   name: string;
+  vendorName: string;
+  vendorEmail: string;
   category: string;
   type: string;
   location: string;
@@ -44,6 +46,8 @@ export type AdminBusinessListParams = {
   category_id?: number;
   /** API: active | none */
   boost_status?: string;
+  /** API: premium | free */
+  subscription_plan?: string;
 };
 
 export type AdminFilterOption = { value: string; label: string };
@@ -52,6 +56,7 @@ export type AdminBusinessFilterOptions = {
   verification_statuses: AdminFilterOption[];
   business_statuses: AdminFilterOption[];
   boost_statuses: AdminFilterOption[];
+  subscription_plans: AdminFilterOption[];
   categories: AdminCategoryOption[];
 };
 
@@ -119,6 +124,10 @@ const DEFAULT_FILTER_OPTIONS: AdminBusinessFilterOptions = {
   boost_statuses: [
     { value: "active", label: "Active boost" },
     { value: "none", label: "No boost" },
+  ],
+  subscription_plans: [
+    { value: "premium", label: "Premium" },
+    { value: "free", label: "Free" },
   ],
   categories: [],
 };
@@ -223,6 +232,7 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
   const verificationObj = pickRecord(item, ["verification"]);
   const planObj = pickRecord(item, ["plan"]);
   const boostObj = pickRecord(item, ["boost"]);
+  const vendorObj = pickRecord(item, ["vendor"]);
   const fallbackSeed = `${pickString(item, ["business_name", "name"], "business")}-${index + 1}`;
 
   const id = toSafeId(item.id ?? item.business_id ?? item.uuid ?? item.slug, fallbackSeed);
@@ -265,17 +275,23 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
       pickString(item, ["boost"], "none")
     ).toLowerCase(),
   );
-  const plan = toPlan(
-    (
-      pickString(item, ["subscription_plan"], "") ||
-      pickString(planObj ?? {}, ["name", "tier"], "") ||
-      pickString(item, ["plan"], "free")
-    ).toLowerCase(),
-  );
+  const plan = asBoolean(item.is_premium) === true
+    ? "premium"
+    : toPlan(
+        (
+          pickString(item, ["subscription_plan"], "") ||
+          pickString(planObj ?? {}, ["name", "tier"], "") ||
+          pickString(item, ["plan"], "free")
+        ).toLowerCase(),
+      );
+  const vendorName = pickString(vendorObj ?? {}, ["name"], pickString(item, ["vendor_name"], "—"));
+  const vendorEmail = pickString(vendorObj ?? {}, ["email"], pickString(item, ["vendor_email"], ""));
 
   return {
     id,
     name,
+    vendorName,
+    vendorEmail,
     category,
     type,
     location,
@@ -381,6 +397,10 @@ function extractFilterOptionsBlock(payload: unknown): AdminBusinessFilterOptions
     .map((row) => parseFilterOption(row))
     .filter((row): row is AdminFilterOption => row !== null);
 
+  const subscriptionPlans = (Array.isArray(block.subscription_plans) ? block.subscription_plans : [])
+    .map((row) => parseFilterOption(row))
+    .filter((row): row is AdminFilterOption => row !== null);
+
   const categories = (Array.isArray(block.categories) ? block.categories : [])
     .map((row) => parseCategoryOption(row))
     .filter((row): row is AdminCategoryOption => row !== null);
@@ -389,6 +409,8 @@ function extractFilterOptionsBlock(payload: unknown): AdminBusinessFilterOptions
     verification_statuses: verification.length > 0 ? verification : DEFAULT_FILTER_OPTIONS.verification_statuses,
     business_statuses: business.length > 0 ? business : DEFAULT_FILTER_OPTIONS.business_statuses,
     boost_statuses: boost.length > 0 ? boost : DEFAULT_FILTER_OPTIONS.boost_statuses,
+    subscription_plans:
+      subscriptionPlans.length > 0 ? subscriptionPlans : DEFAULT_FILTER_OPTIONS.subscription_plans,
     categories,
   };
 }
@@ -440,6 +462,9 @@ export async function fetchAdminBusinessList(
   }
   if (params.boost_status && params.boost_status !== "all") {
     body.boost_status = params.boost_status;
+  }
+  if (params.subscription_plan && params.subscription_plan !== "all") {
+    body.subscription_plan = params.subscription_plan;
   }
 
   const res = await request.post("/admin/business-info", body);

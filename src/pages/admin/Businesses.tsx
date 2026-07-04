@@ -63,6 +63,11 @@ const boostStyles: Record<Boost, string> = {
   active: "bg-blue-50 text-blue-500 border border-blue-200",
 };
 
+const planStyles: Record<Business["plan"], string> = {
+  free: "bg-gray-100 text-gray-600 border border-gray-200",
+  premium: "bg-red-50 text-brand-red border border-red-200",
+};
+
 function Badge({ label, className }: { label: string; className: string }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
@@ -125,6 +130,7 @@ export default function BusinessTable() {
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [businessStatusFilter, setBusinessStatusFilter] = useState("all");
   const [boostFilter, setBoostFilter] = useState("all");
+  const [planFilter, setPlanFilter] = useState("all");
   const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [openingChatBusinessId, setOpeningChatBusinessId] = useState<number | null>(null);
@@ -140,7 +146,7 @@ export default function BusinessTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, verificationFilter, businessStatusFilter, categoryFilter, boostFilter]);
+  }, [debouncedSearch, verificationFilter, businessStatusFilter, categoryFilter, boostFilter, planFilter]);
 
   const listQueryKey = [
     "admin",
@@ -152,6 +158,7 @@ export default function BusinessTable() {
     businessStatusFilter,
     categoryFilter,
     boostFilter,
+    planFilter,
   ] as const;
 
   const listQuery = useQuery({
@@ -165,6 +172,7 @@ export default function BusinessTable() {
         business_status: businessStatusFilter,
         category_id: categoryFilter === "all" ? undefined : Number(categoryFilter),
         boost_status: boostFilter,
+        subscription_plan: planFilter,
       }),
   });
 
@@ -183,7 +191,8 @@ export default function BusinessTable() {
     verificationFilter !== "all" ||
     businessStatusFilter !== "all" ||
     categoryFilter !== "all" ||
-    boostFilter !== "all";
+    boostFilter !== "all" ||
+    planFilter !== "all";
 
   const clearFilters = () => {
     setSearch("");
@@ -191,6 +200,7 @@ export default function BusinessTable() {
     setBusinessStatusFilter("all");
     setCategoryFilter("all");
     setBoostFilter("all");
+    setPlanFilter("all");
   };
 
   const statusMutation = useMutation({
@@ -287,6 +297,8 @@ export default function BusinessTable() {
   const handleExport = () => {
     const headers = [
       "Business Name",
+      "Vendor",
+      "Vendor Email",
       "Category",
       "Type",
       "Location",
@@ -298,6 +310,8 @@ export default function BusinessTable() {
     ];
     const rows = businesses.map((item) => [
       item.name,
+      item.vendorName,
+      item.vendorEmail,
       item.category,
       item.type,
       item.location,
@@ -357,10 +371,18 @@ export default function BusinessTable() {
           <p className="mt-1 text-4xl font-semibold leading-10 text-ink">{freeVendors.toLocaleString()}</p>
           <p className="mt-1 text-xs font-medium text-chat-accent">Plan: Free</p>
         </article>
-        <article className="rounded-xl border border-chat-border-subtle bg-card p-4">
+        <article
+          className={`rounded-xl border border-chat-border-subtle bg-card p-4 ${planFilter === "premium" ? "ring-2 ring-brand-red/30" : ""}`}
+        >
           <p className="text-xs font-semibold uppercase tracking-wide text-chat-meta">Premium Vendors</p>
           <p className="mt-1 text-4xl font-semibold leading-10 text-ink">{premiumVendors.toLocaleString()}</p>
-          <p className="mt-1 text-xs font-medium text-brand-red">Plan: Premium</p>
+          <button
+            type="button"
+            onClick={() => setPlanFilter((current) => (current === "premium" ? "all" : "premium"))}
+            className="mt-1 text-xs font-medium text-brand-red hover:underline"
+          >
+            {planFilter === "premium" ? "Clear premium filter" : "Filter premium vendors"}
+          </button>
         </article>
         <article className="rounded-xl border border-chat-border-subtle bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-chat-meta">Verification Rate</p>
@@ -392,13 +414,20 @@ export default function BusinessTable() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search businesses..."
+                placeholder="Search business, vendor name, email, phone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-all"
               />
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              <SelectFilter
+                placeholder="Plan"
+                value={planFilter}
+                onChange={setPlanFilter}
+                options={filterOptions?.subscription_plans ?? []}
+                disabled={listQuery.isLoading && !filterOptions}
+              />
               <SelectFilter
                 placeholder="Verification"
                 value={verificationFilter}
@@ -451,10 +480,10 @@ export default function BusinessTable() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-sm">
+            <table className="w-full min-w-[1280px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {["Business Name", "Category", "Location", "Join Date", "Status", "Verification", "Boost", "Actions"].map((h) => (
+                  {["SN", "Business Name", "Vendor", "Join Date", "Plan", "Status", "Verification", "Boost", "Actions"].map((h) => (
                     <th
                       key={h}
                       className={`px-6 py-3 text-left text-xs font-medium text-gray-900 ${h === "Actions" ? "text-right" : ""}`}
@@ -467,17 +496,34 @@ export default function BusinessTable() {
               <tbody className="divide-y divide-gray-50">
                 {listQuery.isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-500">
+                    <td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-500">
                       Loading businesses...
                     </td>
                   </tr>
                 ) : null}
-                {businesses.map((b) => (
+                {businesses.map((b, index) => (
                   <tr key={b.id} className="group hover:bg-gray-50/60 transition-colors">
+                    <td className="px-6 py-3.5 text-gray-900">{index + 1}</td>
                     <td className="px-6 py-3.5 font-medium text-gray-900 whitespace-nowrap">{b.name}</td>
-                    <td className="px-6 py-3.5 text-gray-900">{b.category}</td>
-                    <td className="px-6 py-3.5 text-gray-900">{b.location}</td>
+                    <td className="px-6 py-3.5 text-gray-900">
+                      <div className="max-w-[180px] truncate" title={b.vendorName}>
+                        {b.vendorName}
+                      </div>
+                      {b.vendorEmail ? (
+                        <div className="max-w-[180px] truncate text-xs text-gray-500" title={b.vendorEmail}>
+                          {b.vendorEmail}
+                        </div>
+                      ) : null}
+                    </td>
+                    {/* <td className="px-6 py-3.5 text-gray-900">{b.category}</td>
+                    <td className="px-6 py-3.5 text-gray-900">{b.location}</td> */}
                     <td className="px-6 py-3.5 text-gray-900 whitespace-nowrap">{formatDate(b.joinDate)}</td>
+                    <td className="px-6 py-3.5">
+                      <Badge
+                        label={b.plan === "premium" ? "Premium" : "Free"}
+                        className={planStyles[b.plan]}
+                      />
+                    </td>
                     <td className="px-6 py-3.5">
                       <Badge label={statusLabel(b.status)} className={statusStyles[b.status]} />
                     </td>
@@ -571,7 +617,7 @@ export default function BusinessTable() {
                 ))}
                 {!listQuery.isLoading && businesses.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-500">
+                    <td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-500">
                       No businesses found for current search/filter.
                     </td>
                   </tr>
