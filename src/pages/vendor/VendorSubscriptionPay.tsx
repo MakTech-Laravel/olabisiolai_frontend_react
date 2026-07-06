@@ -106,6 +106,7 @@ function resolveSubscriptionPaymentId(checkout: SubscriptionCheckoutInit): numbe
 
 async function loadFreshSubscriptionCheckout(
   boost?: { tierKey: string; durationDays: number; budgetAmount?: number },
+  packageKey?: string,
 ): Promise<SubscriptionCheckoutInit> {
   try {
     const resumed = normalizeCheckout(await resumeSubscriptionPayment());
@@ -120,6 +121,7 @@ async function loadFreshSubscriptionCheckout(
     await initSubscriptionPayment({
       gateway: "flutterwave",
       boost,
+      packageKey,
     }),
   );
   if (!created) {
@@ -162,6 +164,7 @@ export default function VendorSubscriptionPayPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const scopedBusinessId = Number(searchParams.get("business_id")) || undefined;
+  const packageKeyFromUrl = searchParams.get("package_key") || undefined;
   const queryClient = useQueryClient();
   const [selectedGateway, setSelectedGateway] = useState<CheckoutGateway>("paystack");
   const [isPaying, setIsPaying] = useState(false);
@@ -229,8 +232,13 @@ export default function VendorSubscriptionPayPage() {
     }
     setBoostSelection(readPremiumBundledBoostSelection());
   }, []);
-  const premiumPackage = packagesData?.packages[0];
-  const premiumBase = premiumPackage?.amount ?? 25000;
+  const [selectedPackageKey, setSelectedPackageKey] = useState<string | null>(packageKeyFromUrl ?? null);
+  const packages = packagesData?.packages ?? [];
+  const premiumPackage =
+    packages.find((p) => p.id === selectedPackageKey) ??
+    packages.find((p) => p.is_recommended) ??
+    packages[0];
+  const premiumBase = premiumPackage?.amount ?? 0;
   const boostAddon = boostSelection?.amount ?? 0;
   const subscriptionLine = checkout?.payments.subscription ?? checkout?.payment ?? null;
   const boostLinePayment = checkout?.payments.boost ?? null;
@@ -277,7 +285,7 @@ export default function VendorSubscriptionPayPage() {
     },
     customizations: {
       title: "Gidira Premium Subscription",
-      description: "Annual premium subscription",
+      description: premiumPackage?.title ?? "Premium subscription",
       logo: "/favicon.svg",
     },
   });
@@ -489,7 +497,10 @@ export default function VendorSubscriptionPayPage() {
           try {
             paymentId = resolveSubscriptionPaymentId(checkout);
           } catch {
-            const fresh = await loadFreshSubscriptionCheckout(subscriptionBoostPayload(boostSelection));
+            const fresh = await loadFreshSubscriptionCheckout(
+              subscriptionBoostPayload(boostSelection),
+              premiumPackage?.id,
+            );
             persistCheckout(fresh);
             paymentId = resolveSubscriptionPaymentId(fresh);
           }
@@ -537,6 +548,7 @@ export default function VendorSubscriptionPayPage() {
     handleFlutterPayment,
     navigate,
     persistCheckout,
+    premiumPackage?.id,
     queryClient,
     trySaveProfileFromResponse,
   ]);
@@ -616,6 +628,7 @@ export default function VendorSubscriptionPayPage() {
         const result = await payPremiumFromWallet({
           businessId: scopedBusinessId,
           boost: subscriptionBoostPayload(boostSelection),
+          packageKey: premiumPackage?.id,
         });
 
         persistCheckout(null);
@@ -641,6 +654,8 @@ export default function VendorSubscriptionPayPage() {
         return;
       }
 
+      // Note: if a pending payment already exists on the server for a different
+      // plan than the one currently selected below, it will be resumed as-is.
       const resumed = normalizeCheckout(await resumeSubscriptionPayment().catch(() => null));
       const fresh =
         resumed ??
@@ -648,6 +663,7 @@ export default function VendorSubscriptionPayPage() {
           await initSubscriptionPayment({
             gateway: selectedGateway,
             boost: subscriptionBoostPayload(boostSelection),
+            packageKey: premiumPackage?.id,
           }),
         );
       if (!fresh) {
@@ -707,6 +723,44 @@ export default function VendorSubscriptionPayPage() {
 
         <div className="mt-10 grid gap-4 xl:grid-cols-[1fr_390px]">
           <div className="space-y-4">
+            {packages.length > 1 ? (
+              <div className="rounded-2xl border border-border-light bg-card p-4 shadow-sm">
+                <p className="mb-3 text-sm font-semibold text-foreground">Choose a plan</p>
+                <div className="space-y-2">
+                  {packages.map((pkg) => (
+                    <label
+                      key={pkg.id}
+                      className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors ${
+                        premiumPackage?.id === pkg.id
+                          ? "border-brand-red bg-brand-red/5"
+                          : "border-border-light hover:bg-muted/40"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="premium-plan"
+                          checked={premiumPackage?.id === pkg.id}
+                          onChange={() => {
+                            setSelectedPackageKey(pkg.id);
+                            persistCheckout(null);
+                          }}
+                          className="size-4"
+                        />
+                        <span className="font-medium">{pkg.title}</span>
+                        {pkg.is_recommended ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                            Recommended
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="font-semibold">{formatNaira(pkg.amount, { freeLabel: false })}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <PaymentMethodsCard
               selectedGateway={selectedGateway}
               onGatewayChange={setSelectedGateway}

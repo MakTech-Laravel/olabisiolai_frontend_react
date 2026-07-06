@@ -32,7 +32,7 @@ export type VendorSettingsVerification = {
 export type VendorSettingsSubscription = {
   plan: 'free' | 'premium'
   plan_label: string
-  status: 'active' | 'pending_payment' | 'expired'
+  status: 'active' | 'pending_payment' | 'expired' | 'trialing' | 'cancelled'
   status_label: string
   expires_at?: string | null
   expires_at_iso?: string | null
@@ -43,6 +43,9 @@ export type VendorSettingsSubscription = {
   is_premium_active?: boolean
   can_access_features: boolean
   shows_verified_badge: boolean
+  is_trial?: boolean
+  trial_ends_at?: string | null
+  trial_days_remaining?: number
 }
 
 export type VendorSettingsPayload = {
