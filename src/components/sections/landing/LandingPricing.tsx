@@ -162,17 +162,17 @@ export function LandingPricing() {
                 Most Popular
               </div>
               <h3 className="text-lg font-semibold text-ink-heading">{premiumPlan?.title ?? "Premium"}</h3>
-              <div className="mt-2 flex items-baseline gap-1">
+              {premiumPlan?.original_price ? (
+                <p className="mt-2 text-lg font-bold text-placeholder-text line-through decoration-2">
+                  {formatMoney(premiumPlan.original_price, packagesQuery.data?.currency)}
+                </p>
+              ) : null}
+              <div className={`flex items-baseline gap-1 ${premiumPlan?.original_price ? "mt-1" : "mt-2"}`}>
                 <span className="text-4xl font-bold text-ink">
                   {formatMoney(premiumPlan?.amount ?? 0, packagesQuery.data?.currency)}
                 </span>
                 {billingSuffix ? <span className="text-sm text-placeholder-text">{billingSuffix}</span> : null}
               </div>
-              {premiumPlan?.original_price ? (
-                <p className="mt-1 text-sm text-placeholder-text line-through">
-                  {formatMoney(premiumPlan.original_price, packagesQuery.data?.currency)}
-                </p>
-              ) : null}
               {premiumPlan?.promotional_text ? (
                 <p className="mt-1 text-xs font-semibold text-brand-red">{premiumPlan.promotional_text}</p>
               ) : null}

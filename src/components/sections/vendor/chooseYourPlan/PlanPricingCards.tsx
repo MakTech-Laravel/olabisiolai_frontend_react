@@ -136,17 +136,17 @@ export function PlanPricingCards({ signupMode = false }: PlanPricingCardsProps) 
               Premium plan
             </p>
             <h2 className="text-2xl font-bold font-manrope">{premiumPlan?.title ?? "Premium"}</h2>
-            <p className="mt-3 text-4xl font-bold tracking-tight font-manrope">
+            {premiumPlan?.original_price ? (
+              <p className="mt-3 text-xl font-bold text-muted-foreground line-through decoration-2">
+                {formatMoney(premiumPlan.original_price, packagesQuery.data?.currency)}
+              </p>
+            ) : null}
+            <p className={`text-4xl font-bold tracking-tight font-manrope ${premiumPlan?.original_price ? "mt-1" : "mt-3"}`}>
               {formatMoney(premiumPlan?.amount ?? 0, packagesQuery.data?.currency)}
               {billingSuffix ? (
                 <span className="text-lg font-semibold text-muted-foreground"> {billingSuffix}</span>
               ) : null}
             </p>
-            {premiumPlan?.original_price ? (
-              <p className="mt-1 text-sm text-muted-foreground line-through">
-                {formatMoney(premiumPlan.original_price, packagesQuery.data?.currency)}
-              </p>
-            ) : null}
             {premiumPlan?.promotional_text ? (
               <p className="mt-1 text-sm font-semibold text-brand-red">{premiumPlan.promotional_text}</p>
             ) : null}

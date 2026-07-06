@@ -72,15 +72,19 @@ function PlanOptionCard({
             </span>
           ) : null}
         </div>
-        <p className="shrink-0 text-right font-heading text-base font-extrabold text-[#9A6B1F]">
-          {formatMoney(plan.amount, currency)}
-          {billingSuffix ? <span className="block text-xs font-semibold text-body-secondary">{billingSuffix}</span> : null}
-        </p>
+        <div className="shrink-0 text-right">
+          {plan.original_price ? (
+            <p className="font-heading text-sm font-bold text-body-secondary line-through decoration-2">
+              {formatMoney(plan.original_price, currency)}
+            </p>
+          ) : null}
+          <p className="font-heading text-base font-extrabold text-[#9A6B1F]">
+            {formatMoney(plan.amount, currency)}
+            {billingSuffix ? <span className="block text-xs font-semibold text-body-secondary">{billingSuffix}</span> : null}
+          </p>
+        </div>
       </div>
 
-      {plan.original_price ? (
-        <p className="mt-1 text-xs text-body-secondary line-through">{formatMoney(plan.original_price, currency)}</p>
-      ) : null}
       {plan.promotional_text ? (
         <p className="mt-1 text-xs font-semibold text-brand">{plan.promotional_text}</p>
       ) : null}
