@@ -2,12 +2,21 @@ import { request } from '@/api/request';
 
 export type PaymentGateway = 'flutterwave' | 'paystack';
 
+export type BillingPeriod = 'monthly' | 'quarterly' | 'yearly' | 'lifetime';
+
 export type SubscriptionPackage = {
   id: string;
   title: string;
   amount: number;
   description: string;
   perks: string[];
+  original_price?: number | null;
+  discount_label?: string | null;
+  promotional_text?: string | null;
+  billing_period?: BillingPeriod | null;
+  is_recommended?: boolean;
+  trial_eligible?: boolean;
+  trial_duration_days?: number | null;
 };
 
 export type SubscriptionPayment = {
@@ -37,7 +46,7 @@ export type SubscriptionCheckoutInit = {
 export type VendorSubscriptionState = {
   plan: 'free' | 'premium';
   plan_label: string;
-  status: 'active' | 'pending_payment' | 'expired';
+  status: 'active' | 'pending_payment' | 'expired' | 'trialing' | 'cancelled';
   status_label: string;
   expires_at: string | null;
   expires_at_iso: string | null;
@@ -53,6 +62,10 @@ export type VendorSubscriptionState = {
   is_verified?: boolean;
   can_boost?: boolean;
   analytics_locked?: boolean;
+  is_trial?: boolean;
+  trial_ends_at?: string | null;
+  trial_days_remaining?: number;
+  trial_eligible?: boolean;
 };
 
 type ApiEnvelope<T> = {
@@ -69,6 +82,26 @@ export async function fetchSubscriptionPackages(): Promise<{
     '/vendor/subscription/packages',
   );
   return res.data.data;
+}
+
+/**
+ * `GET /subscription-packages` — unauthenticated, for the landing page and the
+ * choose-your-plan screen before a vendor has signed up.
+ */
+export async function fetchPublicSubscriptionPackages(): Promise<{
+  currency: string;
+  packages: SubscriptionPackage[];
+}> {
+  try {
+    const res = await request.get<ApiEnvelope<{ currency: string; packages: SubscriptionPackage[] }>>(
+      '/subscription-packages',
+      { skipAuthRedirect: true },
+    );
+    return res.data.data;
+  } catch (error) {
+    console.warn('[subscription] GET /subscription-packages failed', error);
+    return { currency: 'NGN', packages: [] };
+  }
 }
 
 export async function fetchSubscriptionStatus(options?: {
@@ -90,6 +123,7 @@ export async function initSubscriptionPayment(
   args?: {
     gateway?: PaymentGateway;
     businessId?: number;
+    packageKey?: string;
     boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
   },
 ): Promise<SubscriptionCheckoutInit> {
@@ -98,6 +132,7 @@ export async function initSubscriptionPayment(
   const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>('/vendor/subscription/payment/init', {
     gateway,
     ...(args?.businessId ? { business_id: args.businessId } : null),
+    ...(args?.packageKey ? { package_key: args.packageKey } : null),
     ...(boost
       ? {
         boost_tier_key: boost.tierKey,
@@ -116,6 +151,7 @@ export async function initSubscriptionPayment(
 
 export async function payPremiumFromWallet(args?: {
   businessId?: number;
+  packageKey?: string;
   boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
 }): Promise<{
   subscription: VendorSubscriptionState;
@@ -128,6 +164,7 @@ export async function payPremiumFromWallet(args?: {
   >('/vendor/subscription/payment/init', {
     use_wallet: true,
     ...(args?.businessId ? { business_id: args.businessId } : null),
+    ...(args?.packageKey ? { package_key: args.packageKey } : null),
     ...(boost
       ? {
         boost_tier_key: boost.tierKey,
@@ -201,5 +238,45 @@ export async function reconcileSubscriptionPayment(
   return {
     subscription: res.data.data.subscription,
     message: res.data.message ?? 'Premium subscription activated.',
+  };
+}
+
+export async function startSubscriptionTrial(args: {
+  packageKey: string;
+  businessId?: number;
+}): Promise<{
+  subscription: VendorSubscriptionState;
+  message: string;
+}> {
+  const res = await request.post<ApiEnvelope<{ subscription: VendorSubscriptionState }>>(
+    '/vendor/subscription/trial/start',
+    {
+      package_key: args.packageKey,
+      ...(args.businessId ? { business_id: args.businessId } : null),
+    },
+  );
+  if (res.data?.success !== true || !res.data.data?.subscription) {
+    throw new Error(res.data?.message ?? 'Unable to start free trial.');
+  }
+  return {
+    subscription: res.data.data.subscription,
+    message: res.data.message ?? 'Free trial started successfully.',
+  };
+}
+
+export async function cancelSubscription(options?: { businessId?: number }): Promise<{
+  subscription: VendorSubscriptionState;
+  message: string;
+}> {
+  const res = await request.post<ApiEnvelope<{ subscription: VendorSubscriptionState }>>(
+    '/vendor/subscription/cancel',
+    options?.businessId ? { business_id: options.businessId } : {},
+  );
+  if (res.data?.success !== true || !res.data.data?.subscription) {
+    throw new Error(res.data?.message ?? 'Unable to cancel subscription.');
+  }
+  return {
+    subscription: res.data.data.subscription,
+    message: res.data.message ?? 'Premium subscription cancelled successfully.',
   };
 }

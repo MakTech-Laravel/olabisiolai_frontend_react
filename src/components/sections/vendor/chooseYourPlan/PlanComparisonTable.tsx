@@ -1,26 +1,51 @@
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/auth/useAuth";
+import { fetchVerificationPackages } from "@/features/verification/vendorVerificationApi";
+import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 const paleSurface = "bg-[#EEF2FF]";
 
-const comparisonRows: {
+function baseComparisonRows(verificationPrice: string): {
   feature: string;
   basic: string;
   premium: string;
   premiumHighlight?: boolean;
-}[] = [
-  { feature: "Product image limit", basic: "5 images", premium: "20 images" },
-  { feature: "Search placement", basic: "Standard", premium: "Priority boost" },
-  { feature: "Analytics dashboard", basic: "Basic stats", premium: "Comprehensive" },
-  { feature: "Support response", basic: "48 hours", premium: "Instant priority" },
-  {
-    feature: "Verification badge",
-    basic: "₦5,000 extra",
-    premium: "Free included",
-    premiumHighlight: true,
-  },
-];
+}[] {
+  return [
+    { feature: "Product image limit", basic: "5 images", premium: "20 images" },
+    { feature: "Search placement", basic: "Standard", premium: "Priority boost" },
+    { feature: "Analytics dashboard", basic: "Basic stats", premium: "Comprehensive" },
+    { feature: "Support response", basic: "48 hours", premium: "Instant priority" },
+    {
+      feature: "Verification badge",
+      basic: `${verificationPrice} extra`,
+      premium: "Free included",
+      premiumHighlight: true,
+    },
+  ];
+}
 
 export function PlanComparisonTable() {
+  const { isAuthenticated } = useAuth();
+
+  const verificationQuery = useQuery({
+    queryKey: ["vendor", "verification-packages"],
+    queryFn: fetchVerificationPackages,
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+
+  const cheapestVerificationAmount = verificationQuery.data?.packages.length
+    ? Math.min(...verificationQuery.data.packages.map((p) => p.amount))
+    : null;
+
+  const verificationPrice = cheapestVerificationAmount != null
+    ? formatMoney(cheapestVerificationAmount, verificationQuery.data?.currency)
+    : "Paid";
+
+  const comparisonRows = baseComparisonRows(verificationPrice);
+
   return (
     <div className="space-y-4">
       <h2 className="text-center text-sm font-medium uppercase tracking-wider text-muted-foreground font-inter">

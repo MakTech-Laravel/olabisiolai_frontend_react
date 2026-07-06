@@ -5,6 +5,7 @@ import type { VendorSettingsSubscription } from '@/api/vendorSettings'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { TrialCountdown } from '@/components/sections/vendor/settings/TrialCountdown'
 
 type Props = {
   subscription: VendorSettingsSubscription
@@ -28,7 +29,13 @@ export function CurrentPlanCard({ subscription }: Props) {
           <div>
             <p className="text-sm text-muted-foreground font-inter">Current Plan</p>
             <p className="text-xl font-bold text-foreground font-manrope">{subscription.plan_label}</p>
-            {isPremium && subscription.expires_at ? (
+            {subscription.is_trial ? (
+              <TrialCountdown
+                trialEndsAt={subscription.trial_ends_at}
+                daysRemaining={subscription.trial_days_remaining}
+                className="mt-1.5"
+              />
+            ) : isPremium && subscription.expires_at ? (
               <p className="mt-1 text-xs text-muted-foreground font-inter">
                 Valid until {subscription.expires_at}
                 {typeof subscription.days_remaining === 'number' && subscription.days_remaining > 0

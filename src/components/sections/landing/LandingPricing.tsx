@@ -1,10 +1,13 @@
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, Lock } from "lucide-react";
 import { useAuth } from "@/auth/useAuth";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ensureCanStartVendorSignup } from "@/features/vendor/vendorSignupFromCustomerGuard";
+import { fetchPublicSubscriptionPackages } from "@/features/subscription/vendorSubscriptionApi";
 import { container } from "@/lib/container";
+import { formatMoney } from "@/lib/currency";
 import {
   TRADE_CHOOSE_PLAN_SECTION_ID,
   storeTradePlanSelection,
@@ -21,14 +24,20 @@ const basicFeatures = [
   { text: "No boost access", included: false },
 ] as const;
 
-const premiumFeatures = [
+const DEFAULT_PREMIUM_FEATURES = [
   "Everything in Basic",
-  "Up to 20 photos",
   "Full analytics dashboard",
   "Boost & analytics (verification sold separately)",
   "Priority boost access",
   "Featured in search results",
 ] as const;
+
+const BILLING_PERIOD_SUFFIX: Record<string, string> = {
+  monthly: "/month",
+  quarterly: "/quarter",
+  yearly: "/year",
+  lifetime: "",
+};
 
 function PlanCtaButton({
   plan,
@@ -79,6 +88,19 @@ function PlanCtaButton({
 }
 
 export function LandingPricing() {
+  const packagesQuery = useQuery({
+    queryKey: ["public", "subscription-packages"],
+    queryFn: fetchPublicSubscriptionPackages,
+    staleTime: 60_000,
+  });
+
+  const packages = packagesQuery.data?.packages ?? [];
+  const premiumPlan = packages.find((p) => p.is_recommended) ?? packages[0];
+  const premiumFeatures = premiumPlan?.perks?.length ? premiumPlan.perks : DEFAULT_PREMIUM_FEATURES;
+  const billingSuffix = premiumPlan?.billing_period
+    ? (BILLING_PERIOD_SUFFIX[premiumPlan.billing_period] ?? "")
+    : "/year";
+
   return (
     <section
       id={TRADE_CHOOSE_PLAN_SECTION_ID}
@@ -139,13 +161,23 @@ export function LandingPricing() {
               <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-red px-4 py-1 font-heading text-[10px] font-bold uppercase tracking-wider text-white">
                 Most Popular
               </div>
-              <h3 className="text-lg font-semibold text-ink-heading">Premium</h3>
+              <h3 className="text-lg font-semibold text-ink-heading">{premiumPlan?.title ?? "Premium"}</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-ink">₦25,000</span>
-                <span className="text-sm text-placeholder-text">/year</span>
+                <span className="text-4xl font-bold text-ink">
+                  {formatMoney(premiumPlan?.amount ?? 0, packagesQuery.data?.currency)}
+                </span>
+                {billingSuffix ? <span className="text-sm text-placeholder-text">{billingSuffix}</span> : null}
               </div>
+              {premiumPlan?.original_price ? (
+                <p className="mt-1 text-sm text-placeholder-text line-through">
+                  {formatMoney(premiumPlan.original_price, packagesQuery.data?.currency)}
+                </p>
+              ) : null}
+              {premiumPlan?.promotional_text ? (
+                <p className="mt-1 text-xs font-semibold text-brand-red">{premiumPlan.promotional_text}</p>
+              ) : null}
               <p className="mt-1 text-xs text-placeholder-text">
-                For serious vendors who want to grow fast.
+                {premiumPlan?.description || "For serious vendors who want to grow fast."}
               </p>
               <ul className="mt-8 flex list-none flex-col gap-4 p-0">
                 {premiumFeatures.map((text) => (

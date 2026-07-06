@@ -11,6 +11,7 @@ import {
   Rocket,
   Share2,
   Trash2,
+  XCircle,
 } from 'lucide-react'
 
 import { ProfileHubSlidePanel } from '@/components/profile/hub/ProfileHubSlidePanel'
@@ -24,7 +25,7 @@ import { isBusinessVerified, type ProfileHubBusiness, verificationChipLabel } fr
 import { deleteUserBusiness, setActiveBusinessId } from '@/api/userBusinesses'
 import { shareProfileUrl, appOrigin } from '@/features/share/appShare'
 import { VENDOR_PREMIUM_INFO_PATH } from '@/hooks/useVendorSubscriptionAccess'
-import { fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
+import { cancelSubscription, fetchSubscriptionStatus } from '@/features/subscription/vendorSubscriptionApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { alert, showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -99,6 +100,7 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const isPremiumActive = business?.isPremiumActive === true
   const canBoost = isPremiumActive && isBusinessVerified(business?.verificationStatus ?? '')
 
@@ -111,6 +113,13 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
 
   const premiumSubscription = subscriptionQuery.data?.subscription
   const premiumRenewalLabel = (() => {
+    if (premiumSubscription?.is_trial) {
+      const days = premiumSubscription.trial_days_remaining
+      return typeof days === 'number'
+        ? `Free trial · ${days} day${days === 1 ? '' : 's'} left`
+        : 'Free trial active'
+    }
+
     if (!premiumSubscription?.expires_at) {
       return 'Analytics & badge active'
     }
@@ -145,6 +154,37 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
   async function handleShare() {
     if (!business) return
     await shareProfileUrl(publicUrl, business.businessName ?? 'Business')
+  }
+
+  async function handleCancelPremium() {
+    if (!business || isCancelling) return
+
+    const confirmed = await alert.confirm({
+      title: 'Cancel Premium plan?',
+      text: premiumSubscription?.is_trial
+        ? 'Your free trial will end immediately and this business will revert to the Free plan.'
+        : 'This business will immediately revert to the Free plan. This cannot be undone and there is no refund for time remaining.',
+      icon: 'warning',
+      confirmText: 'Yes, cancel plan',
+      cancelText: 'Keep Premium',
+      confirmButtonColor: '#dc2626',
+    })
+
+    if (!confirmed) return
+
+    setIsCancelling(true)
+    try {
+      const result = await cancelSubscription({ businessId: business.id })
+      showSuccess(result.message)
+      void queryClient.invalidateQueries({ queryKey: ['vendor', 'subscription'] })
+      void queryClient.invalidateQueries({ queryKey: ['vendor'] })
+      void queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
+      onClose()
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Could not cancel the plan.')
+    } finally {
+      setIsCancelling(false)
+    }
   }
 
   async function handleDeletePage() {
@@ -312,10 +352,34 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                     subtitle={premiumRenewalLabel}
                     onClick={() => void openVendorRoute(VENDOR_PREMIUM_INFO_PATH)}
                     trailing={
-                      <span className="rounded-full bg-[#E7F6EF] px-2.5 py-1 text-[11px] font-bold text-[#13a36b]">
-                        {premiumSubscription?.is_expired ? 'Expired' : 'Active'}
+                      <span
+                        className={cn(
+                          'rounded-full px-2.5 py-1 text-[11px] font-bold',
+                          premiumSubscription?.is_trial
+                            ? 'bg-amber-100 text-amber-700'
+                            : premiumSubscription?.is_expired
+                              ? 'bg-[#FDEAEA] text-brand'
+                              : 'bg-[#E7F6EF] text-[#13a36b]',
+                        )}
+                      >
+                        {premiumSubscription?.is_trial
+                          ? 'Trial'
+                          : premiumSubscription?.is_expired
+                            ? 'Expired'
+                            : 'Active'}
                       </span>
                     }
+                  />
+                ) : null}
+                {isPremiumActive ? (
+                  <ManageToolRow
+                    iconClass="bg-[#FDEAEA] text-brand"
+                    icon={<XCircle className="size-5" strokeWidth={2} />}
+                    title="Cancel Premium plan"
+                    subtitle="Revert to the Free plan immediately"
+                    onClick={() => void handleCancelPremium()}
+                    disabled={isCancelling}
+                    trailing={isCancelling ? <Loader2 className="size-4 animate-spin text-body-secondary" aria-hidden /> : undefined}
                   />
                 ) : (
                   <ManageToolRow
