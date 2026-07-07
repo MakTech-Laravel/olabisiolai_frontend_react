@@ -3,6 +3,7 @@ export type PaymentMethod = "card" | "bank_transfer" | "wallet";
 
 export type PaymentRow = {
   id: number;
+  listKey?: string;
   business: string;
   payerName: string;
   payerEmail: string;

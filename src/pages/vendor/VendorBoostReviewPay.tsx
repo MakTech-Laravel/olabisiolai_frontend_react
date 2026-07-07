@@ -3,7 +3,8 @@ import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 import PaystackPop from "@paystack/inline-js";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { alert, showError, showInfo, showSuccess } from "@/lib/sweetAlert";
+import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
+import { fetchUserWallet } from "@/api/wallet";
 import { formatNaira } from "@/lib/currency";
 
 import { useAuth } from "@/auth/useAuth";
@@ -12,6 +13,7 @@ import type { BillingFormValues } from "@/components/sections/vendor/boost/boost
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
 import { PaymentMethodsCard, type CheckoutGateway } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
+import { WalletApplySection } from "@/components/sections/vendor/boost/boostPay/WalletApplySection";
 import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/boostPay/SavedCheckoutProfilesCard";
 import { plans, type PlanId } from "@/components/sections/vendor/verification/verificationData";
 import { env } from "@/config/env";
@@ -68,6 +70,9 @@ export default function VendorBoostReviewPayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedGateway, setSelectedGateway] = useState<CheckoutGateway>("paystack");
+  const [applyWallet, setApplyWallet] = useState(false);
+  const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
+  const [gatewayAmount, setGatewayAmount] = useState<number | null>(null);
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutPayment, setCheckoutPayment] = useState<CheckoutPayment | null>(null);
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -111,6 +116,13 @@ export default function VendorBoostReviewPayPage() {
     staleTime: 30_000,
   });
 
+  const { data: walletData } = useQuery({
+    queryKey: ["user", "wallet"],
+    queryFn: fetchUserWallet,
+    enabled: Boolean(getAccessToken()),
+    staleTime: 15_000,
+  });
+
   const emailVerificationProfile = vendorSettings?.profile ?? user;
   const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
 
@@ -132,12 +144,19 @@ export default function VendorBoostReviewPayPage() {
   }, [user, profileInitDone, selectedProfileId]);
 
   const apiPackage = packagesData?.packages.find((p) => p.id === packageId);
-  const amountNgn = isBoostCheckout
+  const subtotalNgn = isBoostCheckout
     ? (checkoutPayment?.amount ?? boostSelection?.amount ?? 0)
     : (checkoutPayment?.amount ??
       apiPackage?.amount ??
       selectedPlan.amount ??
       5000);
+  const estimatedWalletApplied = applyWallet
+    ? Math.min(walletData?.balance ?? 0, subtotalNgn)
+    : 0;
+  const displayWalletApplied = applyWallet ? (walletAppliedAmount || estimatedWalletApplied) : 0;
+  const amountNgn = applyWallet
+    ? (gatewayAmount ?? Math.max(0, subtotalNgn - estimatedWalletApplied))
+    : subtotalNgn;
 
   const boostPlanTitle = boostSelection
     ? `${boostSelection.tierLabel} · ${boostSelection.durationDays} days`
@@ -316,7 +335,7 @@ export default function VendorBoostReviewPayPage() {
         return;
       }
 
-      const amountKobo = Math.round(amountNgn * 100);
+      const amountKobo = Math.round((gatewayAmount ?? amountNgn) * 100);
       const currency = payment.currency ?? packagesData?.currency ?? "NGN";
       const reference = payment.tx_ref;
 
@@ -451,14 +470,6 @@ export default function VendorBoostReviewPayPage() {
       showError("Verify your email in Settings before making a purchase.");
       return;
     }
-    if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
-      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
-      return;
-    }
-    if (selectedGateway === "paystack" && !env.paystackPublicKey) {
-      showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
-      return;
-    }
 
     if (!isVerification && !isBoostCheckout) {
       showError("No boost checkout found. Select a plan from the boost page first.");
@@ -477,46 +488,50 @@ export default function VendorBoostReviewPayPage() {
       return;
     }
 
-    if (selectedGateway === "wallet") {
-      const confirmed = await alert.confirm({
-        title: "Pay with Gidira Wallet?",
-        html: `<p>${formatNaira(amountNgn, { freeLabel: false })} will be deducted from your wallet balance immediately.</p>`,
-        icon: "question",
-        confirmText: "Yes, pay",
-        cancelText: "Cancel",
-      });
-
-      if (!confirmed) {
-        return;
-      }
-    }
-
     try {
       setIsPaying(true);
 
-      if (selectedGateway === "wallet") {
-        if (isBoostCheckout && boostSelection) {
-          const { payment, requestId, message, paidFromWallet } = await initVendorBoostPayment({
+      if (isBoostCheckout && boostSelection) {
+        if (
+          !applyWallet &&
+          checkoutPayment &&
+          checkoutPayment.status === "pending" &&
+          !checkoutPayment.is_consumed
+        ) {
+          if (selectedGateway === "flutterwave") {
+            setShouldOpenFlutterwave(true);
+          } else {
+            void openPaystack(checkoutPayment);
+          }
+          return;
+        }
+
+        if (!applyWallet && boostSelection.requestId) {
+          const { payment } = await resumeVendorBoostPayment(boostSelection.requestId);
+          setCheckoutPayment(payment);
+          if (selectedGateway === "flutterwave") {
+            setShouldOpenFlutterwave(true);
+          } else {
+            void openPaystack(payment);
+          }
+          return;
+        }
+
+        const { payment, requestId, message, paidFromWallet, gatewayAmount: nextGatewayAmount, walletApplied } =
+          await initVendorBoostPayment({
             durationDays: boostSelection.durationDays,
             budgetAmount: boostSelection.budgetAmount,
             locationId: boostSelection.locationId,
             renewType: boostSelection.renewType,
             sourceCampaignId: boostSelection.sourceCampaignId,
-            useWallet: true,
+            gateway: selectedGateway,
+            applyWallet,
           });
 
-          if (!paidFromWallet) {
-            setCheckoutPayment(payment);
-            if (requestId) {
-              saveBoostCheckoutSelection({
-                ...boostSelection,
-                paymentId: payment.id,
-                requestId,
-              }, { standalonePayment: true });
-            }
-            return;
-          }
+        setWalletAppliedAmount(walletApplied ?? 0);
+        setGatewayAmount(nextGatewayAmount ?? null);
 
+        if (paidFromWallet) {
           clearBoostCheckoutSelection();
           void queryClient.invalidateQueries({ queryKey: ["vendor", "boost", "catalog"] });
           void queryClient.invalidateQueries({ queryKey: ["vendor", "business"] });
@@ -524,18 +539,50 @@ export default function VendorBoostReviewPayPage() {
           void queryClient.invalidateQueries({ queryKey: ["user", "wallet"] });
           navigate("/vendor/boost", { replace: true });
           showSuccess(message || "Payment received. An admin will assign your boost shortly.");
+          setIsPaying(false);
           return;
         }
 
-        clearVerificationPaymentSession();
+        setCheckoutPayment(payment);
+        if (requestId) {
+          saveBoostCheckoutSelection({
+            ...boostSelection,
+            paymentId: payment.id,
+            requestId,
+          }, { standalonePayment: true });
+        }
 
-        const result = await initVerificationPayment(packageId, undefined, true);
+        const payableAmount = nextGatewayAmount ?? payment.amount;
+        if (payableAmount <= 0) {
+          throw new Error("Nothing left to pay for this checkout.");
+        }
 
-        if (!result.paid_from_wallet) {
-          setCheckoutPayment(result.payment);
+        if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
+          showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
+          setIsPaying(false);
+          return;
+        }
+        if (selectedGateway === "paystack" && !env.paystackPublicKey) {
+          showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+          setIsPaying(false);
           return;
         }
 
+        if (selectedGateway === "flutterwave") {
+          setShouldOpenFlutterwave(true);
+        } else {
+          void openPaystack(payment);
+        }
+        return;
+      }
+
+      clearVerificationPaymentSession();
+
+      const result = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
+      setWalletAppliedAmount(result.wallet_applied ?? 0);
+      setGatewayAmount(result.gateway_amount ?? null);
+
+      if (result.paid_from_wallet) {
         if (result.consumable_payment_id) {
           sessionStorage.setItem("verificationPaymentId", String(result.consumable_payment_id));
         }
@@ -549,62 +596,28 @@ export default function VendorBoostReviewPayPage() {
           navigate("/vendor/document-upload", { replace: true });
         }
         showSuccess("Payment confirmed. Upload your documents next.");
+        setIsPaying(false);
         return;
       }
 
-      if (isBoostCheckout && boostSelection) {
-        if (
-          checkoutPayment &&
-          checkoutPayment.status === "pending" &&
-          !checkoutPayment.is_consumed
-        ) {
-          if (selectedGateway === "flutterwave") {
-            setShouldOpenFlutterwave(true);
-          } else {
-            void openPaystack(checkoutPayment);
-          }
-          return;
-        }
-
-        if (boostSelection.requestId) {
-          const { payment } = await resumeVendorBoostPayment(boostSelection.requestId);
-          setCheckoutPayment(payment);
-          if (selectedGateway === "flutterwave") {
-            setShouldOpenFlutterwave(true);
-          } else {
-            void openPaystack(payment);
-          }
-          return;
-        }
-
-        const { payment, requestId } = await initVendorBoostPayment({
-          durationDays: boostSelection.durationDays,
-          budgetAmount: boostSelection.budgetAmount,
-          locationId: boostSelection.locationId,
-          renewType: boostSelection.renewType,
-          sourceCampaignId: boostSelection.sourceCampaignId,
-          gateway: selectedGateway,
-        });
-        setCheckoutPayment(payment);
-        if (requestId) {
-          saveBoostCheckoutSelection({
-            ...boostSelection,
-            paymentId: payment.id,
-            requestId,
-          }, { standalonePayment: true });
-        }
-        if (selectedGateway === "flutterwave") {
-          setShouldOpenFlutterwave(true);
-        } else {
-          void openPaystack(payment);
-        }
-        return;
-      }
-
-      clearVerificationPaymentSession();
-
-      const result = await initVerificationPayment(packageId, selectedGateway);
       setCheckoutPayment(result.payment);
+
+      const payableAmount = result.gateway_amount ?? result.payment.amount;
+      if (payableAmount <= 0) {
+        throw new Error("Nothing left to pay for this checkout.");
+      }
+
+      if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
+        showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
+        setIsPaying(false);
+        return;
+      }
+      if (selectedGateway === "paystack" && !env.paystackPublicKey) {
+        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+        setIsPaying(false);
+        return;
+      }
+
       if (selectedGateway === "flutterwave") {
         setShouldOpenFlutterwave(true);
       } else {
@@ -613,10 +626,6 @@ export default function VendorBoostReviewPayPage() {
     } catch (error) {
       setIsPaying(false);
       showError(getLaravelErrorMessage(error, "Unable to start payment."));
-    } finally {
-      if (selectedGateway === "wallet") {
-        setIsPaying(false);
-      }
     }
   };
 
@@ -643,7 +652,6 @@ export default function VendorBoostReviewPayPage() {
             <PaymentMethodsCard
               selectedGateway={selectedGateway}
               onGatewayChange={setSelectedGateway}
-              totalAmount={amountNgn}
             />
             <SavedCheckoutProfilesCard
               items={methods}
@@ -664,10 +672,23 @@ export default function VendorBoostReviewPayPage() {
                   : "Visibility Pro Plus"
             }
             totalAmount={amountNgn}
+            subtotalAmount={subtotalNgn}
+            walletApplied={displayWalletApplied}
             isVerification={isVerification}
             boostLine={null}
             beforePayButton={
               <div className="space-y-2">
+                <WalletApplySection
+                  subtotal={subtotalNgn}
+                  applyWallet={applyWallet}
+                  walletApplied={displayWalletApplied}
+                  onApplyWalletChange={(next) => {
+                    setApplyWallet(next);
+                    setCheckoutPayment(null);
+                    setWalletAppliedAmount(0);
+                    setGatewayAmount(null);
+                  }}
+                />
                 {isBoostCheckout && boostSelection ? (
                   <div className="rounded-lg border border-border-light bg-muted/30 px-3 py-2 text-sm">
                     <div className="flex items-center justify-between">

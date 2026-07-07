@@ -132,6 +132,7 @@ export async function initVendorBoostPayment(params: {
   sourceCampaignId?: number;
   gateway?: PaymentGateway;
   useWallet?: boolean;
+  applyWallet?: boolean;
   /** @deprecated legacy slot-tier boosts */
   tierKey?: string;
 }): Promise<{
@@ -139,6 +140,8 @@ export async function initVendorBoostPayment(params: {
   requestId?: number;
   message: string;
   paidFromWallet: boolean;
+  gatewayAmount?: number;
+  walletApplied?: number;
 }> {
   const locationId =
     params.locationId !== undefined && params.locationId !== ""
@@ -159,6 +162,7 @@ export async function initVendorBoostPayment(params: {
     source_campaign_id: params.sourceCampaignId,
     gateway: params.gateway,
     use_wallet: params.useWallet,
+    apply_wallet: params.applyWallet,
   });
 
   const requestId = res.data.data.request?.id;
@@ -168,6 +172,8 @@ export async function initVendorBoostPayment(params: {
     requestId: typeof requestId === "number" ? requestId : undefined,
     message: res.data.message,
     paidFromWallet: Boolean(res.data.data.paid_from_wallet),
+    gatewayAmount: res.data.data.gateway_amount,
+    walletApplied: res.data.data.wallet_applied,
   };
 }
 

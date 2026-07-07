@@ -4,7 +4,8 @@ import PaystackPop from "@paystack/inline-js";
 import { Loader2 } from "lucide-react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { alert, showError, showSuccess } from "@/lib/sweetAlert";
+import { showError, showSuccess } from "@/lib/sweetAlert";
+import { fetchUserWallet } from "@/api/wallet";
 
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
@@ -13,6 +14,7 @@ import type { BillingFormValues } from "@/components/sections/vendor/boost/boost
 import { BoostPayHeader } from "@/components/sections/vendor/boost/boostPay/BoostPayHeader";
 import { OrderSummaryCard } from "@/components/sections/vendor/boost/boostPay/OrderSummaryCard";
 import { PaymentMethodsCard, type CheckoutGateway } from "@/components/sections/vendor/boost/boostPay/PaymentMethodsCard";
+import { WalletApplySection } from "@/components/sections/vendor/boost/boostPay/WalletApplySection";
 import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/boostPay/SavedCheckoutProfilesCard";
 import { env } from "@/config/env";
 import { formatNaira } from "@/lib/currency";
@@ -34,11 +36,11 @@ import {
   fetchSubscriptionPackages,
   fetchSubscriptionStatus,
   initSubscriptionPayment,
-  payPremiumFromWallet,
   reconcileSubscriptionPayment,
   resumeSubscriptionPayment,
   type SubscriptionCheckoutInit,
   type SubscriptionPayment,
+  type VendorSubscriptionState,
 } from "@/features/subscription/vendorSubscriptionApi";
 import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
@@ -87,12 +89,30 @@ function normalizeCheckout(raw: unknown): SubscriptionCheckoutInit | null {
   const boost = parsePaymentRecord(paymentsBlock?.boost);
   const totalRaw = data.total_amount ?? subscription.amount + (boost?.amount ?? 0);
   const total_amount = typeof totalRaw === "number" ? totalRaw : Number(totalRaw);
+  const gatewayRaw = data.gateway_amount;
+  const gateway_amount =
+    gatewayRaw !== undefined && gatewayRaw !== null
+      ? typeof gatewayRaw === "number"
+        ? gatewayRaw
+        : Number(gatewayRaw)
+      : undefined;
+  const walletRaw = data.wallet_applied;
+  const wallet_applied =
+    walletRaw !== undefined && walletRaw !== null
+      ? typeof walletRaw === "number"
+        ? walletRaw
+        : Number(walletRaw)
+      : undefined;
 
   return {
     payment: parsePaymentRecord(data.payment) ?? subscription,
     payments: { subscription, boost },
     total_amount: Number.isFinite(total_amount) ? total_amount : subscription.amount,
+    gateway_amount: gateway_amount !== undefined && Number.isFinite(gateway_amount) ? gateway_amount : undefined,
+    wallet_applied: wallet_applied !== undefined && Number.isFinite(wallet_applied) ? wallet_applied : undefined,
     currency: String(data.currency ?? subscription.currency ?? "NGN"),
+    paidFromWallet: Boolean((raw as Record<string, unknown>).paid_from_wallet ?? (data as Record<string, unknown>).paid_from_wallet),
+    subscription: (data as { subscription?: VendorSubscriptionState }).subscription,
   };
 }
 
@@ -167,6 +187,7 @@ export default function VendorSubscriptionPayPage() {
   const packageKeyFromUrl = searchParams.get("package_key") || undefined;
   const queryClient = useQueryClient();
   const [selectedGateway, setSelectedGateway] = useState<CheckoutGateway>("paystack");
+  const [applyWallet, setApplyWallet] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [checkout, setCheckout] = useState<SubscriptionCheckoutInit | null>(() => readCheckoutFromSession());
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -209,6 +230,13 @@ export default function VendorSubscriptionPayPage() {
     staleTime: 30_000,
   });
 
+  const { data: walletData } = useQuery({
+    queryKey: ["user", "wallet"],
+    queryFn: fetchUserWallet,
+    enabled: canFetchPackages,
+    staleTime: 15_000,
+  });
+
   const { data: ownerBusiness } = useQuery({
     queryKey: ["vendor", "business", "profile"],
     queryFn: fetchVendorBusinessProfile,
@@ -242,9 +270,16 @@ export default function VendorSubscriptionPayPage() {
   const boostAddon = boostSelection?.amount ?? 0;
   const subscriptionLine = checkout?.payments.subscription ?? checkout?.payment ?? null;
   const boostLinePayment = checkout?.payments.boost ?? null;
-  const amountNgn =
+  const subtotalNgn =
     checkout?.total_amount ??
     (subscriptionLine?.amount ?? premiumBase) + (boostLinePayment?.amount ?? boostAddon);
+  const estimatedWalletApplied = applyWallet
+    ? Math.min(walletData?.balance ?? 0, subtotalNgn)
+    : 0;
+  const walletAppliedAmount = applyWallet ? (checkout?.wallet_applied ?? estimatedWalletApplied) : 0;
+  const amountNgn = applyWallet
+    ? (checkout?.gateway_amount ?? Math.max(0, subtotalNgn - estimatedWalletApplied))
+    : subtotalNgn;
 
   useEffect(() => {
     if (profileInitDone) return;
@@ -267,7 +302,7 @@ export default function VendorSubscriptionPayPage() {
   const customerPhone = billing.phone.trim() || "08000000000";
   const customerName = billing.cardholder_name.trim() || "Gidira Vendor";
 
-  const flutterAmount = checkout?.total_amount ?? amountNgn;
+  const flutterAmount = checkout?.gateway_amount ?? amountNgn;
   const flutterCurrency = checkout?.currency ?? subscriptionLine?.currency ?? "NGN";
   const flutterTxRef =
     subscriptionLine?.tx_ref ?? `subscription_pending_${String(user?.id ?? "guest")}`;
@@ -304,7 +339,8 @@ export default function VendorSubscriptionPayPage() {
       }
 
       const paymentId = resolveSubscriptionPaymentId(freshCheckout);
-      const amountKobo = Math.round((freshCheckout.total_amount ?? amountNgn) * 100);
+      const payableAmount = freshCheckout.gateway_amount ?? freshCheckout.total_amount ?? amountNgn;
+      const amountKobo = Math.round(payableAmount * 100);
       const currency = freshCheckout.currency ?? flutterCurrency;
       const reference = freshCheckout.payments.subscription.tx_ref ?? flutterTxRef;
 
@@ -598,52 +634,45 @@ export default function VendorSubscriptionPayPage() {
       showError("Verify your email in Settings before making a purchase.");
       return;
     }
-    if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
-      showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
-      return;
-    }
-    if (selectedGateway === "paystack" && !env.paystackPublicKey) {
-      showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
-      return;
-    }
-
-    if (selectedGateway === "wallet") {
-      const confirmed = await alert.confirm({
-        title: "Pay with Gidira Wallet?",
-        html: `<p>${formatNaira(amountNgn, { freeLabel: false })} will be deducted from your wallet balance immediately.</p>`,
-        icon: "question",
-        confirmText: "Yes, pay",
-        cancelText: "Cancel",
-      });
-
-      if (!confirmed) {
-        return;
-      }
-    }
 
     try {
       setIsPaying(true);
 
-      if (selectedGateway === "wallet") {
-        const result = await payPremiumFromWallet({
+      let initResult: Awaited<ReturnType<typeof initSubscriptionPayment>>;
+      if (applyWallet) {
+        initResult = await initSubscriptionPayment({
+          gateway: selectedGateway,
+          applyWallet: true,
           businessId: scopedBusinessId,
           boost: subscriptionBoostPayload(boostSelection),
           packageKey: premiumPackage?.id,
         });
+      } else {
+        const resumed = await resumeSubscriptionPayment().catch(() => null);
+        initResult =
+          resumed ??
+          (await initSubscriptionPayment({
+            gateway: selectedGateway,
+            businessId: scopedBusinessId,
+            boost: subscriptionBoostPayload(boostSelection),
+            packageKey: premiumPackage?.id,
+          }));
+      }
 
+      if (initResult.paidFromWallet && initResult.subscription) {
         persistCheckout(null);
         clearBoostCheckoutSelection();
 
-        if (result.subscription.is_premium_active) {
+        if (initResult.subscription.is_premium_active) {
           localStorage.setItem("vendorPlan", "premium");
         } else {
           localStorage.removeItem("vendorPlan");
         }
         localStorage.setItem("vendorBusinessCreated", "true");
-        primeVendorSubscriptionCaches(queryClient, result.subscription);
+        primeVendorSubscriptionCaches(queryClient, initResult.subscription);
 
         navigate(ownerBusinessPath, { replace: true });
-        showSuccess(result.message || "Premium subscription activated successfully.");
+        showSuccess("Premium subscription activated successfully.");
 
         void queryClient.invalidateQueries({ queryKey: ["vendor"] });
         void queryClient.invalidateQueries({ queryKey: ["vendor", "onboarding", "status"] });
@@ -654,26 +683,35 @@ export default function VendorSubscriptionPayPage() {
         return;
       }
 
-      // Note: if a pending payment already exists on the server for a different
-      // plan than the one currently selected below, it will be resumed as-is.
-      const resumed = normalizeCheckout(await resumeSubscriptionPayment().catch(() => null));
-      const fresh =
-        resumed ??
-        normalizeCheckout(
-          await initSubscriptionPayment({
-            gateway: selectedGateway,
-            boost: subscriptionBoostPayload(boostSelection),
-            packageKey: premiumPackage?.id,
-          }),
-        );
+      const fresh = normalizeCheckout(initResult);
+
       if (!fresh) {
         throw new Error("Unable to prepare premium checkout.");
       }
-      persistCheckout(fresh);
+
+      const checkoutInit = fresh;
+      persistCheckout(checkoutInit);
+
+      const payableAmount = checkoutInit.gateway_amount ?? checkoutInit.total_amount ?? amountNgn;
+      if (payableAmount <= 0) {
+        throw new Error("Nothing left to pay for this checkout.");
+      }
+
+      if (selectedGateway === "flutterwave" && !env.flutterwavePublicKey) {
+        showError("Flutterwave public key is missing. Set VITE_FLUTTERWAVE_PUBLIC_KEY.");
+        setIsPaying(false);
+        return;
+      }
+      if (selectedGateway === "paystack" && !env.paystackPublicKey) {
+        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+        setIsPaying(false);
+        return;
+      }
+
       if (selectedGateway === "flutterwave") {
         setShouldOpenFlutterwave(true);
       } else {
-        void openPaystack(fresh);
+        void openPaystack(checkoutInit);
       }
     } catch (error) {
       setIsPaying(false);
@@ -764,7 +802,6 @@ export default function VendorSubscriptionPayPage() {
             <PaymentMethodsCard
               selectedGateway={selectedGateway}
               onGatewayChange={setSelectedGateway}
-              totalAmount={amountNgn}
             />
             <SavedCheckoutProfilesCard
               items={methods}
@@ -777,6 +814,8 @@ export default function VendorSubscriptionPayPage() {
             onConfirmPay={() => void onConfirmPay()}
             isPaying={isPaying || packagesLoading || purchaseBlockedByEmail}
             planTitle={premiumPackage?.title ?? "Premium"}
+            subtotalAmount={subtotalNgn}
+            walletApplied={walletAppliedAmount}
             totalAmount={amountNgn}
             boostLine={
               boostLinePayment && boostLinePayment.amount > 0
@@ -801,6 +840,15 @@ export default function VendorSubscriptionPayPage() {
             isVerification={false}
             beforePayButton={
               <div className="space-y-2">
+                <WalletApplySection
+                  subtotal={subtotalNgn}
+                  applyWallet={applyWallet}
+                  walletApplied={walletAppliedAmount}
+                  onApplyWalletChange={(next) => {
+                    setApplyWallet(next);
+                    persistCheckout(null);
+                  }}
+                />
                 {boostSelection ? (
                   <button
                     type="button"

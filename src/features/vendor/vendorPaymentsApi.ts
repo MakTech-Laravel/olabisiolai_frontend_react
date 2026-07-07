@@ -4,6 +4,8 @@ export type PaymentGatewayCode = 'paystack' | 'flutterwave' | 'wallet';
 
 export type VendorPaymentListItem = {
   id: number;
+  list_key?: string;
+  split_part?: 'wallet' | 'gateway';
   purpose: string;
   /** Payment reference type (same as purpose; e.g. boosting, subscription, verification). */
   reference_type?: string;

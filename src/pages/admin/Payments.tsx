@@ -439,7 +439,7 @@ export default function Payments() {
               ) : null}
               {!listLoading
                 ? payments.map((row) => (
-                  <tr key={row.id} className="border-b border-border-light">
+                  <tr key={row.listKey ?? row.id} className="border-b border-border-light">
                     <td className="px-4 py-5 text-base font-medium text-ink">{row.business}</td>
                     <td className="px-4 py-4">
                       <p className="text-sm text-ink">{row.payerName}</p>

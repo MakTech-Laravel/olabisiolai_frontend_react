@@ -239,7 +239,7 @@ export function TransactionHistory() {
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-t">
+                  <tr key={row.list_key ?? String(row.id)} className="border-t">
                     <td className="px-4 py-3 font-inter text-sm">{formatWhen(row)}</td>
                     <td className="px-4 py-3">
                       <span

@@ -114,6 +114,7 @@ function parseListItem(raw: unknown): AdminPaymentListItem | null {
 
   return {
     id,
+    listKey: pickString(item, ["list_key", "listKey"], String(id)),
     business: pickString(item, ["business"], "—"),
     payerName: pickString(item, ["payer_name", "payerName"], "—"),
     payerEmail: pickString(item, ["payer_email", "payerEmail"], ""),

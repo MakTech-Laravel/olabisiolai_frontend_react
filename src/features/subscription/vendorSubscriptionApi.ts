@@ -40,7 +40,12 @@ export type SubscriptionCheckoutInit = {
     boost: SubscriptionPayment | null;
   };
   total_amount: number;
+  gateway_amount?: number;
+  wallet_applied?: number;
+  wallet_balance?: number;
   currency: string;
+  paidFromWallet?: boolean;
+  subscription?: VendorSubscriptionState;
 };
 
 export type VendorSubscriptionState = {
@@ -124,13 +129,23 @@ export async function initSubscriptionPayment(
     gateway?: PaymentGateway;
     businessId?: number;
     packageKey?: string;
+    applyWallet?: boolean;
     boost?: { tierKey: string; durationDays: number; budgetAmount?: number };
   },
-): Promise<SubscriptionCheckoutInit> {
+): Promise<SubscriptionCheckoutInit & { paidFromWallet?: boolean; subscription?: VendorSubscriptionState }> {
   const boost = args?.boost;
   const gateway = args?.gateway;
-  const res = await request.post<ApiEnvelope<SubscriptionCheckoutInit>>('/vendor/subscription/payment/init', {
+  const res = await request.post<
+    ApiEnvelope<
+      SubscriptionCheckoutInit & {
+        paid_from_wallet?: boolean;
+        subscription?: VendorSubscriptionState;
+        wallet_balance?: number;
+      }
+    >
+  >('/vendor/subscription/payment/init', {
     gateway,
+    apply_wallet: args?.applyWallet,
     ...(args?.businessId ? { business_id: args.businessId } : null),
     ...(args?.packageKey ? { package_key: args.packageKey } : null),
     ...(boost
@@ -146,7 +161,22 @@ export async function initSubscriptionPayment(
   if (res.data?.success !== true || !res.data.data) {
     throw new Error(res.data?.message ?? 'Unable to start premium payment.');
   }
-  return res.data.data;
+  const data = res.data.data;
+  if (data.paid_from_wallet && data.subscription) {
+    return {
+      ...data,
+      paidFromWallet: true,
+      subscription: data.subscription,
+      payment: data.payment ?? data.payments?.subscription,
+      payments: data.payments ?? {
+        subscription: data.payment!,
+        boost: null,
+      },
+      total_amount: 0,
+      currency: 'NGN',
+    };
+  }
+  return data;
 }
 
 export async function payPremiumFromWallet(args?: {

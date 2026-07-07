@@ -109,12 +109,15 @@ export type InitVerificationPaymentResult = {
   paid_from_wallet: boolean;
   awaiting_document_submission: boolean;
   consumable_payment_id: number | null;
+  gateway_amount?: number;
+  wallet_applied?: number;
 };
 
 export async function initVerificationPayment(
   packageId: string,
   gateway?: PaymentGateway,
   useWallet?: boolean,
+  applyWallet?: boolean,
 ): Promise<InitVerificationPaymentResult> {
   const res = await request.post<
     ApiEnvelope<{
@@ -122,11 +125,14 @@ export async function initVerificationPayment(
       paid_from_wallet?: boolean;
       awaiting_document_submission?: boolean;
       consumable_payment_id?: number | null;
+      gateway_amount?: number;
+      wallet_applied?: number;
     }>
   >('/vendor/verification/payment/init', {
     package_id: packageId,
     gateway,
     use_wallet: useWallet,
+    apply_wallet: applyWallet,
     ...scopedBusinessParams(),
   });
   const data = assertApiSuccess(res.data);
@@ -135,6 +141,8 @@ export async function initVerificationPayment(
     paid_from_wallet: Boolean(data.paid_from_wallet),
     awaiting_document_submission: Boolean(data.awaiting_document_submission),
     consumable_payment_id: data.consumable_payment_id ?? null,
+    gateway_amount: data.gateway_amount,
+    wallet_applied: data.wallet_applied,
   };
 }
 

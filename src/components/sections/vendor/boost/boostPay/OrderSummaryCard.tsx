@@ -11,6 +11,8 @@ export function OrderSummaryCard({
   isPaying,
   planTitle = "Visibility Pro Plus",
   totalAmount = 5000,
+  subtotalAmount,
+  walletApplied = 0,
   isVerification = false,
   boostLine,
   beforePayButton,
@@ -21,6 +23,8 @@ export function OrderSummaryCard({
   confirmLabel?: string;
   planTitle?: string;
   totalAmount?: number;
+  subtotalAmount?: number;
+  walletApplied?: number;
   isVerification?: boolean;
   boostLine?: {
     label: string;
@@ -82,6 +86,20 @@ export function OrderSummaryCard({
                 {boostLine.durationDays} {boostLine.durationDays === 1 ? 'day' : 'days'}
               </p>
             ) : null}
+          </div>
+        ) : null}
+
+        {walletApplied > 0 ? (
+          <div className="flex items-center justify-between text-sm text-emerald-700">
+            <span>Wallet credit</span>
+            <span className="font-semibold">-{formatNaira(walletApplied, { freeLabel: false })}</span>
+          </div>
+        ) : null}
+
+        {subtotalAmount != null && subtotalAmount > totalAmount ? (
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Subtotal</span>
+            <span className="line-through">{formatNaira(subtotalAmount, { freeLabel: false })}</span>
           </div>
         ) : null}
 
