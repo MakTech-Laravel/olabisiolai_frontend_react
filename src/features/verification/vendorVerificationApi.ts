@@ -21,6 +21,11 @@ export type VerificationPayment = {
   status: 'pending' | 'completed' | 'failed';
   is_consumed: boolean;
   paid_at: string | null;
+  metadata?: {
+    wallet_applied?: number;
+    gateway_amount?: number;
+    wallet_debited?: boolean;
+  } | null;
 };
 
 export type PurchasedVerificationPackage = {
@@ -49,6 +54,7 @@ export type VerificationStatusPayload = {
   payment_block_reason?: string | null;
   has_unused_verification_payment?: boolean;
   consumable_payment_id?: number | null;
+  pending_payment?: VerificationPayment | null;
   purchased_package?: PurchasedVerificationPackage | null;
   documents: Array<{
     id: number;

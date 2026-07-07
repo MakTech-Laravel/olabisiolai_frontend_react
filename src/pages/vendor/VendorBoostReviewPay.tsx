@@ -22,7 +22,6 @@ import {
   type FlutterwaveCallbackResponse,
 } from "@/features/payments/flutterwaveResponse";
 import {
-  clearVerificationPaymentSession,
   confirmVerificationPayment,
   fetchVerificationPackages,
   fetchVerificationStatus,
@@ -133,6 +132,30 @@ export default function VendorBoostReviewPayPage() {
       setBilling(billingFromVendorPaymentMethod(def));
     }
   }, [methodsData, profileInitDone]);
+
+  useEffect(() => {
+    if (!isVerification || !verificationStatus?.pending_payment) {
+      return;
+    }
+
+    const pending = verificationStatus.pending_payment;
+    if (pending.status !== "pending" || pending.is_consumed) {
+      return;
+    }
+
+    setCheckoutPayment(pending);
+    const walletApplied = Number(pending.metadata?.wallet_applied ?? 0);
+    const gatewayFromMeta = pending.metadata?.gateway_amount;
+    setWalletAppliedAmount(walletApplied);
+    setGatewayAmount(
+      gatewayFromMeta != null
+        ? Number(gatewayFromMeta)
+        : Math.max(0, pending.amount - walletApplied),
+    );
+    if (walletApplied > 0) {
+      setApplyWallet(true);
+    }
+  }, [isVerification, verificationStatus]);
 
   useEffect(() => {
     if (!profileInitDone) return;
@@ -289,18 +312,26 @@ export default function VendorBoostReviewPayPage() {
 
   const openPaystack = useCallback(
     async (payment: CheckoutPayment) => {
-      if (!env.paystackPublicKey) {
-        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+      const paystackKey = env.paystackPublicKey?.trim();
+      if (!paystackKey || (!paystackKey.startsWith("pk_test_") && !paystackKey.startsWith("pk_live_"))) {
+        showError("Paystack is not configured correctly. Contact support.");
         return;
       }
 
-      const amountKobo = Math.round((gatewayAmount ?? amountNgn) * 100);
+      const payableAmount = gatewayAmount ?? payment.amount;
+      const amountKobo = Math.round(payableAmount * 100);
+      if (amountKobo <= 0) {
+        showError("Nothing left to pay for this checkout.");
+        setIsPaying(false);
+        return;
+      }
+
       const currency = payment.currency ?? packagesData?.currency ?? "NGN";
       const reference = payment.tx_ref;
 
       const paystack = new PaystackPop();
       paystack.newTransaction({
-        key: env.paystackPublicKey,
+        key: paystackKey,
         email: customerEmail,
         amount: amountKobo,
         currency,
@@ -450,10 +481,10 @@ export default function VendorBoostReviewPayPage() {
 
       if (isBoostCheckout && boostSelection) {
         if (
-          !applyWallet &&
           checkoutPayment &&
           checkoutPayment.status === "pending" &&
-          !checkoutPayment.is_consumed
+          !checkoutPayment.is_consumed &&
+          !applyWallet
         ) {
           if (selectedGateway === "flutterwave") {
             setShouldOpenFlutterwave(true);
@@ -533,7 +564,44 @@ export default function VendorBoostReviewPayPage() {
         return;
       }
 
-      clearVerificationPaymentSession();
+      if (
+        isVerification &&
+        checkoutPayment &&
+        checkoutPayment.status === "pending" &&
+        !checkoutPayment.is_consumed
+      ) {
+        const payableAmount = gatewayAmount ?? checkoutPayment.amount;
+        if (payableAmount <= 0) {
+          const walletResult = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
+          setWalletAppliedAmount(walletResult.wallet_applied ?? 0);
+          setGatewayAmount(walletResult.gateway_amount ?? null);
+
+          if (walletResult.paid_from_wallet) {
+            if (walletResult.consumable_payment_id) {
+              sessionStorage.setItem("verificationPaymentId", String(walletResult.consumable_payment_id));
+            }
+            void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
+            void queryClient.invalidateQueries({ queryKey: ["user", "wallet"] });
+
+            if (walletResult.awaiting_document_submission) {
+              const status = await fetchVerificationStatus();
+              redirectToDocumentUpload(navigate, status);
+            } else {
+              navigate("/vendor/document-upload", { replace: true });
+            }
+            showSuccess("Payment confirmed. Upload your documents next.");
+            setIsPaying(false);
+            return;
+          }
+        } else {
+          if (selectedGateway === "flutterwave") {
+            setShouldOpenFlutterwave(true);
+          } else {
+            void openPaystack(checkoutPayment);
+          }
+          return;
+        }
+      }
 
       const result = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
       setWalletAppliedAmount(result.wallet_applied ?? 0);

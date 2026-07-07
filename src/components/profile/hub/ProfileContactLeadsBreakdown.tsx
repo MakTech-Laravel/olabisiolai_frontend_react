@@ -32,6 +32,7 @@ export function ProfileContactLeadsBreakdown({
     queryFn: () => fetchVendorAnalytics('30d', businessId),
     enabled: !locked,
     staleTime: 60_000,
+    retry: false,
   })
 
   const channels = locked ? PREVIEW_CHANNELS : (analyticsQuery.data?.contactLeadsByChannel ?? PREVIEW_CHANNELS)

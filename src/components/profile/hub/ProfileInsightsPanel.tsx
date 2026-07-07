@@ -73,6 +73,7 @@ export function ProfileInsightsPanel({ businessId, followersCount = 0, isPremium
     queryFn: () => fetchVendorAnalytics(mapInsightsRange(range), businessId),
     enabled: !locked,
     staleTime: 60_000,
+    retry: false,
   })
 
   const isLoading = !locked && analyticsQuery.isLoading

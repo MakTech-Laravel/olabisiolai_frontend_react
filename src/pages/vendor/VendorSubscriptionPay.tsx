@@ -331,20 +331,27 @@ export default function VendorSubscriptionPayPage() {
 
   const openPaystack = useCallback(
     async (freshCheckout: SubscriptionCheckoutInit) => {
-      if (!env.paystackPublicKey) {
-        showError("Paystack public key is missing. Set VITE_PAYSTACK_PUBLIC_KEY.");
+      const paystackKey = env.paystackPublicKey?.trim();
+      if (!paystackKey || (!paystackKey.startsWith("pk_test_") && !paystackKey.startsWith("pk_live_"))) {
+        showError("Paystack is not configured correctly. Contact support.");
         return;
       }
 
       const paymentId = resolveSubscriptionPaymentId(freshCheckout);
       const payableAmount = freshCheckout.gateway_amount ?? freshCheckout.total_amount ?? amountNgn;
       const amountKobo = Math.round(payableAmount * 100);
+      if (amountKobo <= 0) {
+        showError("Nothing left to pay for this checkout.");
+        setIsPaying(false);
+        return;
+      }
+
       const currency = freshCheckout.currency ?? flutterCurrency;
       const reference = freshCheckout.payments.subscription.tx_ref ?? flutterTxRef;
 
       const paystack = new PaystackPop();
       paystack.newTransaction({
-        key: env.paystackPublicKey,
+        key: paystackKey,
         email: customerEmail,
         amount: amountKobo,
         currency,
@@ -366,7 +373,14 @@ export default function VendorSubscriptionPayPage() {
               return;
             }
 
-            const result = await confirmSubscriptionPayment(paymentId, paystackRef, "paystack");
+            let result;
+            try {
+              result = await confirmSubscriptionPayment(paymentId, paystackRef, "paystack");
+            } catch {
+              result = await reconcileSubscriptionPayment(paystackRef, {
+                businessId: scopedBusinessId,
+              });
+            }
 
             persistCheckout(null);
             clearBoostCheckoutSelection();
@@ -404,13 +418,13 @@ export default function VendorSubscriptionPayPage() {
       customerEmail,
       customerName,
       customerPhone,
-      env.paystackPublicKey,
       flutterCurrency,
       flutterTxRef,
       navigate,
       ownerBusinessPath,
       persistCheckout,
       queryClient,
+      scopedBusinessId,
     ],
   );
 
@@ -593,26 +607,13 @@ export default function VendorSubscriptionPayPage() {
     try {
       setIsPaying(true);
 
-      let initResult: Awaited<ReturnType<typeof initSubscriptionPayment>>;
-      if (applyWallet) {
-        initResult = await initSubscriptionPayment({
-          gateway: selectedGateway,
-          applyWallet: true,
-          businessId: scopedBusinessId,
-          boost: subscriptionBoostPayload(boostSelection),
-          packageKey: premiumPackage?.id,
-        });
-      } else {
-        const resumed = await resumeSubscriptionPayment().catch(() => null);
-        initResult =
-          resumed ??
-          (await initSubscriptionPayment({
-            gateway: selectedGateway,
-            businessId: scopedBusinessId,
-            boost: subscriptionBoostPayload(boostSelection),
-            packageKey: premiumPackage?.id,
-          }));
-      }
+      const initResult = await initSubscriptionPayment({
+        gateway: selectedGateway,
+        applyWallet,
+        businessId: scopedBusinessId,
+        boost: subscriptionBoostPayload(boostSelection),
+        packageKey: premiumPackage?.id,
+      });
 
       if (initResult.paidFromWallet && initResult.subscription) {
         persistCheckout(null);
