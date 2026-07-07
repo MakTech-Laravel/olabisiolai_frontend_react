@@ -142,6 +142,7 @@ export async function initVendorBoostPayment(params: {
   paidFromWallet: boolean;
   gatewayAmount?: number;
   walletApplied?: number;
+  paystackAccessCode?: string | null;
 }> {
   const locationId =
     params.locationId !== undefined && params.locationId !== ""
@@ -155,6 +156,7 @@ export async function initVendorBoostPayment(params: {
       paid_from_wallet?: boolean;
       gateway_amount?: number;
       wallet_applied?: number;
+      paystack_access_code?: string;
     }>
   >("/vendor/boost/payment/init", {
     duration_days: params.durationDays,
@@ -176,6 +178,7 @@ export async function initVendorBoostPayment(params: {
     paidFromWallet: Boolean(res.data.data.paid_from_wallet),
     gatewayAmount: res.data.data.gateway_amount,
     walletApplied: res.data.data.wallet_applied,
+    paystackAccessCode: res.data.data.paystack_access_code ?? null,
   };
 }
 

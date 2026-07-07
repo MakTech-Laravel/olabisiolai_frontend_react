@@ -43,6 +43,7 @@ export type SubscriptionCheckoutInit = {
   gateway_amount?: number;
   wallet_applied?: number;
   wallet_balance?: number;
+  paystack_access_code?: string | null;
   currency: string;
   paidFromWallet?: boolean;
   subscription?: VendorSubscriptionState;

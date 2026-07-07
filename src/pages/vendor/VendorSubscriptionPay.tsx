@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
-import PaystackPop from "@paystack/inline-js";
 import { Loader2 } from "lucide-react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +22,7 @@ import {
   isFlutterwavePaymentSuccessful,
   type FlutterwaveCallbackResponse,
 } from "@/features/payments/flutterwaveResponse";
+import { openPaystackCheckout } from "@/features/payments/openPaystackCheckout";
 import {
   readBoostCheckoutSelection,
   readPremiumBundledBoostSelection,
@@ -102,6 +102,9 @@ function normalizeCheckout(raw: unknown): SubscriptionCheckoutInit | null {
         ? walletRaw
         : Number(walletRaw)
       : undefined;
+  const accessCodeRaw = data.paystack_access_code;
+  const paystack_access_code =
+    typeof accessCodeRaw === "string" && accessCodeRaw.trim() !== "" ? accessCodeRaw.trim() : undefined;
 
   return {
     payment: parsePaymentRecord(data.payment) ?? subscription,
@@ -109,6 +112,7 @@ function normalizeCheckout(raw: unknown): SubscriptionCheckoutInit | null {
     total_amount: Number.isFinite(total_amount) ? total_amount : subscription.amount,
     gateway_amount: gateway_amount !== undefined && Number.isFinite(gateway_amount) ? gateway_amount : undefined,
     wallet_applied: wallet_applied !== undefined && Number.isFinite(wallet_applied) ? wallet_applied : undefined,
+    paystack_access_code,
     currency: String(data.currency ?? subscription.currency ?? "NGN"),
     paidFromWallet: Boolean((raw as Record<string, unknown>).paid_from_wallet ?? (data as Record<string, unknown>).paid_from_wallet),
     subscription: (data as { subscription?: VendorSubscriptionState }).subscription,
@@ -331,43 +335,24 @@ export default function VendorSubscriptionPayPage() {
 
   const openPaystack = useCallback(
     async (freshCheckout: SubscriptionCheckoutInit) => {
-      const paystackKey = env.paystackPublicKey?.trim();
-      if (!paystackKey || (!paystackKey.startsWith("pk_test_") && !paystackKey.startsWith("pk_live_"))) {
-        showError("Paystack is not configured correctly. Contact support.");
-        return;
-      }
-
       const paymentId = resolveSubscriptionPaymentId(freshCheckout);
       const payableAmount = freshCheckout.gateway_amount ?? freshCheckout.total_amount ?? amountNgn;
-      const amountKobo = Math.round(payableAmount * 100);
-      if (amountKobo <= 0) {
-        showError("Nothing left to pay for this checkout.");
-        setIsPaying(false);
-        return;
-      }
 
-      const currency = freshCheckout.currency ?? flutterCurrency;
-      const reference = freshCheckout.payments.subscription.tx_ref ?? flutterTxRef;
-
-      const paystack = new PaystackPop();
-      paystack.newTransaction({
-        key: paystackKey,
+      await openPaystackCheckout({
         email: customerEmail,
-        amount: amountKobo,
-        currency,
-        ref: reference,
-        metadata: {
-          custom_fields: [
-            { display_name: "Customer name", variable_name: "customer_name", value: customerName },
-            { display_name: "Phone", variable_name: "phone", value: customerPhone },
-          ],
-        },
-        onClose: () => {
+        amountNgn: payableAmount,
+        currency: freshCheckout.currency ?? flutterCurrency,
+        reference: freshCheckout.payments.subscription.tx_ref ?? flutterTxRef,
+        accessCode: freshCheckout.paystack_access_code,
+        customerName,
+        customerPhone,
+        onClose: () => setIsPaying(false),
+        onError: (message) => {
           setIsPaying(false);
+          showError(message);
         },
-        callback: async (response: { reference?: string }) => {
+        onSuccess: async (paystackRef) => {
           try {
-            const paystackRef = String(response?.reference ?? "").trim();
             if (!paystackRef) {
               showError("Payment completed but Paystack reference was missing.");
               return;

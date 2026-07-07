@@ -117,6 +117,7 @@ export type InitVerificationPaymentResult = {
   consumable_payment_id: number | null;
   gateway_amount?: number;
   wallet_applied?: number;
+  paystack_access_code?: string | null;
 };
 
 export async function initVerificationPayment(
@@ -133,6 +134,7 @@ export async function initVerificationPayment(
       consumable_payment_id?: number | null;
       gateway_amount?: number;
       wallet_applied?: number;
+      paystack_access_code?: string | null;
     }>
   >('/vendor/verification/payment/init', {
     package_id: packageId,
@@ -149,6 +151,7 @@ export async function initVerificationPayment(
     consumable_payment_id: data.consumable_payment_id ?? null,
     gateway_amount: data.gateway_amount,
     wallet_applied: data.wallet_applied,
+    paystack_access_code: data.paystack_access_code ?? null,
   };
 }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
-import PaystackPop from "@paystack/inline-js";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
@@ -21,6 +20,7 @@ import {
   isFlutterwavePaymentSuccessful,
   type FlutterwaveCallbackResponse,
 } from "@/features/payments/flutterwaveResponse";
+import { openPaystackCheckout } from "@/features/payments/openPaystackCheckout";
 import {
   confirmVerificationPayment,
   fetchVerificationPackages,
@@ -70,6 +70,7 @@ export default function VendorBoostReviewPayPage() {
   const [applyWallet, setApplyWallet] = useState(false);
   const [walletAppliedAmount, setWalletAppliedAmount] = useState(0);
   const [gatewayAmount, setGatewayAmount] = useState<number | null>(null);
+  const [paystackAccessCode, setPaystackAccessCode] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutPayment, setCheckoutPayment] = useState<CheckoutPayment | null>(null);
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
@@ -312,40 +313,23 @@ export default function VendorBoostReviewPayPage() {
 
   const openPaystack = useCallback(
     async (payment: CheckoutPayment) => {
-      const paystackKey = env.paystackPublicKey?.trim();
-      if (!paystackKey || (!paystackKey.startsWith("pk_test_") && !paystackKey.startsWith("pk_live_"))) {
-        showError("Paystack is not configured correctly. Contact support.");
-        return;
-      }
-
       const payableAmount = gatewayAmount ?? payment.amount;
-      const amountKobo = Math.round(payableAmount * 100);
-      if (amountKobo <= 0) {
-        showError("Nothing left to pay for this checkout.");
-        setIsPaying(false);
-        return;
-      }
 
-      const currency = payment.currency ?? packagesData?.currency ?? "NGN";
-      const reference = payment.tx_ref;
-
-      const paystack = new PaystackPop();
-      paystack.newTransaction({
-        key: paystackKey,
+      await openPaystackCheckout({
         email: customerEmail,
-        amount: amountKobo,
-        currency,
-        ref: reference,
-        metadata: {
-          custom_fields: [
-            { display_name: "Customer name", variable_name: "customer_name", value: customerName },
-            { display_name: "Phone", variable_name: "phone", value: customerPhone },
-          ],
-        },
+        amountNgn: payableAmount,
+        currency: payment.currency ?? packagesData?.currency ?? "NGN",
+        reference: payment.tx_ref,
+        accessCode: paystackAccessCode,
+        customerName,
+        customerPhone,
         onClose: () => setIsPaying(false),
-        callback: async (response: { reference?: string }) => {
+        onError: (message) => {
+          setIsPaying(false);
+          showError(message);
+        },
+        onSuccess: async (paystackRef) => {
           try {
-            const paystackRef = String(response?.reference ?? "").trim();
             if (!paystackRef) {
               showError("Payment completed but Paystack reference was missing.");
               return;
@@ -379,15 +363,15 @@ export default function VendorBoostReviewPayPage() {
       });
     },
     [
-      amountNgn,
       completeBoostCheckout,
       completeVerificationCheckout,
       customerEmail,
       customerName,
       customerPhone,
-      env.paystackPublicKey,
+      gatewayAmount,
       isBoostCheckout,
       packagesData?.currency,
+      paystackAccessCode,
       queryClient,
       recoverAfterConfirmFailure,
     ],
@@ -505,7 +489,7 @@ export default function VendorBoostReviewPayPage() {
           return;
         }
 
-        const { payment, requestId, message, paidFromWallet, gatewayAmount: nextGatewayAmount, walletApplied } =
+        const { payment, requestId, message, paidFromWallet, gatewayAmount: nextGatewayAmount, walletApplied, paystackAccessCode: nextPaystackAccessCode } =
           await initVendorBoostPayment({
             durationDays: boostSelection.durationDays,
             budgetAmount: boostSelection.budgetAmount,
@@ -518,6 +502,7 @@ export default function VendorBoostReviewPayPage() {
 
         setWalletAppliedAmount(walletApplied ?? 0);
         setGatewayAmount(nextGatewayAmount ?? null);
+        setPaystackAccessCode(nextPaystackAccessCode ?? null);
 
         if (paidFromWallet) {
           clearBoostCheckoutSelection();
@@ -575,6 +560,7 @@ export default function VendorBoostReviewPayPage() {
           const walletResult = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
           setWalletAppliedAmount(walletResult.wallet_applied ?? 0);
           setGatewayAmount(walletResult.gateway_amount ?? null);
+          setPaystackAccessCode(walletResult.paystack_access_code ?? null);
 
           if (walletResult.paid_from_wallet) {
             if (walletResult.consumable_payment_id) {
@@ -606,6 +592,7 @@ export default function VendorBoostReviewPayPage() {
       const result = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
       setWalletAppliedAmount(result.wallet_applied ?? 0);
       setGatewayAmount(result.gateway_amount ?? null);
+      setPaystackAccessCode(result.paystack_access_code ?? null);
 
       if (result.paid_from_wallet) {
         if (result.consumable_payment_id) {
@@ -712,6 +699,7 @@ export default function VendorBoostReviewPayPage() {
                     setCheckoutPayment(null);
                     setWalletAppliedAmount(0);
                     setGatewayAmount(null);
+                    setPaystackAccessCode(null);
                   }}
                 />
                 {isBoostCheckout && boostSelection ? (
