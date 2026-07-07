@@ -153,6 +153,8 @@ export async function initVendorBoostPayment(params: {
       payment: BoostPaymentSession;
       request: { id?: number };
       paid_from_wallet?: boolean;
+      gateway_amount?: number;
+      wallet_applied?: number;
     }>
   >("/vendor/boost/payment/init", {
     duration_days: params.durationDays,

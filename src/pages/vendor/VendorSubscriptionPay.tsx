@@ -19,7 +19,6 @@ import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/bo
 import { env } from "@/config/env";
 import { formatNaira } from "@/lib/currency";
 import {
-  extractFlutterwaveCardMeta,
   extractFlutterwaveTransactionId,
   isFlutterwavePaymentSuccessful,
   type FlutterwaveCallbackResponse,
@@ -49,7 +48,7 @@ import { fetchVendorBusinessProfile } from "@/features/business/vendorBusinessPr
 import { businessProfilePath } from "@/lib/businessProfile";
 import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
-import { createVendorPaymentMethod, fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
+import { fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
 import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
 
 const CHECKOUT_SESSION_KEY = "subscriptionCheckoutJson";
@@ -193,7 +192,6 @@ export default function VendorSubscriptionPayPage() {
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [billing, setBilling] = useState<BillingFormValues>(() => billingFromUser(null));
-  const [saveProfileAfterPay, setSaveProfileAfterPay] = useState(true);
   const [profileInitDone, setProfileInitDone] = useState(false);
   const [paystackRetryReference, setPaystackRetryReference] = useState("");
   const [isReconciling, setIsReconciling] = useState(false);
@@ -458,47 +456,6 @@ export default function VendorSubscriptionPayPage() {
     };
   }, [canFetchPackages, checkout, persistCheckout, subscriptionStatus]);
 
-  const trySaveProfileFromResponse = useCallback(
-    async (response: FlutterwaveCallbackResponse) => {
-      if (!saveProfileAfterPay) return;
-      const card = extractFlutterwaveCardMeta(response);
-      try {
-        await createVendorPaymentMethod({
-          label: card.card_brand && card.last_four ? `${card.card_brand} •••• ${card.last_four}` : "Subscription checkout",
-          cardholder_name: billing.cardholder_name.trim() || customerName,
-          email: billing.email.trim() || customerEmail,
-          phone: billing.phone.trim() || customerPhone,
-          last_four: card.last_four,
-          card_brand: card.card_brand,
-          exp_month: card.exp_month,
-          exp_year: card.exp_year,
-          billing_line1: billing.billing_line1.trim() || null,
-          billing_city: billing.billing_city.trim() || null,
-          billing_state: billing.billing_state.trim() || null,
-          billing_country: billing.billing_country.trim() || null,
-          is_default: true,
-        });
-        void queryClient.invalidateQueries({ queryKey: ["vendor", "payment-methods"] });
-      } catch {
-        // non-blocking
-      }
-    },
-    [
-      saveProfileAfterPay,
-      billing.billing_city,
-      billing.billing_country,
-      billing.billing_line1,
-      billing.billing_state,
-      billing.cardholder_name,
-      billing.email,
-      billing.phone,
-      customerEmail,
-      customerName,
-      customerPhone,
-      queryClient,
-    ],
-  );
-
   useEffect(() => {
     if (!shouldOpenFlutterwave || !checkout) {
       return;
@@ -558,7 +515,6 @@ export default function VendorSubscriptionPayPage() {
           navigate(ownerBusinessPath, { replace: true });
           showSuccess(result.message || "Premium subscription activated successfully.");
 
-          void trySaveProfileFromResponse(response);
           void queryClient.invalidateQueries({ queryKey: ["vendor"] });
           void queryClient.invalidateQueries({ queryKey: ["vendor", "onboarding", "status"] });
           void queryClient.invalidateQueries({ queryKey: ["vendor", "subscription", "status"] });
@@ -586,7 +542,6 @@ export default function VendorSubscriptionPayPage() {
     persistCheckout,
     premiumPackage?.id,
     queryClient,
-    trySaveProfileFromResponse,
   ]);
 
   const onRemoveBoostAddon = () => {
@@ -858,18 +813,6 @@ export default function VendorSubscriptionPayPage() {
                     Remove boost add-on (pay premium only)
                   </button>
                 ) : null}
-                <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 size-4 rounded border"
-                    checked={saveProfileAfterPay}
-                    onChange={(e) => setSaveProfileAfterPay(e.target.checked)}
-                  />
-                  <span>
-                    After a successful card payment, save masked card details and billing as a default checkout
-                    profile (last 4 digits only; never your full card number).
-                  </span>
-                </label>
               </div>
             }
           />

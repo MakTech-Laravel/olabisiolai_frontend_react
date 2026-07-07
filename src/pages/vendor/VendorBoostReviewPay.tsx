@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showError, showInfo, showSuccess } from "@/lib/sweetAlert";
 import { fetchUserWallet } from "@/api/wallet";
-import { formatNaira } from "@/lib/currency";
 
 import { useAuth } from "@/auth/useAuth";
 import { getAccessToken } from "@/auth/token";
@@ -18,7 +17,6 @@ import { SavedCheckoutProfilesCard } from "@/components/sections/vendor/boost/bo
 import { plans, type PlanId } from "@/components/sections/vendor/verification/verificationData";
 import { env } from "@/config/env";
 import {
-  extractFlutterwaveCardMeta,
   extractFlutterwaveTransactionId,
   isFlutterwavePaymentSuccessful,
   type FlutterwaveCallbackResponse,
@@ -33,7 +31,7 @@ import {
   type VerificationPayment,
 } from "@/features/verification/vendorVerificationApi";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
-import { createVendorPaymentMethod, fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
+import { fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
 import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
 import {
   clearBoostCheckoutSelection,
@@ -79,7 +77,6 @@ export default function VendorBoostReviewPayPage() {
   const [billing, setBilling] = useState<BillingFormValues>(() => billingFromUser(null));
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [profileInitDone, setProfileInitDone] = useState(false);
-  const [saveProfileAfterPay, setSaveProfileAfterPay] = useState(true);
   const { user } = useAuth();
 
   const isVerification = sessionStorage.getItem("paymentSource") === "verification";
@@ -277,44 +274,6 @@ export default function VendorBoostReviewPayPage() {
     [navigate],
   );
 
-  const trySaveProfileFromResponse = useCallback(
-    async (response: FlutterwaveCallbackResponse) => {
-      if (!saveProfileAfterPay) return;
-      const card = extractFlutterwaveCardMeta(response);
-      try {
-        await createVendorPaymentMethod({
-          label:
-            card.card_brand && card.last_four
-              ? `${card.card_brand} •••• ${card.last_four}`
-              : "Verification checkout",
-          cardholder_name: billing.cardholder_name.trim() || customerName,
-          email: billing.email.trim() || customerEmail,
-          phone: billing.phone.trim() || customerPhone,
-          last_four: card.last_four,
-          card_brand: card.card_brand,
-          exp_month: card.exp_month,
-          exp_year: card.exp_year,
-          billing_line1: billing.billing_line1.trim() || null,
-          billing_city: billing.billing_city.trim() || null,
-          billing_state: billing.billing_state.trim() || null,
-          billing_country: billing.billing_country.trim() || null,
-          is_default: true,
-        });
-        void queryClient.invalidateQueries({ queryKey: ["vendor", "payment-methods"] });
-      } catch {
-        // non-blocking
-      }
-    },
-    [
-      saveProfileAfterPay,
-      billing,
-      customerEmail,
-      customerName,
-      customerPhone,
-      queryClient,
-    ],
-  );
-
   const recoverAfterConfirmFailure = useCallback(async (): Promise<boolean> => {
     try {
       const status = await fetchVerificationStatus();
@@ -431,7 +390,6 @@ export default function VendorBoostReviewPayPage() {
             await completeVerificationCheckout(resolvedPaymentId, txId);
             showSuccess("Payment confirmed. Upload your documents next.");
           }
-          await trySaveProfileFromResponse(response);
           void queryClient.invalidateQueries({ queryKey: ["vendor", "payments"] });
           closePaymentModal();
         } catch (error) {
@@ -461,7 +419,6 @@ export default function VendorBoostReviewPayPage() {
     completeVerificationCheckout,
     completeBoostCheckout,
     isBoostCheckout,
-    trySaveProfileFromResponse,
     queryClient,
   ]);
 
@@ -703,17 +660,6 @@ export default function VendorBoostReviewPayPage() {
                     </div>
                   </div>
                 ) : null}
-                <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-4 rounded border"
-                  checked={saveProfileAfterPay}
-                  onChange={(e) => setSaveProfileAfterPay(e.target.checked)}
-                />
-                <span>
-                  After a successful card payment, save masked card details and billing as a default checkout profile.
-                </span>
-              </label>
               </div>
             }
           />
