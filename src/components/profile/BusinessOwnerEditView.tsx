@@ -20,7 +20,7 @@ import { VendorOwnerCatalogSection } from '@/components/profile/VendorOwnerCatal
 import { OwnerEditSection } from '@/components/profile/OwnerEditSection'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { displayBusinessOverview } from '@/constants/businessOverview'
-import { FREE_PHOTO_LIMIT } from '@/constants/planLimits'
+import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from '@/constants/planLimits'
 import {
   businessPageHero,
   businessPageIdentityCard,
@@ -301,7 +301,7 @@ export function BusinessOwnerEditView({
             >
               Upgrade to Premium
             </Link>{' '}
-            for up to {photoLimit} photos on Premium.
+            for up to {PREMIUM_PHOTO_LIMIT} photos on Premium.
           </p>
         ) : null}
       </OwnerEditSection>
