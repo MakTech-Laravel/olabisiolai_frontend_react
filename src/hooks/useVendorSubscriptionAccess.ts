@@ -50,7 +50,7 @@ export function useVendorSubscriptionAccess() {
   const subscription =
     subscriptionQuery.data?.subscription ?? onboardingQuery.data?.subscription ?? null;
   const isPremiumActive = subscription?.is_premium_active === true;
-  const canPayPremium = subscription?.can_pay_premium === true;
+  const canPayPremium = subscription?.can_pay_premium === true || subscription?.is_trial === true;
   const requiresPayment = subscription?.requires_payment === true;
   const hasBusiness = onboardingQuery.data?.has_business === true;
   const photoLimit = subscription?.photo_limit ?? (isPremiumActive ? 25 : 5);

@@ -72,6 +72,8 @@ export type VendorSubscriptionState = {
   trial_ends_at?: string | null;
   trial_days_remaining?: number;
   trial_eligible?: boolean;
+  can_upgrade_from_trial?: boolean;
+  trial_credit_on_upgrade?: number;
 };
 
 type ApiEnvelope<T> = {

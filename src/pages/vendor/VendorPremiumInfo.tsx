@@ -135,8 +135,10 @@ export default function VendorPremiumInfo() {
     packages[0]
 
   const subscription = statusQuery.data?.subscription
+  const isOnTrial = subscription?.is_trial === true
+  const trialCreditDays = subscription?.trial_credit_on_upgrade ?? subscription?.trial_days_remaining ?? 0
   const canStartTrial = Boolean(
-    canFetchAccountData && subscription?.trial_eligible && selectedPlan?.trial_eligible,
+    canFetchAccountData && !isOnTrial && subscription?.trial_eligible && selectedPlan?.trial_eligible,
   )
 
   const paymentParams = new URLSearchParams()
@@ -197,6 +199,13 @@ export default function VendorPremiumInfo() {
           )}
         </div>
 
+        {isOnTrial && trialCreditDays > 0 ? (
+          <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-900">
+            You are on a free trial. Subscribe now and your remaining {trialCreditDays} day
+            {trialCreditDays === 1 ? '' : 's'} will be added to your monthly or yearly plan.
+          </p>
+        ) : null}
+
         <div className="mt-8 space-y-3">
           {canStartTrial ? (
             <Button
@@ -215,7 +224,7 @@ export default function VendorPremiumInfo() {
             className="h-12 w-full rounded-xl bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] text-base font-bold text-white hover:opacity-95"
             onClick={() => navigate(paymentPath)}
           >
-            Continue to payment
+            {isOnTrial ? 'Subscribe now' : 'Continue to payment'}
           </Button>
           <Button type="button" variant="outline" className="h-11 w-full rounded-xl" asChild>
             <Link to="/user/profile">Not now</Link>

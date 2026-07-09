@@ -14,7 +14,9 @@ type Props = {
 export function CurrentPlanCard({ subscription }: Props) {
   const { goToPremiumPayment, goToBoost } = useVendorSubscriptionAccess()
   const isPremium = subscription.is_premium_active === true
-  const canPayPremium = subscription.can_pay_premium === true
+  const isOnTrial = subscription.is_trial === true
+  const canPayPremium = subscription.can_pay_premium === true || isOnTrial
+  const trialCreditDays = subscription.trial_credit_on_upgrade ?? subscription.trial_days_remaining ?? 0
 
   return (
     <Card className="relative rounded-xl border-border-light shadow-sm">
@@ -46,13 +48,20 @@ export function CurrentPlanCard({ subscription }: Props) {
           </div>
         </div>
         {canPayPremium ? (
-          <Button
-            type="button"
-            onClick={() => goToPremiumPayment()}
-            className="mt-6 w-full cursor-pointer bg-brand-red font-inter font-semibold text-white shadow-none hover:bg-brand-red/90"
-          >
-            Upgrade to Premium
-          </Button>
+          <>
+            <Button
+              type="button"
+              onClick={() => goToPremiumPayment()}
+              className="mt-6 w-full cursor-pointer bg-brand-red font-inter font-semibold text-white shadow-none hover:bg-brand-red/90"
+            >
+              {isOnTrial ? 'Subscribe now' : 'Upgrade to Premium'}
+            </Button>
+            {isOnTrial && trialCreditDays > 0 ? (
+              <p className="mt-2 text-center text-xs text-muted-foreground font-inter">
+                Your remaining {trialCreditDays} trial day{trialCreditDays === 1 ? '' : 's'} will be added to your paid plan.
+              </p>
+            ) : null}
+          </>
         ) : isPremium ? (
           <Button
             type="button"

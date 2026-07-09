@@ -30,7 +30,7 @@ export function VendorPremiumPaymentGate({ children }: Props) {
       return;
     }
 
-    if (data.subscription?.is_premium_active) {
+    if (data.subscription?.is_premium_active && !data.subscription?.is_trial) {
       navigate(onboardingRedirectPath(data), { replace: true });
       return;
     }
@@ -56,7 +56,7 @@ export function VendorPremiumPaymentGate({ children }: Props) {
     return null;
   }
 
-  if (data.subscription?.is_premium_active) {
+  if (data.subscription?.is_premium_active && !data.subscription?.is_trial) {
     return null;
   }
 
