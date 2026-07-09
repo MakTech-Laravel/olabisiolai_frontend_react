@@ -210,9 +210,9 @@ export default function GiveReview() {
 
   if (success) {
     return (
-      <div className={pageShell}>
-        <div className={cn(container)}>
-          <div className="mt-12 flex flex-col items-center gap-4 rounded-2xl border border-border-light/80 bg-card p-10 shadow-md text-center">
+      <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center bg-bg-section px-4 py-8 font-sans">
+        <div className={cn(container, "w-full")}>
+          <div className="mx-auto flex max-w-lg flex-col items-center gap-4 rounded-2xl border border-border-light/80 bg-card p-10 text-center shadow-md">
             <CheckCircle className="size-14 text-success" strokeWidth={1.5} />
             <h1 className="text-xl font-semibold text-ink-heading">Review Submitted!</h1>
             <p className="text-sm text-body-secondary">
