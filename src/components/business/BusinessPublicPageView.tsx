@@ -18,6 +18,7 @@ import { BusinessPageShareReportRow } from "@/components/business/BusinessPageSh
 import { BusinessHoursDisplay } from "@/components/business/BusinessHoursDisplay";
 import { BusinessSocialLinks } from "@/components/business/BusinessSocialLinks";
 import { FollowVendorButton } from "@/components/business/FollowVendorButton";
+import { PublicReviewCard } from "@/components/reviews/PublicReviewCard";
 import { ShowPhoneNumberReveal } from "@/components/ShowPhoneNumberReveal";
 import type { PublicBusiness } from "@/features/business/publicBusinessApi";
 import type { SocialAccount } from "@/features/business/socialAccounts";
@@ -115,9 +116,8 @@ type BusinessPublicPageViewProps = {
   };
   reviewsRef: React.RefObject<HTMLElement | null>;
   reviewsList: PublicReview[];
+  reviewsLoading?: boolean;
   pagination: { current_page: number; last_page: number; total: number };
-  reviewPage: number;
-  onReviewPageChange: (page: number) => void;
   seeAllReviewsHref?: string;
   showDirectMessage?: boolean;
   onFollowersChange: (count: number, following?: boolean) => void;
@@ -166,6 +166,11 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     showCatalogSection,
     showCustomerActions,
     capabilities,
+    reviewsRef,
+    reviewsList,
+    reviewsLoading = false,
+    pagination,
+    seeAllReviewsHref,
     showDirectMessage = false,
     onFollowersChange,
     onOpenPhotos,
@@ -262,6 +267,11 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
     socialAccounts.length > 0 || website?.trim() ? (
       <BusinessSocialLinks accounts={socialAccounts} website={website} title="" className="border-0 p-0" />
     ) : null;
+
+  const showSeeAllReviews =
+    Boolean(seeAllReviewsHref) &&
+    (pagination.total > reviewsList.length || pagination.last_page > 1 || reviewCount > reviewsList.length);
+  const showReviewsSection = businessFetched && !isPageLoading;
 
   const sidebarContent = (
     <>
@@ -563,6 +573,78 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
             ) : null}
           </div>
 
+
+          {showReviewsSection ? (
+            <section ref={reviewsRef} className={cn("pt-6", businessPageSectionX)}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <h2 className={businessPageSectionTitle}>Customer reviews</h2>
+                {rating > 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-body-secondary">
+                    <StarRow rating={rating} size="sm" />
+                    <span className="font-semibold text-ink">
+                      {ratingScore ?? rating.toFixed(1)}
+                    </span>
+                    {reviewCount > 0 ? (
+                      <span>
+                        · {reviewCount.toLocaleString()} {reviewCount === 1 ? "review" : "reviews"}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              <div className="rounded-2xl border border-border-light bg-white px-5 shadow-sm">
+                {reviewsLoading ? (
+                  <div className="space-y-5 py-5">
+                    {[1, 2, 3].map((item) => (
+                      <div key={item} className="animate-pulse border-b border-border-light py-5 last:border-b-0">
+                        <div className="flex gap-3">
+                          <div className="size-11 shrink-0 rounded-full bg-muted" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-32 rounded bg-muted" />
+                            <div className="h-3 w-24 rounded bg-muted" />
+                            <div className="h-3 w-full rounded bg-muted" />
+                            <div className="h-3 w-4/5 rounded bg-muted" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : reviewsList.length > 0 ? (
+                  reviewsList.map((review) => (
+                    <PublicReviewCard
+                      key={review.id}
+                      review={review}
+                      businessName={name}
+                      listingPath={pathname}
+                      showActions={false}
+                    />
+                  ))
+                ) : (
+                  <p className="py-8 text-center text-sm text-body-secondary">
+                    No reviews yet.{" "}
+                    {capabilities.review ? (
+                      <button
+                        type="button"
+                        onClick={onWriteReview}
+                        className="font-semibold text-chat-accent hover:underline"
+                      >
+                        Be the first to write one
+                      </button>
+                    ) : (
+                      "Check back later."
+                    )}
+                  </p>
+                )}
+              </div>
+              {showSeeAllReviews && seeAllReviewsHref ? (
+                <div className="mt-4 flex justify-center">
+                  <Button asChild variant="outline" className="rounded-full px-6 font-semibold">
+                    <Link to={seeAllReviewsHref}>See all reviews</Link>
+                  </Button>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {socialPanel ? (
             <section className={cn("pb-4 pt-6", businessPageSectionX)}>

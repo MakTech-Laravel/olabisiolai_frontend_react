@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, Share2, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 
 import {
   fetchBusinessReviews,
   type BusinessReviewsSummary,
-  type PublicReview,
 } from '@/features/reviews/publicReviewApi'
-import { ReviewImagesGallery } from '@/components/reviews/ReviewImagesGallery'
+import { PublicReviewCard } from '@/components/reviews/PublicReviewCard'
 import { fetchPublicBusinessById } from '@/features/business/publicBusinessApi'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { resolveBusinessIdFromSlug } from '@/lib/encryptId'
-import { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 type ReviewFilter = 'all' | '5' | '4' | '3' | '2' | '1'
@@ -28,105 +26,6 @@ function StarRow({ rating, className }: { rating: number; className?: string }) 
         </span>
       ))}
     </div>
-  )
-}
-
-function helpfulStorageKey(reviewId: number) {
-  return `gidira-review-helpful-${reviewId}`
-}
-
-function ReviewCard({ review, businessName, listingPath }: { review: PublicReview; businessName: string; listingPath: string }) {
-  const [helpful, setHelpful] = useState(() => {
-    try {
-      return localStorage.getItem(helpfulStorageKey(review.id)) === '1'
-    } catch {
-      return false
-    }
-  })
-
-  const initials = review.reviewer_name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
-  const date = review.created_at
-    ? new Date(review.created_at).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
-    : ''
-
-  async function shareReview() {
-    const text = `${review.reviewer_name} rated ${businessName} ${review.rating}/5 on Gidira`
-    const url = `${window.location.origin}${listingPath}`
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Review for ${businessName}`, text, url })
-        return
-      } catch {
-        // fall through
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(`${text}\n${url}`)
-      showSuccess('Review link copied.')
-    } catch {
-      showError('Could not share this review.')
-    }
-  }
-
-  function toggleHelpful() {
-    const next = !helpful
-    setHelpful(next)
-    try {
-      if (next) localStorage.setItem(helpfulStorageKey(review.id), '1')
-      else localStorage.removeItem(helpfulStorageKey(review.id))
-    } catch {
-      // ignore
-    }
-  }
-
-  return (
-    <article className="border-b border-border-light py-5 last:border-b-0">
-      <div className="flex items-start gap-3">
-        <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#EAF2FD] text-sm font-bold text-chat-accent">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold text-ink">{review.reviewer_name}</p>
-            <p className="text-xs text-stat-muted">{date}</p>
-          </div>
-          <StarRow rating={review.rating} className="my-2 text-base" />
-          <p className="text-sm leading-relaxed text-body-secondary">{review.review_text}</p>
-          <ReviewImagesGallery images={review.images} />
-          <div className="mt-3 flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={toggleHelpful}
-              className={cn(
-                'inline-flex items-center gap-1.5 text-sm font-semibold transition-colors',
-                helpful ? 'text-chat-accent' : 'text-body-secondary hover:text-ink',
-              )}
-            >
-              <ThumbsUp className="size-4" aria-hidden />
-              Helpful
-            </button>
-            <button
-              type="button"
-              onClick={() => void shareReview()}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-body-secondary transition-colors hover:text-ink"
-            >
-              <Share2 className="size-4" aria-hidden />
-              Share
-            </button>
-          </div>
-        </div>
-      </div>
-    </article>
   )
 }
 
@@ -306,7 +205,7 @@ export default function BusinessReviews() {
             </p>
           ) : (
             reviews.map((review) => (
-              <ReviewCard
+              <PublicReviewCard
                 key={review.id}
                 review={review}
                 businessName={business?.name ?? 'this business'}

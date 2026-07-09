@@ -106,7 +106,6 @@ export default function Service() {
   const [photosOpen, setPhotosOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [reviewPage, setReviewPage] = useState(1);
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowingVendor, setIsFollowingVendor] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -143,9 +142,9 @@ export default function Service() {
       stateData !== null ? toPublicBusinessPlaceholder(stateData) : undefined,
   });
 
-  const { data: reviewsResult } = useQuery({
-    queryKey: ["reviews", businessId, reviewPage],
-    queryFn: () => fetchBusinessReviews(businessId!, { page: reviewPage }),
+  const { data: reviewsResult, isLoading: reviewsLoading } = useQuery({
+    queryKey: ["reviews", businessId, "preview"],
+    queryFn: () => fetchBusinessReviews(businessId!, { page: 1, perPage: 5, sort: "top" }),
     enabled: businessId !== null,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
@@ -359,12 +358,8 @@ export default function Service() {
               capabilities={capabilities}
               reviewsRef={reviewsRef}
               reviewsList={reviewsList}
+              reviewsLoading={reviewsLoading}
               pagination={pagination}
-              reviewPage={reviewPage}
-              onReviewPageChange={(page) => {
-                setReviewPage(page);
-                reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
               onFollowersChange={(count, following) => {
                 setFollowersCount(count);
                 if (typeof following === "boolean") {
@@ -424,12 +419,8 @@ export default function Service() {
           capabilities={capabilities}
           reviewsRef={reviewsRef}
           reviewsList={reviewsList}
+          reviewsLoading={reviewsLoading}
           pagination={pagination}
-          reviewPage={reviewPage}
-          onReviewPageChange={(page) => {
-            setReviewPage(page);
-            reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
           onFollowersChange={(count, following) => {
             setFollowersCount(count);
             if (typeof following === "boolean") {
