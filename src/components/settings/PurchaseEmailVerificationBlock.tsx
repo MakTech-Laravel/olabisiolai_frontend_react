@@ -13,7 +13,7 @@ type Props = {
 
 export function PurchaseEmailVerificationBlock({
   profile,
-  settingsPath = '/vendor/settings',
+  settingsPath = '/user/settings/account',
   title = 'Verify your email to continue',
 }: Props) {
   if (!profileNeedsEmailVerification(profile)) {

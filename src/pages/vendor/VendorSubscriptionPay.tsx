@@ -47,6 +47,7 @@ import { fetchVendorSettings } from "@/api/vendorSettings";
 import { fetchVendorBusinessProfile } from "@/features/business/vendorBusinessProfileApi";
 import { businessProfilePath } from "@/lib/businessProfile";
 import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
+import { PaystackEmailQuickSet } from "@/components/settings/PaystackEmailQuickSet";
 import { billingFromUser, billingFromVendorPaymentMethod } from "@/features/vendor/vendorBillingProfile";
 import { fetchVendorPaymentMethods } from "@/features/vendor/vendorPaymentsApi";
 import type { VendorPaymentMethod } from "@/features/vendor/vendorPaymentsApi";
@@ -252,6 +253,8 @@ export default function VendorSubscriptionPayPage() {
 
   const emailVerificationProfile = vendorSettings?.profile ?? user;
   const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
+  const paystackNeedsEmailVerification =
+    selectedGateway === "paystack" && !emailVerificationProfile?.email;
 
   const [boostSelection, setBoostSelection] = useState(() => readPremiumBundledBoostSelection());
 
@@ -589,6 +592,11 @@ export default function VendorSubscriptionPayPage() {
       return;
     }
 
+    if (paystackNeedsEmailVerification) {
+      showError("Add and verify your email above to pay with Paystack.");
+      return;
+    }
+
     try {
       setIsPaying(true);
 
@@ -753,7 +761,7 @@ export default function VendorSubscriptionPayPage() {
 
           <OrderSummaryCard
             onConfirmPay={() => void onConfirmPay()}
-            isPaying={isPaying || packagesLoading || purchaseBlockedByEmail}
+            isPaying={isPaying || packagesLoading || purchaseBlockedByEmail || paystackNeedsEmailVerification}
             planTitle={premiumPackage?.title ?? "Premium"}
             subtotalAmount={subtotalNgn}
             walletApplied={walletAppliedAmount}
@@ -790,6 +798,14 @@ export default function VendorSubscriptionPayPage() {
                     persistCheckout(null);
                   }}
                 />
+                {paystackNeedsEmailVerification ? (
+                  <PaystackEmailQuickSet
+                    settingsQueryKey={["vendor", "settings"]}
+                    onSaved={() => {
+                      void queryClient.invalidateQueries({ queryKey: ["vendor", "settings"] });
+                    }}
+                  />
+                ) : null}
                 {boostSelection ? (
                   <button
                     type="button"

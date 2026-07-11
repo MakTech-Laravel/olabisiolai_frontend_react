@@ -48,6 +48,7 @@ import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { profileNeedsEmailVerification } from "@/api/userEmailVerification";
 import { fetchVendorSettings } from "@/api/vendorSettings";
 import { PurchaseEmailVerificationBlock } from "@/components/settings/PurchaseEmailVerificationBlock";
+import { PaystackEmailQuickSet } from "@/components/settings/PaystackEmailQuickSet";
 
 const PLAN_STORAGE_KEY = "verificationPlanId";
 
@@ -122,6 +123,8 @@ export default function VendorBoostReviewPayPage() {
 
   const emailVerificationProfile = vendorSettings?.profile ?? user;
   const purchaseBlockedByEmail = profileNeedsEmailVerification(emailVerificationProfile);
+  const paystackNeedsEmailVerification =
+    selectedGateway === "paystack" && !emailVerificationProfile?.email;
 
   useEffect(() => {
     if (profileInitDone) return;
@@ -443,6 +446,11 @@ export default function VendorBoostReviewPayPage() {
       return;
     }
 
+    if (paystackNeedsEmailVerification) {
+      showError("Add and verify your email above to pay with Paystack.");
+      return;
+    }
+
     if (!isVerification && !isBoostCheckout) {
       showError("No boost checkout found. Select a plan from the boost page first.");
       navigate("/vendor/boost", { replace: true });
@@ -674,7 +682,7 @@ export default function VendorBoostReviewPayPage() {
 
           <OrderSummaryCard
             onConfirmPay={() => void onConfirmPay()}
-            isPaying={isPaying || purchaseBlockedByEmail}
+            isPaying={isPaying || purchaseBlockedByEmail || paystackNeedsEmailVerification}
             confirmLabel={isResumingBoostPayment ? "Continue Payment" : undefined}
             planTitle={
               isBoostCheckout
@@ -702,6 +710,14 @@ export default function VendorBoostReviewPayPage() {
                     setPaystackAccessCode(null);
                   }}
                 />
+                {paystackNeedsEmailVerification ? (
+                  <PaystackEmailQuickSet
+                    settingsQueryKey={["vendor", "settings"]}
+                    onSaved={() => {
+                      void queryClient.invalidateQueries({ queryKey: ["vendor", "settings"] });
+                    }}
+                  />
+                ) : null}
                 {isBoostCheckout && boostSelection ? (
                   <div className="rounded-lg border border-border-light bg-muted/30 px-3 py-2 text-sm">
                     <div className="flex items-center justify-between">

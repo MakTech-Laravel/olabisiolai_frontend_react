@@ -110,7 +110,7 @@ export function OrderSummaryCard({
 
         {beforePayButton ? <div className="space-y-2">{beforePayButton}</div> : null}
 
-        <p>Verified first</p>
+        
         <Button
           className="w-full bg-brand-red text-white hover:bg-brand-red/90"
           onClick={handleConfirmPay}

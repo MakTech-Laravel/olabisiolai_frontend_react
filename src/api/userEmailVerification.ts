@@ -17,6 +17,16 @@ export async function updateUserEmail(email: string): Promise<UserSettingsPayloa
   return body.data
 }
 
+/** `POST /user/email/for-purchase` — set email and mark it verified, no OTP required. */
+export async function setUserEmailForPurchase(email: string): Promise<UserSettingsPayload> {
+  const response = await request.post<ApiEnvelope<UserSettingsPayload>>('/user/email/for-purchase', { email })
+  const body = response.data
+  if (!body?.success || !body.data) {
+    throw new Error(body?.message || 'Could not save email')
+  }
+  return body.data
+}
+
 /** `POST /user/email/verify-otp` — confirm email with 6-digit code. */
 export async function verifyUserEmailOtp(code: string): Promise<UserSettingsPayload> {
   const response = await request.post<ApiEnvelope<UserSettingsPayload>>('/user/email/verify-otp', { code })
