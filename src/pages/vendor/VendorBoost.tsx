@@ -103,7 +103,7 @@ export default function VendorBoost() {
   }
 
   return (
-    <div className="w-full space-y-8 p-4 md:p-6">
+    <div className="container mx-auto px-2 lg:px-0 space-y-8 p-4 md:p-6">
       <div id="boost-configurator">
         <DynamicBoostConfigurator
           catalog={catalog}

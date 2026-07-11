@@ -4,7 +4,7 @@ import { PaymentHeader } from "../paymnent/Header";
 
 export default function VendorPayments() {
   return (
-    <div className="p-4 md:p-6">
+    <div className="container mx-auto p-2 md:p-4">
       <div className="space-y-4">
         <PaymentHeader />
 

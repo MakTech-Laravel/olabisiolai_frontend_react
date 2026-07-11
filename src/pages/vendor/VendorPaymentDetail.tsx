@@ -19,7 +19,7 @@ export default function VendorPaymentDetailPage() {
   const p = data?.payment;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="container mx-auto p-2 md:p-4">
       <div className="mb-4">
         <Button variant="ghost" size="sm" asChild className="gap-2 px-0 text-brand-red hover:text-brand-red">
           <Link to="/vendor/payments">

@@ -12,7 +12,7 @@ export function UserShell({ children }: UserShellProps) {
       <FrontendHeader />
 
       <main className="bg-auth-bg">
-        <div className="mx-auto w-full max-w-[1400px] px-3 pb-6 sm:px-4 sm:pb-8 xl:px-8 xl:pb-10">
+        <div className="container mx-auto p-2 md:p-4">
           <div className="min-w-0">{children}</div>
         </div>
       </main>

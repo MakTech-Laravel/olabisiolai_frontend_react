@@ -1,7 +1,6 @@
 import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
-
-import { VendorLayout } from "@/layouts/vendor/VendorLayout";
+import { FrontendLayout } from "@/layouts/frontend/FrontendLayout";
 import { RoleGate } from "@/routes/RoleGate";
 import { suspensePage, vendorSuspensePage } from "@/routes/routeUtils";
 
@@ -36,11 +35,11 @@ export const vendorEntryRoute: RouteObject = {
 export const vendorRoutes: RouteObject = {
   element: (
     <RoleGate allow="vendor" fallback="/unauthorized">
-      <VendorLayout />
+      <FrontendLayout />
     </RoleGate>
   ),
   children: [
-    { path: "/vendor/dashboard", element: vendorSuspensePage(VendorProfile) },
+    { path: "/vendor/dashboard", element: <Navigate to="/user/profile" replace /> },
     { path: "/vendor/profile", element: <Navigate to="/user/profile" replace /> },
     { path: "/vendor/leads", element: vendorSuspensePage(VendorLeads) },
     { path: "/vendor/notifications", element: vendorSuspensePage(VendorNotifications) },

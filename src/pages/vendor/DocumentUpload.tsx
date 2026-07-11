@@ -54,7 +54,7 @@ export default function DocumentUpload() {
   const showAwaitingBanner = status?.awaiting_document_submission === true;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="container mx-auto p-2 md:p-4">
       {showAwaitingBanner ? (
         <div className="mb-6 flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-sky-950">

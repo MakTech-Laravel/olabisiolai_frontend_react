@@ -35,8 +35,8 @@ export default function VendorNotifications() {
   const totalPages = meta?.last_page ?? 1
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="container-fluid mx-auto space-y-4">
+    <div className="container mx-auto p-2 md:p-4">
+      <div className="container mx-auto space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">

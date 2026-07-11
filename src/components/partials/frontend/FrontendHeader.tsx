@@ -32,6 +32,7 @@ import {
 import { container } from "@/lib/container";
 import { resolveMediaUrl } from "@/lib/mediaUrl";
 import { cn } from "@/lib/utils";
+import { VendorNotificationBell } from "../vendor/VendorNotificationBell";
 
 const LOGO_HEADER = "/images/landing/gidira-logo-header.svg";
 const DEFAULT_HEADER_AVATAR = "/images/avatar/default-header-avatar.png";
@@ -87,7 +88,6 @@ function HeaderToolbar({
 }) {
   const { isAuthenticated, logout, user } = useAuth();
   const avatarSrc = resolveUserAvatar(user);
-  const isVendor = hasAnyRole(user, "vendor");
   const showActivityBell = isAuthenticated && hasAnyRole(user, ["user", "vendor"]);
   const profilePath = "/user/profile";
 
@@ -111,34 +111,24 @@ function HeaderToolbar({
         </Button>
       ) : null}
 
-      {showActivityBell ? <ActivityBellLink /> : null}
+      {showActivityBell ? <VendorNotificationBell /> : null}
 
       {isAuthenticated ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {isVendor ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-10 gap-1.5 px-2 text-sm font-medium text-ink-heading"
-              >
-                <CircleUserRound className="size-6" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className={cn(
-                  "h-10 w-10 overflow-hidden rounded-full p-0",
-                  isLightHeader
-                    ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
-                    : "border-border-gray bg-white text-ink-heading",
-                )}
-                aria-label="My account"
-              >
-                <HeaderAvatar src={avatarSrc} alt="Account" />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "h-10 w-10 overflow-hidden rounded-full p-0",
+                isLightHeader
+                  ? "border-[#2563eb] bg-white text-[#2563eb] hover:bg-muted"
+                  : "border-border-gray bg-white text-ink-heading",
+              )}
+              aria-label="My account"
+            >
+              <HeaderAvatar src={avatarSrc} alt="Account" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>

@@ -94,7 +94,7 @@ export default function AdminBoostRequestDetail() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="container mx-auto p-2 md:p-4">
       <Link
         to="/admin/boost-system"
         className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-chat-accent hover:underline"

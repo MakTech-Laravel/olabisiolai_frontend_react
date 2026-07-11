@@ -8,7 +8,6 @@ import { EngagementHeatmapCard } from "@/components/sections/vendor/analytics/En
 import { LeadsByChannelCard } from "@/components/sections/vendor/analytics/LeadsByChannelCard";
 import { ReachAreasCard } from "@/components/sections/vendor/analytics/ReachAreasCard";
 import { StatsGrid } from "@/components/sections/vendor/analytics/StatsGrid";
-import { TopListingsTable } from "@/components/sections/vendor/analytics/TopListingsTable";
 import { TrafficTrendCard } from "@/components/sections/vendor/analytics/TrafficTrendCard";
 import {
   fetchVendorAnalytics,
@@ -52,7 +51,7 @@ export default function VendorAnalytics() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="container mx-auto p-2 md:p-4">
       <AnalyticsPageContent
         isPremiumActive={isPremiumActive}
         analytics={analytics}
@@ -106,7 +105,7 @@ function PremiumAnalytics({
         <ReachAreasCard reachAreas={analytics.reachAreas} />
         <EngagementHeatmapCard heatmap={analytics.engagementHeatmap} />
       </div>
-      <TopListingsTable listings={analytics.topListings} />
+      {/* <TopListingsTable listings={analytics.topListings} /> */}
     </>
   );
 }

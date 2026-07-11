@@ -3,11 +3,13 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BadgeCheck,
+  BarChart3,
   ChevronRight,
   Crown,
   Loader2,
   MessageSquare,
   Pencil,
+  Receipt,
   Rocket,
   Share2,
   Trash2,
@@ -428,6 +430,20 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                   title="Share page"
                   subtitle="Send your business link to customers"
                   onClick={() => void handleShare()}
+                />
+                <ManageToolRow
+                  iconClass="bg-[#EAF3EA] text-[#2E8B57]"
+                  icon={<BarChart3 className="size-5" strokeWidth={2} />}
+                  title="Analytics"
+                  subtitle="Views, leads & engagement stats"
+                  to="/vendor/analytics"
+                />
+                <ManageToolRow
+                  iconClass="bg-[#F3EDFB] text-[#7C5CBF]"
+                  icon={<Receipt className="size-5" strokeWidth={2} />}
+                  title="Billing History"
+                  subtitle="Past payments & invoices"
+                  to="/vendor/payments"
                 />
               </div>
 

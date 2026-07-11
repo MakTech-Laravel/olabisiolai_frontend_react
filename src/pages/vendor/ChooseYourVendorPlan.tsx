@@ -12,7 +12,7 @@ export default function ChooseYourVendorPlan() {
     const signupMode = searchParams.get("signup") === "1";
 
     return (
-        <div className="p-4 md:p-6">
+        <div className="container mx-auto p-2 md:p-4">
             <div className="mx-auto max-w-5xl space-y-12 text-foreground md:space-y-16">
                 <ChoosePlanHeader signupMode={signupMode} />
                 <PlanPricingCards signupMode={signupMode} />
