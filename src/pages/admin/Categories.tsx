@@ -24,6 +24,8 @@ export default function CategoriesTable() {
   const [isAdding, setIsAdding] = useState(false);
   const [editName, setEditName] = useState("");
   const [editSubcategories, setEditSubcategories] = useState("");
+  const [editIconFile, setEditIconFile] = useState<File | null>(null);
+  const [editIconPreview, setEditIconPreview] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,11 +52,14 @@ export default function CategoriesTable() {
   const lastPage = pagination?.last_page ?? 1;
 
   const createMut = useMutation({
-    mutationFn: () =>
-      adminCreateCategory({
+    mutationFn: () => {
+      if (!editIconFile) throw new Error("Icon is required.");
+      return adminCreateCategory({
         name: editName,
         subcategories: editSubcategories.split(",").map((s) => s.trim()).filter(Boolean),
-      }),
+        icon: editIconFile,
+      });
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "categories"] });
       closeModal();
@@ -70,6 +75,7 @@ export default function CategoriesTable() {
         id: editingCategory.id,
         name: editName,
         subcategories: editSubcategories.split(",").map((s) => s.trim()).filter(Boolean),
+        icon: editIconFile,
       });
     },
     onSuccess: () => {
@@ -110,6 +116,8 @@ export default function CategoriesTable() {
     setShowEditModal(false);
     setEditingCategory(null);
     setIsAdding(false);
+    setEditIconFile(null);
+    setEditIconPreview(null);
     setFormError(null);
   };
 
@@ -124,8 +132,28 @@ export default function CategoriesTable() {
     setEditingCategory(category);
     setEditName(category.name);
     setEditSubcategories(category.subcategories.join(", "));
+    setEditIconFile(null);
+    setEditIconPreview(category.icon_url ?? null);
     setFormError(null);
     setShowEditModal(true);
+  };
+
+  const handleIconChange = (file: File | null) => {
+    if (!file) {
+      setEditIconFile(null);
+      setEditIconPreview(editingCategory?.icon_url ?? null);
+      return;
+    }
+
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!ext || !["png", "svg"].includes(ext)) {
+      setFormError("Icon must be a PNG or SVG file.");
+      return;
+    }
+
+    setFormError(null);
+    setEditIconFile(file);
+    setEditIconPreview(URL.createObjectURL(file));
   };
 
   const handleSave = () => {
@@ -133,6 +161,10 @@ export default function CategoriesTable() {
     const name = editName.trim();
     if (!name) {
       setFormError("Name is required.");
+      return;
+    }
+    if (isAdding && !editIconFile) {
+      setFormError("Icon is required (PNG or SVG).");
       return;
     }
     if (isAdding) createMut.mutate();
@@ -144,6 +176,8 @@ export default function CategoriesTable() {
     setEditingCategory(null);
     setEditName("");
     setEditSubcategories("");
+    setEditIconFile(null);
+    setEditIconPreview(null);
     setFormError(null);
     setShowEditModal(true);
   };
@@ -230,6 +264,9 @@ export default function CategoriesTable() {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide w-64">
                   Category Name
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide w-20">
+                  Icon
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide">
                   Subcategories
                 </th>
@@ -243,6 +280,13 @@ export default function CategoriesTable() {
                 <tr key={cat.id} className="group hover:bg-gray-50/70 transition-colors">
                   <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap align-top pt-5">
                     {cat.name}
+                  </td>
+                  <td className="px-6 py-4 align-top pt-5">
+                    {cat.icon_url ? (
+                      <img src={cat.icon_url} alt="" className="size-8 object-contain" />
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 align-top pt-5">
                     <SubcategoryBadges subcategories={cat.subcategories} />
@@ -283,7 +327,12 @@ export default function CategoriesTable() {
             className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
-              <p className="font-semibold text-gray-800 text-sm leading-tight">{cat.name}</p>
+              <div className="flex items-center gap-3 min-w-0">
+                {cat.icon_url ? (
+                  <img src={cat.icon_url} alt="" className="size-8 shrink-0 object-contain" />
+                ) : null}
+                <p className="font-semibold text-gray-800 text-sm leading-tight">{cat.name}</p>
+              </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
@@ -368,6 +417,28 @@ export default function CategoriesTable() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Icon
+                  <span className="ml-1 font-normal text-gray-400">
+                    ({isAdding ? "PNG or SVG required" : "PNG or SVG, optional"})
+                  </span>
+                </label>
+                {editIconPreview ? (
+                  <div className="mb-2 flex items-center gap-3">
+                    <img src={editIconPreview} alt="" className="size-12 object-contain rounded border border-gray-200 bg-gray-50 p-1" />
+                    {!isAdding && !editIconFile ? (
+                      <span className="text-xs text-gray-500">Current icon</span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <input
+                  type="file"
+                  accept=".png,.svg,image/png,image/svg+xml"
+                  onChange={(e) => handleIconChange(e.target.files?.[0] ?? null)}
+                  className="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                 />
               </div>
               <div>

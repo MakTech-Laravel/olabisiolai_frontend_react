@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 interface CategoryCardProps {
   name: string;
   icon: string;
+  iconUrl?: string | null;
   to?: string;
   onClick?: () => void;
 }
 
-export function CategoryCard({ name, icon, to, onClick }: CategoryCardProps) {
+export function CategoryCard({ name, icon, iconUrl, to, onClick }: CategoryCardProps) {
   const IconComponent = (LucideIcons as any)[icon];
 
   const handleClick = () => {
@@ -28,7 +29,11 @@ export function CategoryCard({ name, icon, to, onClick }: CategoryCardProps) {
       className="flex flex-col items-center gap-2 py-6 px-4 bg-bg-section rounded-2xl hover:shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
     >
       <div className="p-4 bg-card rounded-full">
-        {IconComponent && <IconComponent className="w-8 h-8 text-text-primary" />}
+        {iconUrl ? (
+          <img src={iconUrl} alt="" className="w-8 h-8 object-contain" />
+        ) : (
+          IconComponent && <IconComponent className="w-8 h-8 text-text-primary" />
+        )}
       </div>
       <p className="text-base font-inter text-text-primary font-medium text-center">
         {name}

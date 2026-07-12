@@ -13,6 +13,19 @@ function paginationFrom(inner: Record<string, unknown>): AdminCategoriesListResu
   }
 }
 
+function appendSubcategories(form: FormData, subcategories?: string[] | string | null) {
+  if (subcategories == null) return
+  if (Array.isArray(subcategories)) {
+    subcategories.forEach((item, index) => {
+      const value = item.trim()
+      if (value) form.append(`subcategories[${index}]`, value)
+    })
+    return
+  }
+  const value = subcategories.trim()
+  if (value) form.append('subcategories', value)
+}
+
 export async function adminListCategories(params: {
   search?: string
   page?: number
@@ -41,10 +54,15 @@ export async function adminListCategories(params: {
 export async function adminCreateCategory(payload: {
   name: string
   subcategories?: string[] | string | null
+  icon: File
 }): Promise<CategoryDto> {
-  const res = await request.post('/admin/categories/create', {
-    name: payload.name.trim(),
-    subcategories: payload.subcategories ?? undefined,
+  const form = new FormData()
+  form.append('name', payload.name.trim())
+  appendSubcategories(form, payload.subcategories)
+  form.append('icon', payload.icon)
+
+  const res = await request.post('/admin/categories/create', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   const inner = laravelInnerData(res.data) ?? {}
   const cat = parseCategoryDto(inner.category)
@@ -64,11 +82,16 @@ export async function adminUpdateCategory(payload: {
   id: number
   name: string
   subcategories?: string[] | string | null
+  icon?: File | null
 }): Promise<CategoryDto> {
-  const res = await request.post('/admin/categories/update', {
-    id: payload.id,
-    name: payload.name.trim(),
-    subcategories: payload.subcategories ?? undefined,
+  const form = new FormData()
+  form.append('id', String(payload.id))
+  form.append('name', payload.name.trim())
+  appendSubcategories(form, payload.subcategories)
+  if (payload.icon) form.append('icon', payload.icon)
+
+  const res = await request.post('/admin/categories/update', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   const inner = laravelInnerData(res.data) ?? {}
   const cat = parseCategoryDto(inner.category)

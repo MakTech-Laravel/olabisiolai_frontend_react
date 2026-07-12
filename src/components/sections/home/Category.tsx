@@ -41,6 +41,7 @@ export function Category() {
                   key={category.id}
                   name={category.name}
                   icon={lucideIconForCategoryName(category.name)}
+                  iconUrl={category.icon_url}
                   to={`/filters?category_id=${category.id}`}
                 />
               ))}

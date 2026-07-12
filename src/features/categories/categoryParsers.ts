@@ -34,6 +34,8 @@ export function parseCategoryDto(raw: unknown): CategoryDto | null {
     subcategories: normalizeSubcategories(o.subcategories),
     subcategories_count:
       typeof o.subcategories_count === 'number' ? o.subcategories_count : undefined,
+    icon: typeof o.icon === 'string' ? o.icon : null,
+    icon_url: typeof o.icon_url === 'string' ? o.icon_url : null,
     created_at: typeof o.created_at === 'string' ? o.created_at : null,
     updated_at: typeof o.updated_at === 'string' ? o.updated_at : null,
   }
