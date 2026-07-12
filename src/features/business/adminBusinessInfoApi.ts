@@ -491,6 +491,28 @@ export async function fetchAdminBusinessList(
   };
 }
 
+/** Fetch every business_info row (paginated under the hood) for CSV export, with 1-based SN. */
+export type AdminBusinessExportRow = AdminBusinessInfo & { sn: number };
+
+export async function fetchAllAdminBusinessesForExport(): Promise<AdminBusinessExportRow[]> {
+  const perPage = 100;
+  let page = 1;
+  let lastPage = 1;
+  const items: AdminBusinessInfo[] = [];
+
+  do {
+    const result = await fetchAdminBusinessList({ page, per_page: perPage });
+    items.push(...result.items);
+    lastPage = result.pagination.last_page;
+    page += 1;
+  } while (page <= lastPage);
+
+  return items.map((item, index) => ({
+    ...item,
+    sn: index + 1,
+  }));
+}
+
 function extractCategoryRows(payload: unknown): unknown[] {
   const root = asRecord(payload);
   if (!root || root.success !== true) return [];

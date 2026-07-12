@@ -34,6 +34,15 @@ export function parseCategoryDto(raw: unknown): CategoryDto | null {
     subcategories: normalizeSubcategories(o.subcategories),
     subcategories_count:
       typeof o.subcategories_count === 'number' ? o.subcategories_count : undefined,
+    business_count: (() => {
+      const raw = o.business_count
+      if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        const n = Number(raw)
+        return Number.isFinite(n) ? n : 0
+      }
+      return 0
+    })(),
     icon: typeof o.icon === 'string' ? o.icon : null,
     icon_url: typeof o.icon_url === 'string' ? o.icon_url : null,
     created_at: typeof o.created_at === 'string' ? o.created_at : null,

@@ -261,11 +261,17 @@ export default function CategoriesTable() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide w-20">
+                  SN
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide w-64">
                   Category Name
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide w-20">
                   Icon
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-900 uppercase tracking-wide w-28">
+                  Businesses
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-900 uppercase tracking-wide">
                   Subcategories
@@ -276,8 +282,11 @@ export default function CategoriesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {categories.map((cat) => (
+              {categories.map((cat, index) => (
                 <tr key={cat.id} className="group hover:bg-gray-50/70 transition-colors">
+                  <td className="px-6 py-4 align-top pt-5 text-sm text-gray-500">
+                    {(pagination?.current_page ? (pagination.current_page - 1) * PER_PAGE : 0) + index + 1}
+                  </td>
                   <td className="px-6 py-4 font-semibold text-gray-800 whitespace-nowrap align-top pt-5">
                     {cat.name}
                   </td>
@@ -287,6 +296,11 @@ export default function CategoriesTable() {
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 align-top pt-5 text-center">
+                    <span className="inline-flex min-w-8 items-center justify-center rounded-md bg-gray-100 px-2.5 py-1 text-sm font-semibold tabular-nums text-gray-800">
+                      {cat.business_count ?? 0}
+                    </span>
                   </td>
                   <td className="px-6 py-4 align-top pt-5">
                     <SubcategoryBadges subcategories={cat.subcategories} />
@@ -314,6 +328,13 @@ export default function CategoriesTable() {
                   </td>
                 </tr>
               ))}
+              {!listQuery.isLoading && categories.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
+                    No categories found.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -355,6 +376,13 @@ export default function CategoriesTable() {
             </div>
 
             <div className="border-t border-gray-100 mb-3" />
+
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Businesses</p>
+              <span className="inline-flex min-w-8 items-center justify-center rounded-md bg-gray-100 px-2.5 py-1 text-sm font-semibold tabular-nums text-gray-800">
+                {cat.business_count ?? 0}
+              </span>
+            </div>
 
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
               Subcategories

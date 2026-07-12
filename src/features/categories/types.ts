@@ -4,6 +4,7 @@ export type CategoryDto = {
   name: string
   subcategories: string[]
   subcategories_count?: number
+  business_count?: number
   icon?: string | null
   icon_url?: string | null
   created_at?: string | null

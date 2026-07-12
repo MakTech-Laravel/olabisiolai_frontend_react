@@ -18,6 +18,7 @@ import {
   changeAdminBusinessStatus,
   deleteAdminBusiness,
   fetchAdminBusinessList,
+  fetchAllAdminBusinessesForExport,
   startAdminVendorConversation,
   type AdminBusinessInfo,
   type AdminBusinessStatusApi,
@@ -138,6 +139,7 @@ export default function BusinessTable() {
   const [actionType, setActionType] = useState<"status" | "delete" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Business | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -294,46 +296,56 @@ export default function BusinessTable() {
     totalBusinesses === 0 ? 0 : Math.round(((summary?.approved_verification ?? 0) / totalBusinesses) * 100);
   const pendingReview = summary?.pending_verification ?? 0;
 
-  const handleExport = () => {
-    const headers = [
-      "Business Name",
-      "Vendor",
-      "Vendor Email",
-      "Category",
-      "Type",
-      "Location",
-      "Status",
-      "Verification",
-      "Boost",
-      "Plan",
-      "Join Date",
-    ];
-    const rows = businesses.map((item) => [
-      item.name,
-      item.vendorName,
-      item.vendorEmail,
-      item.category,
-      item.type,
-      item.location,
-      item.status,
-      item.verification,
-      item.boost,
-      item.plan,
-      formatDate(item.joinDate),
-    ]);
-    const csvRows = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\r\n");
-    const now = new Date();
-    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const blob = new Blob([`\uFEFF${csvRows}`], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `businesses-export-${stamp}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const allBusinesses = await fetchAllAdminBusinessesForExport();
+      const headers = [
+        "SN",
+        "Business Name",
+        "Vendor",
+        "Vendor Email",
+        "Category",
+        "Type",
+        "Location",
+        "Status",
+        "Verification",
+        "Boost",
+        "Plan",
+        "Join Date",
+      ];
+      const rows = allBusinesses.map((item) => [
+        item.sn,
+        item.name,
+        item.vendorName,
+        item.vendorEmail,
+        item.category,
+        item.type,
+        item.location,
+        item.status,
+        item.verification,
+        item.boost,
+        item.plan,
+        formatDate(item.joinDate),
+      ]);
+      const csvRows = [headers, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\r\n");
+      const now = new Date();
+      const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const blob = new Blob([`\uFEFF${csvRows}`], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `businesses-export-${stamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Export failed.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const lastPage = Math.max(1, pagination.last_page);
@@ -470,10 +482,12 @@ export default function BusinessTable() {
               ) : null}
               <button
                 type="button"
-                onClick={handleExport}
-                className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                onClick={() => void handleExport()}
+                disabled={exporting}
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Export page (CSV)
+                {exporting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                {exporting ? "Exporting…" : "Export all (CSV)"}
               </button>
             </div>
           </div>
