@@ -4,6 +4,7 @@ import Featured from "@/components/sections/home/Featured";
 import HowGidiraWorks from "@/components/sections/home/HowGidiraWorks";
 import WhyChooseGidira from "@/components/sections/home/WhyChooseGidira";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import BusinessCatalog from "@/components/sections/home/BusinessCatalog";
 
 export default function Home() {
   return (
@@ -14,6 +15,9 @@ export default function Home() {
       </ScrollReveal>
       <ScrollReveal delayMs={60}>
         <Featured />
+      </ScrollReveal>
+      <ScrollReveal delayMs={60}>
+        <BusinessCatalog />
       </ScrollReveal>
       <ScrollReveal delayMs={60}>
         <HowGidiraWorks />

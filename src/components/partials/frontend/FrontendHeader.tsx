@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Bell,
   CircleUserRound,
+  Gift,
   Home,
   LayoutGrid,
   LocateFixed,
@@ -134,15 +135,21 @@ function HeaderToolbar({
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to={dashboardPath} className="flex items-center gap-2">
-                <LayoutGrid className="size-4" aria-hidden />
-                Dashboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link to={profilePath} className="flex items-center gap-2">
                 <User className="size-4" aria-hidden />
                 Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/catalog" className="flex items-center gap-2">
+                <LayoutGrid className="size-4" aria-hidden />
+                Catalog
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/user/referrals" className="flex items-center gap-2">
+                <Gift className="size-4" aria-hidden />
+                Referrals
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -252,6 +259,18 @@ function MobileMenu({
               Browse Businesses
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild className="rounded-lg">
+            <Link to="/catalog" className="flex items-center gap-2 py-2">
+              <LayoutGrid className="size-4" aria-hidden />
+              Catalog
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="rounded-lg">
+            <Link to="/user/referrals" className="flex items-center gap-2 py-2">
+              <Gift className="size-4" aria-hidden />
+              Referrals
+            </Link>
+          </DropdownMenuItem>
           {isAuthenticated ? (
             <DropdownMenuItem asChild className="rounded-lg">
               <Link to={profilePath} className="flex items-center gap-2 py-2">
@@ -296,7 +315,9 @@ export function FrontendHeader({ compactOnMobile = false }: { compactOnMobile?: 
   const profilePath = "/user/profile";
   const isLightHeader =
     pathname === "/" ||
+    pathname === "/catalog" ||
     pathname === "/service" ||
+    pathname === "/user/referrals" ||
     pathname.startsWith("/businesses/") ||
     pathname === "/messages" ||
     pathname.startsWith("/user/messages") ||

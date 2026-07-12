@@ -29,7 +29,7 @@ export function WhyVerifySection() {
   ];
 
   return (
-    <div className="rounded-xl border bg-black p-4 sm:p-6 shadow-sm">
+    <div className="container mx-auto rounded-xl border bg-black px-4 md:px-4 p-4 sm:p-6 shadow-sm">
       <div className="">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-white">Why verify your identity?</h2>
       </div>

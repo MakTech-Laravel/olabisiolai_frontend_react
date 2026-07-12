@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, MessageCircle, Store } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -44,7 +45,27 @@ export function CatalogItemDetailSheet({
   const { requireAuthNavigate, isAuthReady, isAuthenticated } = useRequireAuthNavigate()
   const [loading, setLoading] = useState(false)
 
-  if (!open || !item) return null
+  useEffect(() => {
+    if (!open) return
+
+    const prevBodyOverflow = document.body.style.overflow
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow
+      document.documentElement.style.overflow = prevHtmlOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, onClose])
+
+  if (!open || !item || typeof document === 'undefined') return null
 
   const priceLabel = formatCatalogPrice(item)
 
@@ -103,9 +124,9 @@ export function CatalogItemDetailSheet({
     })()
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center lg:items-center lg:p-6"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="catalog-detail-title"
@@ -119,12 +140,11 @@ export function CatalogItemDetailSheet({
 
       <div
         className={cn(
-          'relative z-10 flex w-full flex-col overflow-hidden bg-auth-bg text-ink',
-          'h-[100dvh] max-h-[100dvh]',
-          'lg:container lg:mx-auto lg:h-auto lg:max-h-[min(90dvh,820px)] lg:max-w-2xl lg:rounded-2xl lg:border lg:border-border-light lg:shadow-2xl',
+          'relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border-light bg-auth-bg text-ink shadow-2xl',
+          'max-h-[min(90dvh,820px)]',
         )}
       >
-        <header className="flex shrink-0 items-center gap-3 border-b border-border-light bg-white px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:rounded-t-2xl lg:pt-3">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border-light bg-white px-3 py-3 rounded-t-2xl">
           <button
             type="button"
             aria-label="Back to catalog"
@@ -139,8 +159,8 @@ export function CatalogItemDetailSheet({
           <div className="size-10" aria-hidden />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-visible pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
-          <div className="relative aspect-square w-full bg-border-light lg:aspect-[16/10] lg:max-h-[min(48vh,420px)]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-visible pb-6">
+          <div className="relative aspect-[16/10] w-full max-h-[min(48vh,420px)] bg-border-light">
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className="size-full object-cover" />
             ) : (
@@ -158,12 +178,12 @@ export function CatalogItemDetailSheet({
             </span>
           </div>
 
-          <div className="space-y-4 px-4 py-5 lg:px-6">
+          <div className="space-y-4 px-4 py-5 sm:px-6">
             <div>
-              <h3 className="font-heading text-xl font-bold leading-snug text-ink lg:text-2xl">{item.name}</h3>
+              <h3 className="font-heading text-xl font-bold leading-snug text-ink sm:text-2xl">{item.name}</h3>
               <p className="mt-2 font-heading text-lg font-bold text-ink">{priceLabel}</p>
               {item.description ? (
-                <p className="mt-3 text-[15px] leading-relaxed text-body-secondary lg:text-base">
+                <p className="mt-3 text-[15px] leading-relaxed text-body-secondary sm:text-base">
                   {item.description}
                 </p>
               ) : null}
@@ -174,7 +194,7 @@ export function CatalogItemDetailSheet({
                 type="button"
                 disabled={loading}
                 onClick={handleMessageBusiness}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#1e293b] px-4 py-3.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(15,23,42,0.18)] transition-all hover:bg-[#273449] active:scale-[0.99] disabled:opacity-60 lg:py-4"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#1e293b] px-4 py-3.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(15,23,42,0.18)] transition-all hover:bg-[#273449] active:scale-[0.99] disabled:opacity-60 sm:py-4"
               >
                 {loading ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -185,7 +205,7 @@ export function CatalogItemDetailSheet({
               </button>
             ) : null}
 
-            <section className="rounded-2xl border border-border-light bg-white p-4 lg:p-5">
+            <section className="rounded-2xl border border-border-light bg-white p-4 sm:p-5">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-stat-muted">
                 About the business
               </h4>
@@ -204,6 +224,7 @@ export function CatalogItemDetailSheet({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

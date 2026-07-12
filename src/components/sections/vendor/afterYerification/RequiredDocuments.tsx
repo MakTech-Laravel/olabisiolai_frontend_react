@@ -228,7 +228,7 @@ export function RequiredDocuments({ className }: { className?: string }) {
 
   return (
     <div className={className}>
-      <div className="bg-card p-4 sm:p-6">
+      <div className="container mx-auto bg-card">
         {statusPayload?.is_flagged ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <p className="font-semibold">Action required on your verification</p>
