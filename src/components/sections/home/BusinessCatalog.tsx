@@ -47,8 +47,8 @@ export default function BusinessCatalog() {
   }
 
   return (
-    <section className="bg-bg-section">
-      <div className="container mx-auto px-4 lg:py-24 py-12">
+    <section className="">
+      <div className="bg-card container mx-auto py-12 lg:py-24">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="lg:text-3xl text-2xl font-inter font-bold text-text-primary">
@@ -58,12 +58,6 @@ export default function BusinessCatalog() {
               A curated pick of premium catalog items. Explore the full discovery feed in Catalog.
             </p>
           </div>
-          <Link
-            to="/catalog"
-            className="inline-flex shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-inter font-medium text-primary-foreground"
-          >
-            Browse Catalog
-          </Link>
         </div>
 
         <div className="mt-12">
@@ -146,6 +140,15 @@ export default function BusinessCatalog() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="relative z-20 mt-8 text-center">
+          <Link
+            to="/catalog"
+            className="relative z-20 inline-flex rounded-xl bg-primary px-4 py-3 font-inter text-lg font-normal text-primary-foreground"
+          >
+            View All Catalog Items
+          </Link>
         </div>
       </div>
 

@@ -1,17 +1,19 @@
-import { useQuery } from '@tanstack/react-query'
-import { Loader2, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { CatalogItemDetailSheet } from '@/components/business/CatalogItemDetailSheet'
+import FiltersSection from '@/components/sections/filters/FiltersSection'
 import { formatCatalogPrice, type CatalogItemType } from '@/features/catalog/businessCatalogApi'
 import {
   fetchCatalogDiscoveryFeed,
   type DiscoveryCatalogItem,
 } from '@/features/catalog/publicCatalogDiscoveryApi'
 import { useCategoryCatalog } from '@/features/categories/useCategoryCatalog'
+import { useLocationCatalog } from '@/features/locations/useLocationCatalog'
 import { cn } from '@/lib/utils'
+import { router } from '@/routes/router'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronLeft, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 
 const GRADIENTS = [
   'linear-gradient(135deg,#2e3b52,#46587a)',
@@ -22,58 +24,166 @@ const GRADIENTS = [
   'linear-gradient(135deg,#2a4a6a,#3f6c97)',
 ]
 
+const CATALOG_BASE_PATH = '/catalog'
+
 type TypeFilter = 'all' | CatalogItemType
 
 export default function CatalogDiscoveryPage() {
-  const [page, setPage] = useState(1)
-  const [type, setType] = useState<TypeFilter>('all')
-  const [categoryId, setCategoryId] = useState<number | 'all'>('all')
-  const [cityInput, setCityInput] = useState('')
-  const [city, setCity] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const queryClient = useQueryClient()
+  const [showFilters, setShowFilters] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedItem, setSelectedItem] = useState<DiscoveryCatalogItem | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const perPage = 24
 
-  const { data: categories = [] } = useCategoryCatalog()
+  const categoryIdParam = searchParams.get('category_id')
+  const categoryNameParam = (searchParams.get('category') ?? '').trim()
+  const searchTerm = (searchParams.get('search') ?? '').trim()
+  const locationRaw = Number(searchParams.get('location_id') ?? '')
+  const selectedLocationId = Number.isFinite(locationRaw) && locationRaw > 0 ? locationRaw : null
+  const typeParam = (searchParams.get('type') ?? '').trim().toLowerCase()
+  const typeFilter: TypeFilter =
+    typeParam === 'product' || typeParam === 'service' ? typeParam : 'all'
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchInput.trim()), 350)
-    return () => window.clearTimeout(t)
-  }, [searchInput])
+  const { data: apiCategories = [], isPending: categoriesLoading } = useCategoryCatalog()
+  const { data: catalogLocations = [] } = useLocationCatalog()
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setCity(cityInput.trim()), 350)
-    return () => window.clearTimeout(t)
-  }, [cityInput])
+  const filterCategoryId = useMemo<number | null>(() => {
+    const rawId = Number(categoryIdParam ?? '')
+    if (Number.isFinite(rawId) && rawId > 0) return rawId
+    if (categoryNameParam && apiCategories.length > 0) {
+      const byName = apiCategories.find((c) => c.name === categoryNameParam)
+      if (byName) return byName.id
+    }
+    return null
+  }, [categoryIdParam, categoryNameParam, apiCategories])
 
-  useEffect(() => {
-    setPage(1)
-  }, [type, categoryId, city, search])
+  const filterCategoryName = useMemo(() => {
+    if (filterCategoryId == null) return null
+    return apiCategories.find((c) => c.id === filterCategoryId)?.name ?? null
+  }, [apiCategories, filterCategoryId])
 
-  const feedQuery = useQuery({
-    queryKey: ['catalog', 'feed', page, type, categoryId, city, search],
-    queryFn: () =>
+  const locationOptions = useMemo(() => {
+    return [...catalogLocations].sort((a, b) => a.label.localeCompare(b.label))
+  }, [catalogLocations])
+
+  const cityFilter = useMemo(() => {
+    if (selectedLocationId == null) return ''
+    const location = locationOptions.find((opt) => opt.id === selectedLocationId)
+    if (!location) return ''
+    return (
+      location.lgaName?.trim() ||
+      location.cityName?.trim() ||
+      location.stateName?.trim() ||
+      location.label.trim()
+    )
+  }, [selectedLocationId, locationOptions])
+
+  const filterQueryKey = useMemo(
+    () => ['catalog', 'feed', filterCategoryId, selectedLocationId, cityFilter, searchTerm, typeFilter, perPage],
+    [filterCategoryId, selectedLocationId, cityFilter, searchTerm, typeFilter, perPage],
+  )
+
+  const feedQuery = useInfiniteQuery({
+    queryKey: filterQueryKey,
+    queryFn: ({ pageParam }) =>
       fetchCatalogDiscoveryFeed({
-        page,
-        per_page: 24,
-        type,
-        category_id: categoryId === 'all' ? undefined : categoryId,
-        city: city || undefined,
-        search: search || undefined,
+        page: pageParam,
+        per_page: perPage,
+        category_id: filterCategoryId ?? undefined,
+        city: cityFilter || undefined,
+        search: searchTerm || undefined,
+        type: typeFilter,
       }),
-    staleTime: 60 * 1000,
-    placeholderData: (prev) => prev,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.current_page < lastPage.pagination.last_page
+        ? lastPage.pagination.current_page + 1
+        : undefined,
+    staleTime: 60_000,
   })
 
-  const items = feedQuery.data?.items ?? []
-  const pagination = feedQuery.data?.pagination
-  const lastPage = pagination?.last_page ?? 1
+  const items = useMemo<DiscoveryCatalogItem[]>(() => {
+    if (feedQuery.isError) return []
+    return feedQuery.data?.pages.flatMap((page) => page.items) ?? []
+  }, [feedQuery.data?.pages, feedQuery.isError])
 
-  const categoryOptions = useMemo(
-    () => categories.map((c) => ({ id: c.id, name: c.name })),
-    [categories],
+  const totalCount = feedQuery.data?.pages[0]?.pagination.total ?? items.length
+  const itemsLoading = feedQuery.isPending
+
+  const handleSelectCategory = (categoryId: number | null) => {
+    const next = new URLSearchParams(searchParams)
+    if (categoryId == null) {
+      next.delete('category_id')
+      next.delete('category')
+    } else {
+      next.set('category_id', String(categoryId))
+      next.delete('category')
+    }
+    setSearchParams(next, { replace: true })
+  }
+
+  const handleSelectLocation = (locationId: number | null) => {
+    const next = new URLSearchParams(searchParams)
+    if (locationId === null) next.delete('location_id')
+    else next.set('location_id', String(locationId))
+    setSearchParams(next, { replace: true })
+  }
+
+  const handleSearchTermChange = (value: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (!value.trim()) next.delete('search')
+    else next.set('search', value.trim())
+    setSearchParams(next, { replace: true })
+  }
+
+  const handleTypeChange = (value: TypeFilter) => {
+    const next = new URLSearchParams(searchParams)
+    if (value === 'all') next.delete('type')
+    else next.set('type', value)
+    setSearchParams(next, { replace: true })
+  }
+
+  const hasActiveFilters = useMemo(() => {
+    const hasCategoryInUrl = Boolean(categoryIdParam?.trim()) || categoryNameParam.length > 0
+    return (
+      hasCategoryInUrl ||
+      searchTerm.length > 0 ||
+      selectedLocationId != null ||
+      typeFilter !== 'all'
+    )
+  }, [categoryIdParam, categoryNameParam, searchTerm, selectedLocationId, typeFilter])
+
+  const onResetFiltersClick = useCallback(
+    (event?: { preventDefault?: () => void }) => {
+      event?.preventDefault?.()
+      setShowFilters(false)
+      void queryClient.cancelQueries({ queryKey: ['catalog', 'feed'] })
+      void queryClient.removeQueries({ queryKey: ['catalog', 'feed'] })
+      void router.navigate(CATALOG_BASE_PATH, { replace: true })
+      setSearchParams('', { replace: true })
+    },
+    [queryClient, setSearchParams],
   )
+
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0]
+        if (first?.isIntersecting && feedQuery.hasNextPage && !feedQuery.isFetchingNextPage) {
+          void feedQuery.fetchNextPage()
+        }
+      },
+      { rootMargin: '240px' },
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [feedQuery.fetchNextPage, feedQuery.hasNextPage, feedQuery.isFetchingNextPage])
 
   const openItem = (item: DiscoveryCatalogItem) => {
     setSelectedItem(item)
@@ -85,68 +195,142 @@ export default function CatalogDiscoveryPage() {
     setSelectedItem(null)
   }
 
+  const filtersSectionProps = {
+    categories: apiCategories,
+    selectedCategoryId: filterCategoryId,
+    onSelectCategory: handleSelectCategory,
+    subcategoryOptions: [] as string[],
+    selectedSubcategory: null as string | null,
+    onSelectSubcategory: () => undefined,
+    locationOptions,
+    selectedLocationId,
+    onSelectLocation: handleSelectLocation,
+    searchTerm,
+    onSearchTermChange: handleSearchTermChange,
+    verifiedOnly: false,
+    onVerifiedOnlyChange: () => undefined,
+    selectedMinRating: null as number | null,
+    onSelectMinRating: () => undefined,
+    categoriesLoading,
+    showVerifiedOnly: false,
+    showMinRating: false,
+    showSubcategory: false,
+    searchPlaceholder: 'Search products, services, or businesses…',
+  }
+
   return (
-    <div className="min-h-dvh bg-bg-section">
-      <div className="container mx-auto px-4 py-10 lg:py-14">
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-chat-accent">Discovery</p>
-          <h1 className="mt-1 text-3xl font-inter font-bold text-text-primary lg:text-4xl">Catalog</h1>
-          <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-            Premium products and services, trending offers, and recommendations by category and city.
+    <div key={searchParams.toString() || 'default'} className="min-h-screen bg-background">
+      <div className="bg-card shadow-sm px-4 py-4 sm:px-6">
+        <div className="container mx-auto px-2 sm:px-4">
+          <Link
+            to="/"
+            className="flex items-center font-inter font-normal text-base text-primary hover:text-primary/80"
+          >
+            <ChevronLeft size={20} className="mr-1" />
+            Back to Home
+          </Link>
+          <h1 className="mt-4 text-2xl font-inter font-bold text-text-primary sm:text-3xl">
+            {searchTerm ? 'Search results' : 'Catalog'}
+          </h1>
+          <p className="mt-2 font-inter text-sm font-normal text-text-secondary sm:text-base">
+            {searchTerm
+              ? `Showing catalog items matching "${searchTerm}"`
+              : filterCategoryName
+                ? `Showing catalog items in ${filterCategoryName}`
+                : 'Premium products and services, trending offers, and recommendations by category and city.'}
           </p>
         </div>
+      </div>
 
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stat-muted" />
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search products, services, or businesses…"
-              className="h-11 w-full rounded-xl border border-border-light bg-white pl-10 pr-3 text-sm outline-none focus:border-chat-accent"
-            />
+      <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-card px-4 py-3 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setShowFilters(true)}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-text-primary hover:bg-muted"
+        >
+          <SlidersHorizontal size={16} />
+          Filters
+        </button>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={() => onResetFiltersClick()}
+            className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-primary hover:bg-muted"
+            aria-label="Reset filters"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <RotateCcw size={16} className="shrink-0" aria-hidden />
+              Reset
+            </span>
+          </button>
+        ) : null}
+      </div>
+
+      {showFilters ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFilters(false)} />
+          <div className="absolute bottom-0 left-0 top-0 w-[min(100vw-2rem,24rem)] max-w-[85vw] overflow-y-auto bg-background shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background p-4">
+              <span className="font-inter text-lg font-semibold text-text-primary">Filters</span>
+              <button
+                type="button"
+                onClick={() => setShowFilters(false)}
+                className="rounded-md p-1 hover:bg-muted"
+                aria-label="Close filters"
+              >
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+            <div className="p-3 sm:p-4">
+              <FiltersSection
+                key={searchParams.toString() || 'default'}
+                radioGroupId="catalog-mobile-drawer"
+                layout="drawer"
+                {...filtersSectionProps}
+              />
+            </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <select
-              value={categoryId === 'all' ? 'all' : String(categoryId)}
-              onChange={(e) => {
-                const value = e.target.value
-                setCategoryId(value === 'all' ? 'all' : Number(value))
-              }}
-              className="h-10 rounded-xl border border-border-light bg-white px-3 text-sm"
+        </div>
+      ) : null}
+
+      <div className="container mx-auto flex min-w-0 flex-col gap-6 px-3 py-4 sm:px-4 sm:py-6 lg:flex-row lg:px-4 lg:py-8">
+        <aside className="hidden w-full shrink-0 space-y-3 lg:block lg:w-1/4 xl:w-1/5">
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={() => onResetFiltersClick()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-text-primary shadow-sm hover:bg-muted"
             >
-              <option value="all">All categories</option>
-              {categoryOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={cityInput}
-              onChange={(e) => setCityInput(e.target.value)}
-              placeholder="Filter by city / LGA / state"
-              className="h-10 rounded-xl border border-border-light bg-white px-3 text-sm outline-none focus:border-chat-accent"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {([
-              ['all', 'All'],
-              ['service', 'Services'],
-              ['product', 'Products'],
-            ] as const).map(([key, label]) => (
+              <RotateCcw size={16} className="shrink-0" aria-hidden />
+              Reset filters
+            </button>
+          ) : null}
+          <FiltersSection
+            key={searchParams.toString() || 'default'}
+            radioGroupId="catalog-desktop-sidebar"
+            {...filtersSectionProps}
+          />
+        </aside>
+
+        <div className="min-w-0 w-full lg:w-3/4 xl:w-4/5">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {(
+              [
+                ['all', 'All'],
+                ['service', 'Services'],
+                ['product', 'Products'],
+              ] as const
+            ).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
-                aria-pressed={type === key}
-                onClick={() => setType(key)}
+                aria-pressed={typeFilter === key}
+                onClick={() => handleTypeChange(key)}
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-                  type === key
+                  typeFilter === key
                     ? 'border-ink bg-ink text-white'
-                    : 'border-border-light bg-white text-body-secondary hover:bg-auth-bg',
+                    : 'border-border bg-card text-text-secondary hover:bg-muted',
                 )}
               >
                 {label}
@@ -154,45 +338,47 @@ export default function CatalogDiscoveryPage() {
             ))}
           </div>
 
+          <div className="mb-4 flex items-center justify-between gap-2 text-sm text-text-secondary">
+            <span>{totalCount} items</span>
+            {feedQuery.isFetching ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          </div>
 
-        </div>
-
-        {feedQuery.isLoading && !feedQuery.data ? (
-          <div className="flex justify-center py-20 text-text-secondary">
-            <Loader2 className="size-9 animate-spin" aria-hidden />
-          </div>
-        ) : feedQuery.isError ? (
-          <div className="rounded-xl border border-border bg-card px-4 py-10 text-center text-sm text-text-secondary">
-            <p>Could not load the catalog feed.</p>
-            <button
-              type="button"
-              onClick={() => void feedQuery.refetch()}
-              className="mt-3 text-primary font-medium underline-offset-2 hover:underline"
-            >
-              Try again
-            </button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card px-4 py-12 text-center">
-            <p className="text-base font-medium text-text-primary">No catalog items match these filters.</p>
-            <p className="mt-2 text-sm text-text-secondary">Try another category or city, or browse businesses.</p>
-            <Link to="/filters" className="mt-4 inline-flex text-sm font-medium text-primary underline-offset-2 hover:underline">
-              Browse businesses
-            </Link>
-          </div>
-        ) : (
-          <>
-            <div className="mb-4 flex items-center justify-between gap-2 text-sm text-text-secondary">
-              <span>{pagination?.total ?? items.length} items</span>
-              {feedQuery.isFetching ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          {itemsLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-8 animate-spin text-primary" />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+          ) : feedQuery.isError ? (
+            <div className="rounded-xl border border-border bg-card px-4 py-10 text-center text-sm text-text-secondary">
+              <p>Could not load the catalog feed.</p>
+              <button
+                type="button"
+                onClick={() => void feedQuery.refetch()}
+                className="mt-3 font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Try again
+              </button>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card px-4 py-12 text-center">
+              <p className="text-base font-medium text-text-primary">No catalog items match these filters.</p>
+              <p className="mt-2 text-sm text-text-secondary">
+                Try another category or location, or browse businesses.
+              </p>
+              <Link
+                to="/filters"
+                className="mt-4 inline-flex text-sm font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Browse businesses
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((item, index) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => openItem(item)}
-                  className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-transform transition-shadow duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
+                  className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
                 >
                   <div
                     className="relative"
@@ -220,20 +406,22 @@ export default function CatalogDiscoveryPage() {
                     ) : null}
                   </div>
                   <div className="flex flex-1 flex-col px-3 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-stat-muted line-clamp-1">
+                    <p className="line-clamp-1 text-[11px] font-medium uppercase tracking-wide text-stat-muted">
                       {item.businessName}
                       {item.categoryName ? ` · ${item.categoryName}` : ''}
                     </p>
                     <h3 className="mt-1 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
                     {item.description ? (
-                      <p className="mt-1 flex-1 text-xs leading-relaxed text-stat-muted line-clamp-2">
+                      <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-stat-muted">
                         {item.description}
                       </p>
                     ) : null}
                     <div className="mt-2 flex items-end justify-between gap-2">
-                      <p className="font-heading text-[15px] font-bold text-ink">{formatCatalogPrice(item)}</p>
+                      <p className="font-heading text-[15px] font-bold text-ink">
+                        {formatCatalogPrice(item)}
+                      </p>
                       {item.cityName || item.locationLabel ? (
-                        <p className="text-[11px] text-stat-muted line-clamp-1">
+                        <p className="line-clamp-1 text-[11px] text-stat-muted">
                           {item.cityName || item.locationLabel}
                         </p>
                       ) : null}
@@ -242,32 +430,14 @@ export default function CatalogDiscoveryPage() {
                 </button>
               ))}
             </div>
+          )}
 
-            {lastPage > 1 ? (
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  disabled={page <= 1 || feedQuery.isFetching}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-border bg-white px-3 py-2 text-sm disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-text-secondary">
-                  {page} / {lastPage}
-                </span>
-                <button
-                  type="button"
-                  disabled={page >= lastPage || feedQuery.isFetching}
-                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                  className="rounded-lg border border-border bg-white px-3 py-2 text-sm disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
+          <div ref={loadMoreRef} className="flex min-h-12 items-center justify-center py-4">
+            {feedQuery.isFetchingNextPage ? (
+              <Loader2 className="size-6 animate-spin text-primary" aria-label="Loading more catalog items" />
             ) : null}
-          </>
-        )}
+          </div>
+        </div>
       </div>
 
       {selectedItem ? (
