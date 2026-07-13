@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, MessageCircle, Store } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import {
   buildCatalogMessagePayload,
@@ -16,6 +16,7 @@ import { startDirectConversationWithVendor } from '@/features/messaging/startDir
 import { directMessageTo } from '@/lib/directMessage'
 import { showError } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
+import { businessProfilePath } from '@/lib/businessProfile'
 
 const SWIPE_THRESHOLD_PX = 48
 
@@ -335,22 +336,24 @@ export function CatalogItemDetailSheet({
               </button>
             ) : null}
 
-            <section className="rounded-2xl border border-border-light bg-white p-4 sm:p-5">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-stat-muted">
-                About the business
-              </h4>
-              <div className="mt-3 flex items-start gap-3">
-                <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e8f5ee] text-chat-accent">
-                  <Store className="size-5" aria-hidden />
+            <Link to={businessProfilePath(businessInfoId)}>
+              <section className="rounded-2xl border border-border-light bg-white p-4 sm:p-5">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-stat-muted">
+                  About the business
+                </h4>
+                <div className="mt-3 flex items-start gap-3">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e8f5ee] text-chat-accent">
+                    <Store className="size-5" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-heading text-base font-bold text-ink hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">{businessName}</p>
+                    <p className="mt-1 text-sm text-body-secondary">
+                      Enquire about this {item.type} via direct message.
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-heading text-base font-bold text-ink">{businessName}</p>
-                  <p className="mt-1 text-sm text-body-secondary">
-                    Enquire about this {item.type} via direct message.
-                  </p>
-                </div>
-              </div>
-            </section>
+              </section>
+            </Link>
           </div>
         </div>
       </div>
