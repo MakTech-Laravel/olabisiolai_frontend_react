@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BookOpen,
   ChevronRight,
+  Gift,
   LogOut,
   MessageSquareQuote,
   ShieldAlert,
@@ -135,6 +136,12 @@ export default function SettingsHub() {
                 to="/user/business-reviews"
               />
             ) : null}
+            <HubRow
+              icon={<Gift className="size-4" />}
+              label="Referral Program"
+              description="Refer a friend and earn rewards"
+              to="/user/referrals"
+            />
           </HubSection>
 
           <HubSection title="Account">
