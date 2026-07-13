@@ -46,6 +46,31 @@ export default function CatalogDiscoveryPage() {
   const typeFilter: TypeFilter =
     typeParam === 'product' || typeParam === 'service' ? typeParam : 'all'
 
+  const [searchInput, setSearchInput] = useState(searchTerm)
+
+  useEffect(() => {
+    setSearchInput(searchTerm)
+  }, [searchTerm])
+
+  useEffect(() => {
+    const nextValue = searchInput.trim()
+    if (nextValue === searchTerm) return
+
+    const timer = window.setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (!nextValue) next.delete('search')
+          else next.set('search', nextValue)
+          return next
+        },
+        { replace: true },
+      )
+    }, 350)
+
+    return () => window.clearTimeout(timer)
+  }, [searchInput, searchTerm, setSearchParams])
+
   const { data: apiCategories = [], isPending: categoriesLoading } = useCategoryCatalog()
   const { data: catalogLocations = [] } = useLocationCatalog()
 
@@ -132,10 +157,7 @@ export default function CatalogDiscoveryPage() {
   }
 
   const handleSearchTermChange = (value: string) => {
-    const next = new URLSearchParams(searchParams)
-    if (!value.trim()) next.delete('search')
-    else next.set('search', value.trim())
-    setSearchParams(next, { replace: true })
+    setSearchInput(value)
   }
 
   const handleTypeChange = (value: TypeFilter) => {
@@ -149,16 +171,25 @@ export default function CatalogDiscoveryPage() {
     const hasCategoryInUrl = Boolean(categoryIdParam?.trim()) || categoryNameParam.length > 0
     return (
       hasCategoryInUrl ||
+      searchInput.trim().length > 0 ||
       searchTerm.length > 0 ||
       selectedLocationId != null ||
       typeFilter !== 'all'
     )
-  }, [categoryIdParam, categoryNameParam, searchTerm, selectedLocationId, typeFilter])
+  }, [
+    categoryIdParam,
+    categoryNameParam,
+    searchInput,
+    searchTerm,
+    selectedLocationId,
+    typeFilter,
+  ])
 
   const onResetFiltersClick = useCallback(
     (event?: { preventDefault?: () => void }) => {
       event?.preventDefault?.()
       setShowFilters(false)
+      setSearchInput('')
       void queryClient.cancelQueries({ queryKey: ['catalog', 'feed'] })
       void queryClient.removeQueries({ queryKey: ['catalog', 'feed'] })
       void router.navigate(CATALOG_BASE_PATH, { replace: true })
@@ -205,7 +236,7 @@ export default function CatalogDiscoveryPage() {
     locationOptions,
     selectedLocationId,
     onSelectLocation: handleSelectLocation,
-    searchTerm,
+    searchTerm: searchInput,
     onSearchTermChange: handleSearchTermChange,
     verifiedOnly: false,
     onVerifiedOnlyChange: () => undefined,
@@ -219,7 +250,7 @@ export default function CatalogDiscoveryPage() {
   }
 
   return (
-    <div key={searchParams.toString() || 'default'} className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <div className="bg-card shadow-sm px-4 py-4 sm:px-6">
         <div className="container mx-auto px-2 sm:px-4">
           <Link
@@ -283,7 +314,6 @@ export default function CatalogDiscoveryPage() {
             </div>
             <div className="p-3 sm:p-4">
               <FiltersSection
-                key={searchParams.toString() || 'default'}
                 radioGroupId="catalog-mobile-drawer"
                 layout="drawer"
                 {...filtersSectionProps}
@@ -306,7 +336,6 @@ export default function CatalogDiscoveryPage() {
             </button>
           ) : null}
           <FiltersSection
-            key={searchParams.toString() || 'default'}
             radioGroupId="catalog-desktop-sidebar"
             {...filtersSectionProps}
           />

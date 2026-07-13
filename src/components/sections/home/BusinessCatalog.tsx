@@ -48,7 +48,7 @@ export default function BusinessCatalog() {
 
   return (
     <section className="">
-      <div className="bg-card container mx-auto py-12 lg:py-24">
+      <div className="bg-card container px-4 mx-auto py-12 lg:py-24">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="lg:text-3xl text-2xl font-inter font-bold text-text-primary">
