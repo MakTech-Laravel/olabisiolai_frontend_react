@@ -16,6 +16,8 @@ export type BusinessCatalogItem = {
   priceLabel: string | null
   priceFrom: boolean
   imageUrl: string | null
+  imageUrls: string[]
+  imagePaths: string[]
   sortOrder: number
 }
 
@@ -45,6 +47,13 @@ function asBoolean(value: unknown): boolean {
   return value === true || value === 1 || value === '1'
 }
 
+function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry) => asString(entry).trim())
+    .filter((entry) => entry.length > 0)
+}
+
 export function parseCatalogItem(raw: unknown): BusinessCatalogItem | null {
   const item = asRecord(raw)
   if (!item) return null
@@ -54,6 +63,11 @@ export function parseCatalogItem(raw: unknown): BusinessCatalogItem | null {
 
   const typeRaw = asString(item.type, 'service').toLowerCase()
   const type: CatalogItemType = typeRaw === 'product' ? 'product' : 'service'
+  const imageUrls = parseStringList(item.image_urls)
+  const imageUrl = asString(item.image_url).trim() || imageUrls[0] || null
+  if (imageUrl && !imageUrls.includes(imageUrl)) {
+    imageUrls.unshift(imageUrl)
+  }
 
   return {
     id,
@@ -63,7 +77,9 @@ export function parseCatalogItem(raw: unknown): BusinessCatalogItem | null {
     priceKobo: asNumber(item.price_kobo),
     priceLabel: asString(item.price_label).trim() || null,
     priceFrom: asBoolean(item.price_from),
-    imageUrl: asString(item.image_url).trim() || null,
+    imageUrl,
+    imageUrls,
+    imagePaths: parseStringList(item.image_paths),
     sortOrder: asNumber(item.sort_order) ?? 0,
   }
 }
@@ -114,7 +130,10 @@ export type CatalogItemInput = {
   description?: string
   priceLabel?: string
   priceFrom?: boolean
+  images?: File[]
+  /** @deprecated use `images` */
   image?: File | null
+  keepImagePaths?: string[]
   removeImage?: boolean
 }
 
@@ -125,10 +144,23 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
   if (input.description?.trim()) formData.append('description', input.description.trim())
   if (input.priceLabel?.trim()) formData.append('price_label', input.priceLabel.trim())
   formData.append('price_from', input.priceFrom ? '1' : '0')
-  if (input.image) {
-    formData.append('image', catalogImageFileForUpload(input.image, input.name.trim()))
+
+  const files = [
+    ...(input.images ?? []),
+    ...(input.image ? [input.image] : []),
+  ]
+
+  files.forEach((file, index) => {
+    formData.append('images[]', catalogImageFileForUpload(file, `${input.name.trim()}-${index + 1}`))
+  })
+
+  if (input.keepImagePaths) {
+    input.keepImagePaths.forEach((path, index) => {
+      formData.append(`keep_image_paths[${index}]`, path)
+    })
   }
-  if (input.removeImage) formData.append('remove_image', '1')
+
+  if (input.removeImage) formData.append('remove_images', '1')
 }
 
 export async function createCatalogItem(input: CatalogItemInput, businessId?: number): Promise<BusinessCatalogItem> {

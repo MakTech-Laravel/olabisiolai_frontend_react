@@ -78,7 +78,6 @@ function ActivityBellLink() {
 
 function HeaderToolbar({
   isLightHeader,
-  dashboardPath,
   showLocationPicker,
   onOpenLocationMap,
 }: {

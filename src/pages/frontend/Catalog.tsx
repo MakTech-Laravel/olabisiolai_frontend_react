@@ -80,6 +80,11 @@ export default function CatalogDiscoveryPage() {
     setDetailOpen(true)
   }
 
+  const closeDetail = () => {
+    setDetailOpen(false)
+    setSelectedItem(null)
+  }
+
   return (
     <div className="min-h-dvh bg-bg-section">
       <div className="container mx-auto px-4 py-10 lg:py-14">
@@ -91,7 +96,7 @@ export default function CatalogDiscoveryPage() {
           </p>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stat-muted" />
             <input
@@ -102,30 +107,6 @@ export default function CatalogDiscoveryPage() {
               className="h-11 w-full rounded-xl border border-border-light bg-white pl-10 pr-3 text-sm outline-none focus:border-chat-accent"
             />
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {([
-              ['all', 'All'],
-              ['service', 'Services'],
-              ['product', 'Products'],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={type === key}
-                onClick={() => setType(key)}
-                className={cn(
-                  'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-                  type === key
-                    ? 'border-ink bg-ink text-white'
-                    : 'border-border-light bg-white text-body-secondary hover:bg-auth-bg',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           <div className="grid gap-2 sm:grid-cols-2">
             <select
               value={categoryId === 'all' ? 'all' : String(categoryId)}
@@ -150,6 +131,30 @@ export default function CatalogDiscoveryPage() {
               className="h-10 rounded-xl border border-border-light bg-white px-3 text-sm outline-none focus:border-chat-accent"
             />
           </div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              ['all', 'All'],
+              ['service', 'Services'],
+              ['product', 'Products'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={type === key}
+                onClick={() => setType(key)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                  type === key
+                    ? 'border-ink bg-ink text-white'
+                    : 'border-border-light bg-white text-body-secondary hover:bg-auth-bg',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+
         </div>
 
         {feedQuery.isLoading && !feedQuery.data ? (
@@ -264,6 +269,20 @@ export default function CatalogDiscoveryPage() {
           </>
         )}
       </div>
+
+      {selectedItem ? (
+        <CatalogItemDetailSheet
+          open={detailOpen}
+          item={selectedItem}
+          businessInfoId={selectedItem.businessInfoId}
+          businessName={selectedItem.businessName}
+          vendorUserUuid={selectedItem.vendorUserUuid}
+          fromPath="/catalog"
+          showMessageBusiness
+          messagesPath="/messages"
+          onClose={closeDetail}
+        />
+      ) : null}
     </div>
   )
 }
