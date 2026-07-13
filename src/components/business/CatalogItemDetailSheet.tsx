@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, MessageCircle, Store } from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, MessageCircle, Store } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import {
   buildCatalogMessagePayload,
@@ -15,6 +16,9 @@ import { startDirectConversationWithVendor } from '@/features/messaging/startDir
 import { directMessageTo } from '@/lib/directMessage'
 import { showError } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
+import { businessProfilePath } from '@/lib/businessProfile'
+
+const SWIPE_THRESHOLD_PX = 48
 
 type CatalogItemDetailSheetProps = {
   open: boolean
@@ -43,10 +47,92 @@ export function CatalogItemDetailSheet({
   const queryClient = useQueryClient()
   const { requireAuthNavigate, isAuthReady, isAuthenticated } = useRequireAuthNavigate()
   const [loading, setLoading] = useState(false)
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const swipeStartX = useRef<number | null>(null)
+  const swipeStartY = useRef<number | null>(null)
 
-  if (!open || !item) return null
+  const photos = useMemo(() => {
+    if (!item) return [] as string[]
+    const urls = item.imageUrls?.length
+      ? item.imageUrls
+      : item.imageUrl
+        ? [item.imageUrl]
+        : []
+    return urls.filter((url) => typeof url === 'string' && url.trim().length > 0)
+  }, [item])
+
+  const hasMultiplePhotos = photos.length > 1
+  const activePhoto = photos[photoIndex] ?? null
+
+  useEffect(() => {
+    if (!open) return
+    setPhotoIndex(0)
+  }, [open, item?.id])
+
+  useEffect(() => {
+    if (!open) return
+
+    const prevBodyOverflow = document.body.style.overflow
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (!hasMultiplePhotos) return
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        setPhotoIndex((current) => (current - 1 + photos.length) % photos.length)
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        setPhotoIndex((current) => (current + 1) % photos.length)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow
+      document.documentElement.style.overflow = prevHtmlOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, onClose, hasMultiplePhotos, photos.length])
+
+  if (!open || !item || typeof document === 'undefined') return null
 
   const priceLabel = formatCatalogPrice(item)
+
+  const goPrev = () => {
+    if (!hasMultiplePhotos) return
+    setPhotoIndex((current) => (current - 1 + photos.length) % photos.length)
+  }
+
+  const goNext = () => {
+    if (!hasMultiplePhotos) return
+    setPhotoIndex((current) => (current + 1) % photos.length)
+  }
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!hasMultiplePhotos) return
+    swipeStartX.current = event.clientX
+    swipeStartY.current = event.clientY
+  }
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!hasMultiplePhotos || swipeStartX.current === null || swipeStartY.current === null) return
+
+    const deltaX = event.clientX - swipeStartX.current
+    const deltaY = event.clientY - swipeStartY.current
+    swipeStartX.current = null
+    swipeStartY.current = null
+
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) < Math.abs(deltaY)) return
+    if (deltaX < 0) goNext()
+    else goPrev()
+  }
 
   const handleMessageBusiness = () => {
     if (!showMessageBusiness || loading) return
@@ -103,9 +189,9 @@ export function CatalogItemDetailSheet({
     })()
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center lg:items-center lg:p-6"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="catalog-detail-title"
@@ -119,12 +205,11 @@ export function CatalogItemDetailSheet({
 
       <div
         className={cn(
-          'relative z-10 flex w-full flex-col overflow-hidden bg-auth-bg text-ink',
-          'h-[100dvh] max-h-[100dvh]',
-          'lg:container lg:mx-auto lg:h-auto lg:max-h-[min(90dvh,820px)] lg:max-w-2xl lg:rounded-2xl lg:border lg:border-border-light lg:shadow-2xl',
+          'relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border-light bg-auth-bg text-ink shadow-2xl',
+          'max-h-[min(90dvh,820px)]',
         )}
       >
-        <header className="flex shrink-0 items-center gap-3 border-b border-border-light bg-white px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:rounded-t-2xl lg:pt-3">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border-light bg-white px-3 py-3 rounded-t-2xl">
           <button
             type="button"
             aria-label="Back to catalog"
@@ -139,31 +224,97 @@ export function CatalogItemDetailSheet({
           <div className="size-10" aria-hidden />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-visible pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
-          <div className="relative aspect-square w-full bg-border-light lg:aspect-[16/10] lg:max-h-[min(48vh,420px)]">
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="size-full object-cover" />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-visible pb-6">
+          <div
+            className="relative aspect-[16/10] w-full max-h-[min(48vh,420px)] touch-pan-y select-none bg-border-light"
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => {
+              swipeStartX.current = null
+              swipeStartY.current = null
+            }}
+          >
+            {activePhoto ? (
+              <img
+                src={activePhoto}
+                alt=""
+                draggable={false}
+                className="size-full object-cover"
+              />
             ) : (
               <div className="grid size-full place-items-center bg-gradient-to-br from-[#2e3b52] to-[#46587a] text-sm font-semibold uppercase tracking-wide text-white/80">
                 {item.type}
               </div>
             )}
+
             <span
               className={cn(
-                'absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+                'absolute left-3 top-3 z-10 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
                 item.type === 'service' ? 'text-chat-accent' : 'text-brand',
               )}
             >
               {item.type}
             </span>
+
+            {hasMultiplePhotos ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous photo"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    goPrev()
+                  }}
+                  className="absolute left-2 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70"
+                >
+                  <ChevronLeft className="size-5" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next photo"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    goNext()
+                  }}
+                  className="absolute right-2 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70"
+                >
+                  <ChevronRight className="size-5" aria-hidden />
+                </button>
+                <span className="absolute bottom-2 right-3 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white">
+                  {photoIndex + 1}/{photos.length}
+                </span>
+              </>
+            ) : null}
           </div>
 
-          <div className="space-y-4 px-4 py-5 lg:px-6">
+          {hasMultiplePhotos ? (
+            <div className="flex gap-2 overflow-x-auto px-4 pt-3 sm:px-6">
+              {photos.map((url, index) => (
+                <button
+                  key={`${url}-${index}`}
+                  type="button"
+                  aria-label={`Show photo ${index + 1}`}
+                  aria-pressed={index === photoIndex}
+                  onClick={() => setPhotoIndex(index)}
+                  className={cn(
+                    'size-14 shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
+                    index === photoIndex
+                      ? 'border-chat-accent'
+                      : 'border-border-light opacity-80 hover:opacity-100',
+                  )}
+                >
+                  <img src={url} alt="" className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="space-y-4 px-4 py-5 sm:px-6">
             <div>
-              <h3 className="font-heading text-xl font-bold leading-snug text-ink lg:text-2xl">{item.name}</h3>
+              <h3 className="font-heading text-xl font-bold leading-snug text-ink sm:text-2xl">{item.name}</h3>
               <p className="mt-2 font-heading text-lg font-bold text-ink">{priceLabel}</p>
               {item.description ? (
-                <p className="mt-3 text-[15px] leading-relaxed text-body-secondary lg:text-base">
+                <p className="mt-3 text-[15px] leading-relaxed text-body-secondary sm:text-base">
                   {item.description}
                 </p>
               ) : null}
@@ -174,7 +325,7 @@ export function CatalogItemDetailSheet({
                 type="button"
                 disabled={loading}
                 onClick={handleMessageBusiness}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#1e293b] px-4 py-3.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(15,23,42,0.18)] transition-all hover:bg-[#273449] active:scale-[0.99] disabled:opacity-60 lg:py-4"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[#1e293b] px-4 py-3.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(15,23,42,0.18)] transition-all hover:bg-[#273449] active:scale-[0.99] disabled:opacity-60 sm:py-4"
               >
                 {loading ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -185,25 +336,28 @@ export function CatalogItemDetailSheet({
               </button>
             ) : null}
 
-            <section className="rounded-2xl border border-border-light bg-white p-4 lg:p-5">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-stat-muted">
-                About the business
-              </h4>
-              <div className="mt-3 flex items-start gap-3">
-                <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e8f5ee] text-chat-accent">
-                  <Store className="size-5" aria-hidden />
+            <Link to={businessProfilePath(businessInfoId)}>
+              <section className="rounded-2xl border border-border-light bg-white p-4 sm:p-5">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-stat-muted">
+                  About the business
+                </h4>
+                <div className="mt-3 flex items-start gap-3">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e8f5ee] text-chat-accent">
+                    <Store className="size-5" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-heading text-base font-bold text-ink hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">{businessName}</p>
+                    <p className="mt-1 text-sm text-body-secondary">
+                      Enquire about this {item.type} via direct message.
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-heading text-base font-bold text-ink">{businessName}</p>
-                  <p className="mt-1 text-sm text-body-secondary">
-                    Enquire about this {item.type} via direct message.
-                  </p>
-                </div>
-              </div>
-            </section>
+              </section>
+            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -21,7 +21,7 @@ export const businessPagePhotoGrid =
   "grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4";
 
 export const businessPageCatalogGrid =
-  "grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4";
+  "grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6";
 
 export const businessPageSidebar =
   "w-full shrink-0 space-y-6 lg:sticky lg:top-24 lg:max-w-[22rem] xl:max-w-md";

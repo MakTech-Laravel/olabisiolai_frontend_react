@@ -24,7 +24,7 @@ import {
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
-import { showError, showSuccess } from '@/lib/sweetAlert'
+import alert, { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
 
 const GRADIENTS = [
@@ -50,7 +50,8 @@ type EditorState = {
   description: string
   priceLabel: string
   priceFrom: boolean
-  image: File | null
+  images: File[]
+  keepImagePaths: string[]
   removeImage: boolean
 }
 
@@ -61,7 +62,8 @@ const emptyEditor = (): EditorState => ({
   description: '',
   priceLabel: '',
   priceFrom: false,
-  image: null,
+  images: [],
+  keepImagePaths: [],
   removeImage: false,
 })
 
@@ -129,7 +131,8 @@ export function VendorOwnerCatalogSection({
       description: item.description ?? '',
       priceLabel: item.priceLabel ?? '',
       priceFrom: item.priceFrom,
-      image: null,
+      images: [],
+      keepImagePaths: [...item.imagePaths],
       removeImage: false,
     })
     setSheetOpen(true)
@@ -172,7 +175,8 @@ export function VendorOwnerCatalogSection({
       description,
       priceLabel,
       priceFrom: editor.priceFrom,
-      image: editor.image,
+      images: editor.images,
+      keepImagePaths: editor.item ? editor.keepImagePaths : undefined,
       removeImage: editor.removeImage,
     }
 
@@ -197,6 +201,10 @@ export function VendorOwnerCatalogSection({
   async function handleDelete(item?: BusinessCatalogItem) {
     const target = item ?? editor.item
     if (!target) return
+
+    const confirmed = await alert.confirmDelete(target.name)
+    if (!confirmed) return
+
     setSaving(true)
     try {
       await deleteCatalogItem(target.id, businessId)
@@ -287,19 +295,81 @@ export function VendorOwnerCatalogSection({
         </label>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-body-secondary">Photo (optional)</label>
+          <label className="mb-1.5 block text-sm font-medium text-body-secondary">
+            Photos (optional)
+          </label>
+
+          {editor.item && editor.keepImagePaths.length > 0 ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {editor.item.imageUrls.map((url, index) => {
+                const path = editor.item?.imagePaths[index]
+                if (!path || !editor.keepImagePaths.includes(path)) return null
+                return (
+                  <div key={path} className="relative size-16 overflow-hidden rounded-lg border border-border-light">
+                    <img src={url} alt="" className="size-full object-cover" />
+                    <button
+                      type="button"
+                      aria-label={`Remove photo ${index + 1}`}
+                      className="absolute right-0.5 top-0.5 grid size-5 place-items-center rounded-full bg-black/60 text-[10px] text-white"
+                      onClick={() =>
+                        setEditor((current) => ({
+                          ...current,
+                          keepImagePaths: current.keepImagePaths.filter((entry) => entry !== path),
+                          removeImage: current.keepImagePaths.length <= 1 && current.images.length === 0,
+                        }))
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {editor.images.length > 0 ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {editor.images.map((file, index) => (
+                <div key={`${file.name}-${index}`} className="relative size-16 overflow-hidden rounded-lg border border-border-light">
+                  <img src={URL.createObjectURL(file)} alt="" className="size-full object-cover" />
+                  <button
+                    type="button"
+                    aria-label={`Remove new photo ${index + 1}`}
+                    className="absolute right-0.5 top-0.5 grid size-5 place-items-center rounded-full bg-black/60 text-[10px] text-white"
+                    onClick={() =>
+                      setEditor((current) => ({
+                        ...current,
+                        images: current.images.filter((_, i) => i !== index),
+                      }))
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           <Input
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            multiple
             onChange={(event) => {
-              const file = event.target.files?.[0] ?? null
+              const selected = Array.from(event.target.files ?? [])
+              event.target.value = ''
+              if (selected.length === 0) return
               setEditor((current) => ({
                 ...current,
-                image: file,
+                images: [...current.images, ...selected],
                 removeImage: false,
               }))
             }}
           />
+          {editor.keepImagePaths.length + editor.images.length > 0 ? (
+            <p className="mt-1 text-xs text-stat-muted">
+              {editor.keepImagePaths.length + editor.images.length} photos
+            </p>
+          ) : null}
         </div>
       </div>
 

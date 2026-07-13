@@ -32,6 +32,10 @@ export type FiltersSectionProps = {
   categoriesLoading?: boolean;
   /** Drawer/mobile panel — drop sticky card chrome for narrow screens. */
   layout?: "sidebar" | "drawer";
+  showVerifiedOnly?: boolean;
+  showMinRating?: boolean;
+  showSubcategory?: boolean;
+  searchPlaceholder?: string;
 };
 
 export default function FiltersSection({
@@ -53,6 +57,10 @@ export default function FiltersSection({
   onSelectMinRating,
   categoriesLoading,
   layout = "sidebar",
+  showVerifiedOnly = true,
+  showMinRating = true,
+  showSubcategory = true,
+  searchPlaceholder = "Search business name...",
 }: FiltersSectionProps) {
   const size = 24;
   const catName = `${radioGroupId}-category`;
@@ -128,13 +136,14 @@ export default function FiltersSection({
           type="search"
           value={searchTerm}
           onChange={(event) => onSearchTermChange(event.target.value)}
-          placeholder="Search business name..."
-          aria-label="Search businesses"
+          placeholder={searchPlaceholder}
+          aria-label="Search"
           className="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
         />
       </div>
 
       {/* Verified Only Toggle */}
+      {showVerifiedOnly ? (
       <div className="mb-6">
         <div className="flex items-center justify-between p-2 bg-muted rounded-md shadow-md">
           <svg
@@ -172,6 +181,7 @@ export default function FiltersSection({
           </label>
         </div>
       </div>
+      ) : null}
 
       {/* Category Section — list from API (`CategoryDto[]`) */}
       <div className="mb-8">
@@ -228,7 +238,7 @@ export default function FiltersSection({
             </div>
           </div>
         )}
-        {selectedCategoryId !== null && subcategoryOptions.length > 0 ? (
+        {showSubcategory && selectedCategoryId !== null && subcategoryOptions.length > 0 ? (
           <div className="mt-4">
             <label
               htmlFor={`${radioGroupId}-subcategory`}
@@ -365,6 +375,7 @@ export default function FiltersSection({
       </div>
 
       {/* Ratings & Reviews Section */}
+      {showMinRating ? (
       <div className="mb-6">
         <h3 className="font-inter font-semibold text-text-primary mb-3">
           Ratings & Reviews
@@ -412,6 +423,7 @@ export default function FiltersSection({
           ))}
         </div>
       </div>
+      ) : null}
     </div>
   );
 }
