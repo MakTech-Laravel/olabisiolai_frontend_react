@@ -23,7 +23,7 @@ const GRADIENTS = [
   'linear-gradient(135deg,#2a4a6a,#3f6c97)',
 ]
 
-const HOME_LIMIT = 6
+const HOME_LIMIT = 8
 
 export default function BusinessCatalog() {
   const [selectedItem, setSelectedItem] = useState<DiscoveryCatalogItem | null>(null)
