@@ -19,6 +19,11 @@ export type OpenPaystackCheckoutOptions = {
   currency?: string;
   reference: string;
   accessCode?: string | null;
+  /**
+   * Vendor checkouts initialize on the server. Reusing `newTransaction` with that
+   * same reference causes Paystack "Duplicate Transaction Reference".
+   */
+  requireAccessCode?: boolean;
   customerName?: string;
   customerPhone?: string;
   onSuccess: (reference: string) => void | Promise<void>;
@@ -51,6 +56,13 @@ export async function openPaystackCheckout(options: OpenPaystackCheckoutOptions)
 
   if (accessCode) {
     paystack.resumeTransaction(accessCode, callbacks);
+    return;
+  }
+
+  if (options.requireAccessCode) {
+    options.onError?.(
+      'Paystack checkout expired. Close this window and tap Pay again for a fresh payment session.',
+    );
     return;
   }
 

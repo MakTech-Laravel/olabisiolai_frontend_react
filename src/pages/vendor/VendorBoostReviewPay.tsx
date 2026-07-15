@@ -315,15 +315,17 @@ export default function VendorBoostReviewPayPage() {
   }, [navigate]);
 
   const openPaystack = useCallback(
-    async (payment: CheckoutPayment) => {
+    async (payment: CheckoutPayment, accessCode?: string | null) => {
       const payableAmount = gatewayAmount ?? payment.amount;
+      const resolvedAccessCode = accessCode ?? paystackAccessCode;
 
       await openPaystackCheckout({
         email: customerEmail,
         amountNgn: payableAmount,
         currency: payment.currency ?? packagesData?.currency ?? "NGN",
         reference: payment.tx_ref,
-        accessCode: paystackAccessCode,
+        accessCode: resolvedAccessCode,
+        requireAccessCode: true,
         customerName,
         customerPhone,
         onClose: () => setIsPaying(false),
@@ -480,20 +482,42 @@ export default function VendorBoostReviewPayPage() {
         ) {
           if (selectedGateway === "flutterwave") {
             setShouldOpenFlutterwave(true);
-          } else {
-            void openPaystack(checkoutPayment);
+            return;
           }
-          return;
+
+          if (boostSelection.requestId) {
+            const resumed = await resumeVendorBoostPayment(
+              boostSelection.requestId,
+              selectedGateway as "flutterwave" | "paystack",
+            );
+            setCheckoutPayment(resumed.payment);
+            setGatewayAmount(resumed.gatewayAmount ?? null);
+            setWalletAppliedAmount(resumed.walletApplied ?? 0);
+            setPaystackAccessCode(resumed.paystackAccessCode ?? null);
+            void openPaystack(resumed.payment, resumed.paystackAccessCode);
+            return;
+          }
+
+          // Fall through to init so Paystack always gets a fresh access code.
         }
 
         if (!applyWallet && boostSelection.requestId) {
-          const { payment } = await resumeVendorBoostPayment(boostSelection.requestId);
-          setCheckoutPayment(payment);
           if (selectedGateway === "flutterwave") {
+            const { payment } = await resumeVendorBoostPayment(boostSelection.requestId);
+            setCheckoutPayment(payment);
             setShouldOpenFlutterwave(true);
-          } else {
-            void openPaystack(payment);
+            return;
           }
+
+          const resumed = await resumeVendorBoostPayment(
+            boostSelection.requestId,
+            selectedGateway as "flutterwave" | "paystack",
+          );
+          setCheckoutPayment(resumed.payment);
+          setGatewayAmount(resumed.gatewayAmount ?? null);
+          setWalletAppliedAmount(resumed.walletApplied ?? 0);
+          setPaystackAccessCode(resumed.paystackAccessCode ?? null);
+          void openPaystack(resumed.payment, resumed.paystackAccessCode);
           return;
         }
 
@@ -552,7 +576,7 @@ export default function VendorBoostReviewPayPage() {
         if (selectedGateway === "flutterwave") {
           setShouldOpenFlutterwave(true);
         } else {
-          void openPaystack(payment);
+          void openPaystack(payment, nextPaystackAccessCode);
         }
         return;
       }
@@ -587,12 +611,17 @@ export default function VendorBoostReviewPayPage() {
             setIsPaying(false);
             return;
           }
+        } else if (selectedGateway === "flutterwave") {
+          setShouldOpenFlutterwave(true);
+          return;
         } else {
-          if (selectedGateway === "flutterwave") {
-            setShouldOpenFlutterwave(true);
-          } else {
-            void openPaystack(checkoutPayment);
-          }
+          // Always re-init Paystack so cancelled attempts get a fresh access code.
+          const refreshed = await initVerificationPayment(packageId, selectedGateway, false, applyWallet);
+          setWalletAppliedAmount(refreshed.wallet_applied ?? 0);
+          setGatewayAmount(refreshed.gateway_amount ?? null);
+          setPaystackAccessCode(refreshed.paystack_access_code ?? null);
+          setCheckoutPayment(refreshed.payment);
+          void openPaystack(refreshed.payment, refreshed.paystack_access_code);
           return;
         }
       }
@@ -641,7 +670,7 @@ export default function VendorBoostReviewPayPage() {
       if (selectedGateway === "flutterwave") {
         setShouldOpenFlutterwave(true);
       } else {
-        void openPaystack(result.payment);
+        void openPaystack(result.payment, result.paystack_access_code);
       }
     } catch (error) {
       setIsPaying(false);

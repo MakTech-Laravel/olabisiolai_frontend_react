@@ -108,19 +108,35 @@ export type BoostPaymentSession = {
   paid_at: string | null;
 };
 
-export async function resumeVendorBoostPayment(requestId: number): Promise<{
+export async function resumeVendorBoostPayment(
+  requestId: number,
+  gateway?: PaymentGateway,
+): Promise<{
   payment: BoostPaymentSession;
   message: string;
+  gatewayAmount?: number;
+  walletApplied?: number;
+  paystackAccessCode?: string | null;
 }> {
   const res = await request.post<
-    ApiEnvelope<{ payment: BoostPaymentSession; request: unknown }>
+    ApiEnvelope<{
+      payment: BoostPaymentSession;
+      request: unknown;
+      gateway_amount?: number;
+      wallet_applied?: number;
+      paystack_access_code?: string;
+    }>
   >("/vendor/boost/payment/resume", {
     request_id: requestId,
+    gateway,
   });
 
   return {
     payment: res.data.data.payment,
     message: res.data.message,
+    gatewayAmount: res.data.data.gateway_amount,
+    walletApplied: res.data.data.wallet_applied,
+    paystackAccessCode: res.data.data.paystack_access_code ?? null,
   };
 }
 

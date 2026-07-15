@@ -347,6 +347,7 @@ export default function VendorSubscriptionPayPage() {
         currency: freshCheckout.currency ?? flutterCurrency,
         reference: freshCheckout.payments.subscription.tx_ref ?? flutterTxRef,
         accessCode: freshCheckout.paystack_access_code,
+        requireAccessCode: true,
         customerName,
         customerPhone,
         onClose: () => setIsPaying(false),
