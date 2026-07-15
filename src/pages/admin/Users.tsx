@@ -2,6 +2,8 @@ import {
   Ban,
   BriefcaseBusiness,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   Download,
   Eye,
@@ -44,6 +46,16 @@ type UsersSummaryCounts = {
   newSignups: number;
 };
 
+type UsersPagination = {
+  current_page: number;
+  per_page: number;
+  last_page: number;
+  total: number;
+};
+
+const DEFAULT_PER_PAGE = 10;
+const EXPORT_PER_PAGE = 100;
+
 const SUPPORTED_ROLES: UserRole[] = ["user", "vendor", "admin"];
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -82,6 +94,17 @@ function toNumber(value: unknown): number | null {
   return null;
 }
 
+function parseUsersPagination(body: unknown): UsersPagination {
+  const data = toRecord(getNestedData(body));
+  const pagination = toRecord(data?.pagination);
+  return {
+    current_page: Math.max(1, toNumber(pagination?.current_page) ?? 1),
+    per_page: Math.max(1, toNumber(pagination?.per_page) ?? DEFAULT_PER_PAGE),
+    last_page: Math.max(1, toNumber(pagination?.last_page) ?? 1),
+    total: Math.max(0, toNumber(pagination?.total) ?? toNumber(data?.count) ?? 0),
+  };
+}
+
 function toStatus(value: unknown): UserRow["status"] {
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
@@ -90,6 +113,12 @@ function toStatus(value: unknown): UserRow["status"] {
     if (normalized === "block" || normalized === "blocked" || normalized === "inactive") return "blocked";
   }
   return "active";
+}
+
+function toApiStatus(status: StatusFilter): string | undefined {
+  if (status === "all") return undefined;
+  if (status === "blocked") return "block";
+  return status;
 }
 
 function toDateLabel(value: unknown): string {
@@ -244,9 +273,46 @@ function limitText(value: string, max = 24) {
   return `${value.slice(0, max)}...`;
 }
 
+function buildUsersListPayload(params: {
+  page: number;
+  perPage: number;
+  search?: string;
+  roleFilter: RoleFilter;
+  statusFilter: StatusFilter;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    page: params.page,
+    per_page: params.perPage,
+  };
+  if (params.search) body.search = params.search;
+  if (params.roleFilter !== "all") body.role = params.roleFilter;
+  const apiStatus = toApiStatus(params.statusFilter);
+  if (apiStatus) body.status = apiStatus;
+  return body;
+}
+
+async function fetchAllAdminUsersForExport(): Promise<(UserRow & { sn: number })[]> {
+  let page = 1;
+  let lastPage = 1;
+  const items: UserRow[] = [];
+
+  do {
+    const res = await postToAnyAdminUsersEndpoint<UsersApiEnvelope>(
+      ["/api/v1/admin/users", "/admin/users"],
+      { page, per_page: EXPORT_PER_PAGE },
+    );
+    items.push(...pickUsersArray(res.data).map(mapApiUser));
+    lastPage = parseUsersPagination(res.data).last_page;
+    page += 1;
+  } while (page <= lastPage);
+
+  return items.map((user, index) => ({ ...user, sn: index + 1 }));
+}
+
 export default function Users() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -260,6 +326,15 @@ export default function Users() {
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [summaryCounts, setSummaryCounts] = useState<UsersSummaryCounts | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(DEFAULT_PER_PAGE);
+  const [pagination, setPagination] = useState<UsersPagination>({
+    current_page: 1,
+    per_page: DEFAULT_PER_PAGE,
+    last_page: 1,
+    total: 0,
+  });
+  const [exporting, setExporting] = useState(false);
 
   const fetchSummary = async () => {
     try {
@@ -283,10 +358,17 @@ export default function Users() {
     try {
       const res = await postToAnyAdminUsersEndpoint<UsersApiEnvelope>(
         ["/api/v1/admin/users", "/admin/users"],
-        {},
+        buildUsersListPayload({
+          page,
+          perPage,
+          search,
+          roleFilter,
+          statusFilter,
+        }),
       );
       const list = pickUsersArray(res.data).map(mapApiUser);
       setUsers(list);
+      setPagination(parseUsersPagination(res.data));
     } catch (error) {
       console.error("Users list fetch failed", error);
       setError("Failed to load users. Please check API path or payload.");
@@ -298,28 +380,20 @@ export default function Users() {
   };
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchTerm.trim());
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     void fetchUsers();
+  }, [page, perPage, roleFilter, statusFilter, search]);
+
+  useEffect(() => {
     void fetchSummary();
   }, []);
-
-  const filteredUsers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    return users.filter((user) => {
-      const matchesRole = roleFilter === "all" || user.role === roleFilter;
-      if (!matchesRole) return false;
-
-      const matchesStatus = statusFilter === "all" || user.status === statusFilter;
-      if (!matchesStatus) return false;
-
-      if (!query) return true;
-      return (
-        user.name.toLowerCase().includes(query) ||
-        user.phone.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query)
-      );
-    });
-  }, [users, searchTerm, statusFilter, roleFilter]);
 
   const statusLabel = statusFilter === "all" ? "Select Status" : statusFilter;
   const roleLabel = roleFilter === "all" ? "Select Role" : roleFilter;
@@ -327,7 +401,7 @@ export default function Users() {
   const summaryFallback = useMemo((): UsersSummaryCounts => {
     const threshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
     return {
-      allUsers: users.length,
+      allUsers: pagination.total || users.length,
       totalUsers: users.filter((user) => user.role === "user").length,
       totalVendors: users.filter((user) => user.role === "vendor").length,
       totalAdmins: users.filter((user) => user.role === "admin").length,
@@ -336,35 +410,67 @@ export default function Users() {
         return parsed ? parsed.getTime() >= threshold : false;
       }).length,
     };
-  }, [users]);
+  }, [users, pagination.total]);
 
   const counts = summaryCounts ?? summaryFallback;
   const { allUsers, totalUsers, totalVendors, totalAdmins, newSignups } = counts;
 
-  const exportToExcel = () => {
-    const rows = filteredUsers.map((user) => ({
-      Name: user.name,
-      Phone: user.phone,
-      Email: user.email,
-      Role: user.role,
-      Status: user.status,
-      "Join Date": user.joinDate,
-    }));
-    const headers = ["Name", "Phone", "Email", "Role", "Status", "Join Date"];
-    const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csvLines = [headers.join(","), ...rows.map((row) => headers.map((h) => escapeCell(String(row[h as keyof typeof row] ?? ""))).join(","))];
-    const blob = new Blob([`\uFEFF${csvLines.join("\r\n")}`], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const now = new Date();
-    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `users-${stamp}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+  const lastPage = Math.max(1, pagination.last_page);
+  const pageNumbers = useMemo(() => {
+    const cur = pagination.current_page;
+    const last = lastPage;
+    const max = 7;
+    if (last <= max) return Array.from({ length: last }, (_, i) => i + 1);
+    let start = Math.max(1, cur - Math.floor(max / 2));
+    let end = start + max - 1;
+    if (end > last) {
+      end = last;
+      start = Math.max(1, end - max + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [pagination.current_page, lastPage]);
+
+  const rangeFrom = pagination.total === 0 ? 0 : (pagination.current_page - 1) * pagination.per_page + 1;
+  const rangeTo = Math.min(pagination.current_page * pagination.per_page, pagination.total);
+
+  const exportToExcel = async () => {
+    setExporting(true);
+    try {
+      const allUsersRows = await fetchAllAdminUsersForExport();
+      const headers = ["SN", "Name", "Phone", "Email", "Role", "Status", "Join Date"];
+      const rows = allUsersRows.map((user) => ({
+        SN: String(user.sn),
+        Name: user.name,
+        Phone: user.phone,
+        Email: user.email,
+        Role: user.role,
+        Status: user.status,
+        "Join Date": user.joinDate,
+      }));
+      const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
+      const csvLines = [
+        headers.join(","),
+        ...rows.map((row) => headers.map((h) => escapeCell(String(row[h as keyof typeof row] ?? ""))).join(",")),
+      ];
+      const blob = new Blob([`\uFEFF${csvLines.join("\r\n")}`], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const now = new Date();
+      const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `users-${stamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      showSuccess(`Exported ${allUsersRows.length} users.`);
+    } catch (error) {
+      console.error("Users export failed", error);
+      showError("Failed to export users.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleView = async (user: UserRow) => {
@@ -540,11 +646,12 @@ export default function Users() {
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <button
               type="button"
-              onClick={exportToExcel}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-chat-accent/30 bg-surface-soft px-4 text-sm font-medium text-chat-accent hover:bg-surface-soft/70 sm:w-auto"
+              onClick={() => void exportToExcel()}
+              disabled={exporting}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-chat-accent/30 bg-surface-soft px-4 text-sm font-medium text-chat-accent hover:bg-surface-soft/70 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              <Download className="size-4" />
-              Export to Excel
+              {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              {exporting ? "Exporting…" : "Export all (CSV)"}
             </button>
             <div className="relative w-full sm:w-auto">
               <button
@@ -566,6 +673,7 @@ export default function Users() {
                       type="button"
                       onClick={() => {
                         setRoleFilter(role);
+                        setPage(1);
                         setIsRoleMenuOpen(false);
                       }}
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm capitalize text-ink hover:bg-muted"
@@ -598,6 +706,7 @@ export default function Users() {
                       type="button"
                       onClick={() => {
                         setStatusFilter(status);
+                        setPage(1);
                         setIsStatusMenuOpen(false);
                       }}
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm capitalize text-ink hover:bg-muted"
@@ -616,6 +725,9 @@ export default function Users() {
           <table className="w-full min-w-[980px] border-collapse">
             <thead>
               <tr className="border-b border-border-gray">
+                <th className="px-2 py-2 text-left text-xs font-semibold text-body-secondary sm:px-4 sm:py-3 sm:text-sm">
+                  SN
+                </th>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-body-secondary sm:px-4 sm:py-3 sm:text-sm">
                   Name
                 </th>
@@ -639,85 +751,91 @@ export default function Users() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-2 py-8 text-center text-sm text-chat-meta sm:px-4">
+                  <td colSpan={7} className="px-2 py-8 text-center text-sm text-chat-meta sm:px-4">
                     Loading users...
                   </td>
                 </tr>
               ) : null}
-              {filteredUsers.map((user, index) => (
-                <tr key={`${user.email}-${index}`} className="border-b border-border-light">
-                  <td className="px-2 py-3 text-sm font-medium text-ink sm:px-4 sm:py-5 sm:text-base" title={user.name}>
-                    {limitText(user.name, 22)}
-                  </td>
-                  <td className="px-2 py-3 sm:px-4 sm:py-4">
-                    <p className="text-xs leading-5 text-ink sm:text-sm" title={user.phone}>
-                      {limitText(user.phone, 18)}
-                    </p>
-                    <p className="text-xs leading-5 text-chat-meta sm:text-sm" title={user.email}>
-                      {limitText(user.email, 28)}
-                    </p>
-                  </td>
-                  <td className="px-2 py-3 sm:px-4 sm:py-4">
-                    <span
-                      className={`inline-flex min-w-[70px] justify-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${roleClass(user.role)}`}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 sm:px-4 sm:py-4">
-                    <span
-                      className={`inline-flex min-w-[76px] justify-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass(user.status)}`}
-                    >
-                      {user.status === "active" ? "Active" : user.status === "pending" ? "Pending" : "Blocked"}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 text-xs text-body-secondary sm:px-4 sm:py-4 sm:text-sm">{user.joinDate}</td>
-                  <td className="px-2 py-3 sm:px-4 sm:py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
-                        onClick={() => void handleView(user)}
-                        disabled={actionUserId === user.id}
-                      >
-                        {actionUserId === user.id && actionType === "view" ? (
-                          <Loader2 className="size-4 animate-spin text-body-secondary" />
-                        ) : (
-                          <Eye className="size-4 text-body-secondary" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
-                        onClick={() => void handleStatusChange(user)}
-                        disabled={actionUserId === user.id}
-                        title={user.status === "active" ? "Block user" : "Activate user"}
-                      >
-                        {actionUserId === user.id && actionType === "status" ? (
-                          <Loader2 className="size-4 animate-spin text-amber-500" />
-                        ) : (
-                          <Ban className="size-4 text-amber-500" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
-                        onClick={() => void handleDelete(user)}
-                        disabled={actionUserId === user.id}
-                      >
-                        {actionUserId === user.id && actionType === "delete" ? (
-                          <Loader2 className="size-4 animate-spin text-brand-red" />
-                        ) : (
-                          <Trash2 className="size-4 text-brand-red" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!isLoading && filteredUsers.length === 0 ? (
+              {!isLoading
+                ? users.map((user, index) => {
+                    const sn = (pagination.current_page - 1) * pagination.per_page + index + 1;
+                    return (
+                      <tr key={`${user.id}-${user.email}`} className="border-b border-border-light">
+                        <td className="px-2 py-3 text-sm text-body-secondary sm:px-4 sm:py-5">{sn}</td>
+                        <td className="px-2 py-3 text-sm font-medium text-ink sm:px-4 sm:py-5 sm:text-base" title={user.name}>
+                          {limitText(user.name, 22)}
+                        </td>
+                        <td className="px-2 py-3 sm:px-4 sm:py-4">
+                          <p className="text-xs leading-5 text-ink sm:text-sm" title={user.phone}>
+                            {limitText(user.phone, 18)}
+                          </p>
+                          <p className="text-xs leading-5 text-chat-meta sm:text-sm" title={user.email}>
+                            {limitText(user.email, 28)}
+                          </p>
+                        </td>
+                        <td className="px-2 py-3 sm:px-4 sm:py-4">
+                          <span
+                            className={`inline-flex min-w-[70px] justify-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${roleClass(user.role)}`}
+                          >
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 sm:px-4 sm:py-4">
+                          <span
+                            className={`inline-flex min-w-[76px] justify-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass(user.status)}`}
+                          >
+                            {user.status === "active" ? "Active" : user.status === "pending" ? "Pending" : "Blocked"}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-xs text-body-secondary sm:px-4 sm:py-4 sm:text-sm">{user.joinDate}</td>
+                        <td className="px-2 py-3 sm:px-4 sm:py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
+                              onClick={() => void handleView(user)}
+                              disabled={actionUserId === user.id}
+                            >
+                              {actionUserId === user.id && actionType === "view" ? (
+                                <Loader2 className="size-4 animate-spin text-body-secondary" />
+                              ) : (
+                                <Eye className="size-4 text-body-secondary" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
+                              onClick={() => void handleStatusChange(user)}
+                              disabled={actionUserId === user.id}
+                              title={user.status === "active" ? "Block user" : "Activate user"}
+                            >
+                              {actionUserId === user.id && actionType === "status" ? (
+                                <Loader2 className="size-4 animate-spin text-amber-500" />
+                              ) : (
+                                <Ban className="size-4 text-amber-500" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
+                              onClick={() => void handleDelete(user)}
+                              disabled={actionUserId === user.id}
+                            >
+                              {actionUserId === user.id && actionType === "delete" ? (
+                                <Loader2 className="size-4 animate-spin text-brand-red" />
+                              ) : (
+                                <Trash2 className="size-4 text-brand-red" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : null}
+              {!isLoading && users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-2 py-8 text-center text-sm text-chat-meta sm:px-4">
+                  <td colSpan={7} className="px-2 py-8 text-center text-sm text-chat-meta sm:px-4">
                     No users found for the current search/filter.
                   </td>
                 </tr>
@@ -728,8 +846,43 @@ export default function Users() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tint-red/20 px-1 pb-0 pt-4">
           <p className="text-xs font-medium text-body-secondary">
-            Showing {filteredUsers.length === 0 ? 0 : 1}-{filteredUsers.length} of {users.length} users
+            Showing {rangeFrom}-{rangeTo} of {pagination.total} users
           </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={pagination.current_page <= 1 || isLoading}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-gray text-body-secondary hover:bg-muted disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            {pageNumbers.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPage(p)}
+                disabled={isLoading}
+                className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors ${
+                  pagination.current_page === p
+                    ? "bg-ink text-white"
+                    : "border border-border-gray text-body-secondary hover:bg-muted"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+              disabled={pagination.current_page >= lastPage || isLoading}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-gray text-body-secondary hover:bg-muted disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
         </div>
       </section>
 
