@@ -27,6 +27,11 @@ import {
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import {
+  BUSINESS_COVER_RECOMMENDED_SIZE,
+  BUSINESS_COVER_ASPECT_LABEL,
+  BUSINESS_LOGO_UPLOAD_HINT,
+} from '@/lib/businessImageLayout'
+import {
   BUSINESS_OVERVIEW_MAX_LENGTH,
   businessOverviewLengthError,
   clampBusinessOverview,
@@ -789,7 +794,8 @@ export function VendorOwnerGalleryEditButton({
         saveDisabled={totalCount < 1}
       >
         <p className="mb-3 text-xs font-medium text-muted-foreground">
-          {totalCount}/{photoLimit} photos on your plan
+          {totalCount}/{photoLimit} photos on your plan. Recommended {BUSINESS_COVER_RECOMMENDED_SIZE} (
+          {BUSINESS_COVER_ASPECT_LABEL}).
         </p>
         <div className="flex flex-wrap gap-3">
           {existingUrls.map((src, index) => (
@@ -896,7 +902,7 @@ export function VendorOwnerLogoEditButton({
         saveDisabled={!logoFile}
       >
         <p className="mb-3 text-xs text-muted-foreground">
-          Square images work best. JPG, PNG, or WebP up to 10 MB.
+          {BUSINESS_LOGO_UPLOAD_HINT}
         </p>
         <div className="flex flex-col items-center gap-4">
           <div className="relative size-28 overflow-hidden rounded-xl border border-border-light bg-muted shadow-sm">

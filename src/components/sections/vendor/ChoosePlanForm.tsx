@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
+  BUSINESS_COVER_UPLOAD_HINT,
+  BUSINESS_LOGO_UPLOAD_HINT,
+} from "@/lib/businessImageLayout";
+import {
   businessCreateRequiresPayment,
   createVendorBusiness,
   isPremiumPlanSelected,
@@ -768,7 +772,7 @@ export default function ChoosePlanForm() {
             id="logo-upload"
             accept="image/jpeg,image/png,image/webp"
             helper="Click to upload photos or drag and drop"
-            subhelper="JPG, PNG up to 10MB each"
+            subhelper={BUSINESS_LOGO_UPLOAD_HINT}
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               if (!file) {
@@ -844,7 +848,7 @@ export default function ChoosePlanForm() {
             id="cover-upload"
             accept="image/jpeg,image/png,image/webp"
             helper="Click to upload photos or drag and drop"
-            subhelper="JPG, PNG up to 10MB each (max 5 photos)"
+            subhelper={`${BUSINESS_COVER_UPLOAD_HINT} Max 5 photos.`}
             multiple
             onChange={(e) => {
               const files = Array.from(e.target.files ?? []);

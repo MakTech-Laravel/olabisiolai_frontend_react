@@ -23,6 +23,7 @@ import { displayBusinessOverview } from '@/constants/businessOverview'
 import { FREE_PHOTO_LIMIT, PREMIUM_PHOTO_LIMIT } from '@/constants/planLimits'
 import {
   businessPageHero,
+  businessPageHeroAspect,
   businessPageIdentityCard,
   businessPageOwnerOuter,
   businessPageSectionX,
@@ -71,11 +72,11 @@ function OwnerEditButton({
       className={cn(
         'inline-flex',
         variant === 'dark' &&
-          '[&>button]:size-[34px] [&>button]:border-0 [&>button]:bg-[rgba(15,22,32,0.62)] [&>button]:text-white [&>button]:shadow-[0_2px_6px_rgba(0,0,0,0.25)]',
+        '[&>button]:size-[34px] [&>button]:border-0 [&>button]:bg-[rgba(15,22,32,0.62)] [&>button]:text-white [&>button]:shadow-[0_2px_6px_rgba(0,0,0,0.25)]',
         variant === 'light' &&
-          '[&>button]:size-[34px] [&>button]:border [&>button]:border-border-light [&>button]:bg-white [&>button]:text-body-secondary [&>button]:shadow-sm',
+        '[&>button]:size-[34px] [&>button]:border [&>button]:border-border-light [&>button]:bg-white [&>button]:text-body-secondary [&>button]:shadow-sm',
         variant === 'delete' &&
-          '[&>button]:size-[30px] [&>button]:border-0 [&>button]:bg-white [&>button]:text-brand [&>button]:shadow-sm',
+        '[&>button]:size-[30px] [&>button]:border-0 [&>button]:bg-white [&>button]:text-brand [&>button]:shadow-sm',
         className,
       )}
     >
@@ -106,7 +107,20 @@ function AspectCover({ src, className }: { src: string; className?: string }) {
       src={src}
       alt=""
       className={className}
-      aspectClassName="aspect-[4/3] w-full max-h-[min(540px,72vh)]"
+      aspectClassName={businessPageHeroAspect}
+      fit="cover"
+    />
+  )
+}
+
+function LogoCover({ src, className }: { src: string; className?: string }) {
+  return (
+    <BusinessCatalogImage
+      src={src}
+      alt=""
+      className={className}
+      aspectClassName="aspect-square size-full"
+      fit="cover"
     />
   )
 }
@@ -152,30 +166,30 @@ export function BusinessOwnerEditView({
 
   return (
     <div className={businessPageOwnerOuter}>
-      <div id="owner-details" className={cn('scroll-mt-28 grid grid-cols-1 gap-4 lg:grid-cols-2', businessPageSectionX)}>
+      <div id="owner-details" className={cn('scroll-mt-28 space-y-4 grid grid-cols-2 gap-3', businessPageSectionX)}>
         <div className="relative">
           <AspectCover src={heroCover} className={businessPageHero} />
           <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-black/5 lg:rounded-2xl" aria-hidden />
           {isPremium ? (
-            <span className="absolute left-4 top-7 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white lg:left-5 lg:top-8">
+            <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white lg:left-5 lg:top-5">
               <Star className="size-3 fill-white" aria-hidden />
               Premium
             </span>
           ) : null}
           {boostActive && !isPremium ? (
-            <span className="absolute left-4 top-7 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white lg:left-5 lg:top-8">
+            <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white lg:left-5 lg:top-5">
               <Star className="size-3 fill-white" aria-hidden />
               Boosted
             </span>
           ) : null}
-          <div className="edit-only absolute right-4 top-7 z-20 lg:right-5 lg:top-8">
+          <div className="edit-only absolute right-4 top-4 z-20 lg:right-5 lg:top-5">
             <OwnerEditButton label="Edit cover" variant="dark">
               <VendorOwnerGalleryEditButton label="Cover photos" onProfileUpdated={onProfileUpdated} />
             </OwnerEditButton>
           </div>
         </div>
 
-        <div className={cn('relative mt-4 lg:mt-0', businessPageIdentityCard)}>
+        <div className={cn('relative', businessPageIdentityCard)}>
           <div className="edit-only absolute right-3.5 top-3.5 z-20 lg:right-4 lg:top-4">
             <OwnerEditButton label="Edit details" variant="light">
               <VendorOwnerDetailsEditButton
@@ -186,7 +200,7 @@ export function BusinessOwnerEditView({
             </OwnerEditButton>
           </div>
           <div className="relative mb-3 size-16 lg:size-20">
-            <AspectCover src={logoUrl} className="size-16 rounded-[18px] shadow-sm lg:size-20 lg:rounded-2xl" />
+            <LogoCover src={logoUrl} className="size-16 rounded-[18px] shadow-sm lg:size-20 lg:rounded-2xl" />
             <div className="edit-only absolute -bottom-2 -right-2 z-20">
               <OwnerEditButton label="Edit logo" variant="dark" className="[&>button]:size-7">
                 <VendorOwnerLogoEditButton label="Business logo" onProfileUpdated={onProfileUpdated} />
@@ -226,27 +240,27 @@ export function BusinessOwnerEditView({
             {about || 'Add a short description about your business (max 150 characters).'}
           </p>
         </div>
-
-        <div className="col-span-1 lg:col-span-2 mt-3.5 flex w-full flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3.5 shadow-sm lg:px-5">
-          {verified ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF2FD] px-2.5 py-1 text-[11.5px] font-bold text-chat-accent">
-              <BadgeCheck className="size-3 fill-chat-accent text-white" aria-hidden />
-              Verified
-            </span>
-          ) : null}
-          {isPremium ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1 text-[11.5px] font-bold text-white">
-              ★ Premium
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-auth-bg px-2.5 py-1 text-[11.5px] font-bold text-body-secondary">
-              Free plan
-            </span>
-          )}
-          <Link to={managePath} className="ml-auto text-[13px] font-semibold text-chat-accent lg:text-sm">
-            Manage
-          </Link>
-        </div>
+      </div>
+      
+      <div className="mt-3.5 flex w-full flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3.5 shadow-sm lg:px-5">
+        {verified ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF2FD] px-2.5 py-1 text-[11.5px] font-bold text-chat-accent">
+            <BadgeCheck className="size-3 fill-chat-accent text-white" aria-hidden />
+            Verified
+          </span>
+        ) : null}
+        {isPremium ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1 text-[11.5px] font-bold text-white">
+            ★ Premium
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-auth-bg px-2.5 py-1 text-[11.5px] font-bold text-body-secondary">
+            Free plan
+          </span>
+        )}
+        <Link to={managePath} className="ml-auto text-[13px] font-semibold text-chat-accent lg:text-sm">
+          Manage
+        </Link>
       </div>
 
       <OwnerEditSection id="owner-catalog" className={businessPageSectionX}>

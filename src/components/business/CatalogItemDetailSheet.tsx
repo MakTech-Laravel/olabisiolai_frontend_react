@@ -13,6 +13,7 @@ import { formatCatalogPrice, type BusinessCatalogItem } from '@/features/catalog
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import { seedNewConversationInCache } from '@/features/messaging/conversationCache'
 import { startDirectConversationWithVendor } from '@/features/messaging/startDirectConversation'
+import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { directMessageTo } from '@/lib/directMessage'
 import { showError } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -226,7 +227,10 @@ export function CatalogItemDetailSheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-visible pb-6">
           <div
-            className="relative aspect-[16/10] w-full max-h-[min(48vh,420px)] touch-pan-y select-none bg-border-light"
+            className={cn(
+              'relative w-full max-h-[min(48vh,420px)] touch-pan-y select-none bg-border-light',
+              CATALOG_IMAGE_ASPECT_CLASS,
+            )}
             onPointerDown={onPointerDown}
             onPointerUp={onPointerUp}
             onPointerCancel={() => {

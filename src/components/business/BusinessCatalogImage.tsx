@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { BUSINESS_GALLERY_ASPECT_CLASS } from "@/lib/businessImageLayout";
+import { CATALOG_IMAGE_ASPECT_CLASS } from "@/lib/businessImageLayout";
 import { cn } from "@/lib/utils";
 
 type BusinessCatalogImageProps = {
@@ -9,6 +9,8 @@ type BusinessCatalogImageProps = {
   className?: string;
   imageClassName?: string;
   aspectClassName?: string;
+  /** `contain` keeps full image (catalog cards). `cover` fills the frame (business cover/hero). */
+  fit?: "contain" | "cover";
   onClick?: React.MouseEventHandler<HTMLElement>;
   priority?: boolean;
   interactive?: boolean;
@@ -19,7 +21,8 @@ export function BusinessCatalogImage({
   alt = "",
   className,
   imageClassName,
-  aspectClassName = BUSINESS_GALLERY_ASPECT_CLASS,
+  aspectClassName = CATALOG_IMAGE_ASPECT_CLASS,
+  fit = "contain",
   onClick,
   priority = false,
   interactive = Boolean(onClick),
@@ -46,7 +49,8 @@ export function BusinessCatalogImage({
         src={src}
         alt={alt}
         className={cn(
-          "absolute inset-0 m-auto block max-h-full max-w-full object-contain",
+          "absolute inset-0 block size-full",
+          fit === "cover" ? "object-cover" : "m-auto max-h-full max-w-full object-contain",
           imageClassName,
         )}
         loading={priority ? "eager" : "lazy"}

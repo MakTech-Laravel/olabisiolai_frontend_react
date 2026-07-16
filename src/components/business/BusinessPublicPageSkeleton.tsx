@@ -10,7 +10,7 @@ export function BusinessHeroSkeleton({ className }: { className?: string }) {
     <div aria-hidden>
       <BusinessPageBlockSkeleton
         className={cn(
-          'h-[208px] w-full rounded-[22px] sm:h-[400px] lg:h-[400px] lg:rounded-2xl xl:h-[540px]',
+          'aspect-[4/3] w-full rounded-[22px] lg:rounded-2xl',
           className,
         )}
       />

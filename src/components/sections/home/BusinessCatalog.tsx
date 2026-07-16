@@ -12,6 +12,7 @@ import {
   fetchHomeCatalogItems,
   type DiscoveryCatalogItem,
 } from '@/features/catalog/publicCatalogDiscoveryApi'
+import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { cn } from '@/lib/utils'
 
 const GRADIENTS = [
@@ -96,9 +97,9 @@ export default function BusinessCatalog() {
                     }}
                   >
                     {item.imageUrl ? (
-                      <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" />
+                      <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" fit="cover" />
                     ) : (
-                      <div className="aspect-[4/3] w-full" />
+                      <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />
                     )}
                     <span
                       className={cn(
@@ -119,14 +120,14 @@ export default function BusinessCatalog() {
                       {item.businessName}
                       {item.categoryName ? ` · ${item.categoryName}` : ''}
                     </p>
-                    <h3 className="mt-1 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
+                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
                     {item.description ? (
                       <p className="mt-1 flex-1 text-xs leading-relaxed text-stat-muted line-clamp-2">
                         {item.description}
                       </p>
                     ) : null}
                     <div className="mt-2 flex items-end justify-between gap-2">
-                      <p className="font-heading text-[15px] font-bold text-ink">
+                      <p className="line-clamp-1 font-heading text-[15px] font-bold text-ink">
                         {formatCatalogPrice(item)}
                       </p>
                       {item.cityName || item.locationLabel ? (

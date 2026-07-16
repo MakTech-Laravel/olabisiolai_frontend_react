@@ -30,6 +30,7 @@ import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import {
   businessPageBody,
   businessPageHero,
+  businessPageHeroAspect,
   businessPageIdentityCard,
   businessPageOuter,
   businessPagePhotoGrid,
@@ -313,7 +314,8 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                   src={heroCover}
                   alt={`${name} cover photo`}
                   className={businessPageHero}
-                  aspectClassName="aspect-[4/3] w-full max-h-[min(540px,72vh)]"
+                  aspectClassName={businessPageHeroAspect}
+                  fit="cover"
                   priority
                   onClick={() => onOpenPhotoAt(0)}
                 />
@@ -341,7 +343,7 @@ export function BusinessPublicPageView(props: BusinessPublicPageViewProps) {
                         key={`${src}-thumb-${index}`}
                         className="size-[46px] overflow-hidden rounded-[11px] border-2 border-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] lg:size-[52px]"
                       >
-                        <img src={src} alt="" className="size-full object-contain" loading="lazy" />
+                        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
                       </span>
                     ))}
                     {coverPhotos.length > 3 ? (

@@ -13,6 +13,14 @@ import {
 
 import { VendorOnboardingCtaButton } from "@/components/businessTips/VendorOnboardingCtaButton";
 import { container } from "@/lib/container";
+import {
+  BUSINESS_COVER_RECOMMENDED_SIZE,
+  BUSINESS_COVER_ASPECT_LABEL,
+  BUSINESS_LOGO_RECOMMENDED_SIZE,
+  BUSINESS_LOGO_ASPECT_LABEL,
+  CATALOG_IMAGE_RECOMMENDED_SIZE,
+  CATALOG_IMAGE_ASPECT_LABEL,
+} from "@/lib/businessImageLayout";
 import { cn } from "@/lib/utils";
 
 // Image Constants - Replace these with your actual paths
@@ -291,9 +299,10 @@ export default function PhotosThatSell() {
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               <div className="space-y-4">
                 {[
-                  ["Cover Photo", "1200 x 400px"],
-                  ["Profile Image", "400 x 400px"],
-                  ["Gallery Photos", "Min 800 x 800px"],
+                  ["Cover Photo", `${BUSINESS_COVER_RECOMMENDED_SIZE} (${BUSINESS_COVER_ASPECT_LABEL})`],
+                  ["Profile / Logo", `${BUSINESS_LOGO_RECOMMENDED_SIZE} (${BUSINESS_LOGO_ASPECT_LABEL})`],
+                  ["Gallery Photos", `${BUSINESS_COVER_RECOMMENDED_SIZE} (${BUSINESS_COVER_ASPECT_LABEL})`],
+                  ["Catalog Product / Service", `${CATALOG_IMAGE_RECOMMENDED_SIZE} (${CATALOG_IMAGE_ASPECT_LABEL})`],
                 ].map(([label, size]) => (
                   <div
                     key={label}

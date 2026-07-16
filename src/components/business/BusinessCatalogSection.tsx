@@ -10,6 +10,7 @@ import {
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
+import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { cn } from '@/lib/utils'
 
@@ -154,10 +155,10 @@ export function BusinessCatalogSection({
                 key={item.id}
                 type="button"
                 onClick={() => openItem(item)}
-                className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-transform transition-shadow duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
+                className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
               >
                 <div
-                  className="relative"
+                  className="relative shrink-0"
                   style={{
                     background: item.imageUrl
                       ? undefined
@@ -165,9 +166,14 @@ export function BusinessCatalogSection({
                   }}
                 >
                   {item.imageUrl ? (
-                    <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" />
+                    <BusinessCatalogImage
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="rounded-none"
+                      fit="cover"
+                    />
                   ) : (
-                    <div className="aspect-[4/3] w-full" />
+                    <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />
                   )}
                   <span
                     className={cn(
@@ -178,14 +184,16 @@ export function BusinessCatalogSection({
                     {item.type}
                   </span>
                 </div>
-                <div className="flex flex-1 flex-col px-3 py-3">
-                  <h3 className="text-sm font-semibold leading-snug text-ink">{item.name}</h3>
+                <div className="flex min-h-0 flex-1 flex-col px-3 py-3">
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
                   {item.description ? (
-                    <p className="mt-1 flex-1 text-xs leading-relaxed text-stat-muted line-clamp-2">
+                    <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-stat-muted">
                       {item.description}
                     </p>
-                  ) : null}
-                  <p className="mt-2 font-heading text-[15px] font-bold text-ink">
+                  ) : (
+                    <span className="flex-1" aria-hidden />
+                  )}
+                  <p className="mt-2 line-clamp-1 font-heading text-[15px] font-bold text-ink">
                     {formatCatalogPrice(item)}
                   </p>
                 </div>

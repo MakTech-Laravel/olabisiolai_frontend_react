@@ -11,16 +11,20 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   CATALOG_DESCRIPTION_MAX_LENGTH,
   CATALOG_NAME_MAX_LENGTH,
-  CATALOG_PRICE_LABEL_MAX_LENGTH,
+  catalogPriceEditorValue,
   createCatalogItem,
   deleteCatalogItem,
   fetchVendorCatalog,
   formatCatalogPrice,
+  nairaDigitsToKobo,
+  sanitizeCatalogPriceDigits,
   updateCatalogItem,
   type BusinessCatalogItem,
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
+import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
+import { CATALOG_IMAGE_ASPECT_CLASS, CATALOG_IMAGE_UPLOAD_HINT } from '@/lib/businessImageLayout'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
@@ -129,7 +133,7 @@ export function VendorOwnerCatalogSection({
       type: item.type,
       name: item.name,
       description: item.description ?? '',
-      priceLabel: item.priceLabel ?? '',
+      priceLabel: catalogPriceEditorValue(item),
       priceFrom: item.priceFrom,
       images: [],
       keepImagePaths: [...item.imagePaths],
@@ -163,9 +167,10 @@ export function VendorOwnerCatalogSection({
       return
     }
 
-    const priceLabel = editor.priceLabel.trim()
-    if (priceLabel.length > CATALOG_PRICE_LABEL_MAX_LENGTH) {
-      showError(`Price must be ${CATALOG_PRICE_LABEL_MAX_LENGTH} characters or fewer.`)
+    const priceDigits = sanitizeCatalogPriceDigits(editor.priceLabel)
+    const priceKobo = nairaDigitsToKobo(priceDigits)
+    if (editor.priceLabel.trim() && priceKobo === null) {
+      showError('Enter a valid numeric price (naira only).')
       return
     }
 
@@ -173,7 +178,7 @@ export function VendorOwnerCatalogSection({
       type: editor.type,
       name: resolvedName,
       description,
-      priceLabel,
+      priceKobo,
       priceFrom: editor.priceFrom,
       images: editor.images,
       keepImagePaths: editor.item ? editor.keepImagePaths : undefined,
@@ -275,13 +280,22 @@ export function VendorOwnerCatalogSection({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-body-secondary">Price</label>
+          <label className="mb-1.5 block text-sm font-medium text-body-secondary">Price (₦)</label>
           <Input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
             value={editor.priceLabel}
-            maxLength={CATALOG_PRICE_LABEL_MAX_LENGTH}
-            onChange={(event) => setEditor((current) => ({ ...current, priceLabel: event.target.value }))}
-            placeholder="e.g. ₦250,000"
+            onChange={(event) =>
+              setEditor((current) => ({
+                ...current,
+                priceLabel: sanitizeCatalogPriceDigits(event.target.value),
+              }))
+            }
+            placeholder="e.g. 250000"
           />
+          <p className="mt-1 text-xs text-stat-muted">Numbers only — whole naira amount.</p>
         </div>
 
         <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
@@ -298,6 +312,7 @@ export function VendorOwnerCatalogSection({
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">
             Photos (optional)
           </label>
+          <p className="mb-2 text-xs text-stat-muted">{CATALOG_IMAGE_UPLOAD_HINT}</p>
 
           {editor.item && editor.keepImagePaths.length > 0 ? (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -434,17 +449,24 @@ export function VendorOwnerCatalogSection({
             {items.map((item, index) => (
               <article
                 key={item.id}
-                className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+                className="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
               >
                 <div
-                  className="relative h-[100px]"
+                  className="relative shrink-0"
                   style={{
                     background: item.imageUrl ? undefined : GRADIENTS[index % GRADIENTS.length],
                   }}
                 >
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt="" className="size-full object-cover" loading="lazy" />
-                  ) : null}
+                    <BusinessCatalogImage
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="rounded-none"
+                      fit="cover"
+                    />
+                  ) : (
+                    <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />
+                  )}
                   <span
                     className={cn(
                       'absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
@@ -458,12 +480,16 @@ export function VendorOwnerCatalogSection({
                     onDelete={() => void handleDelete(item)}
                   />
                 </div>
-                <div className="flex flex-1 flex-col px-3 py-3">
-                  <h3 className="text-sm font-semibold leading-snug text-ink">{item.name}</h3>
+                <div className="flex min-h-0 flex-1 flex-col px-3 py-3">
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
                   {item.description ? (
-                    <p className="mt-1 flex-1 text-xs leading-relaxed text-stat-muted">{item.description}</p>
-                  ) : null}
-                  <p className="mt-2 font-heading text-[15px] font-bold text-ink">
+                    <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-stat-muted">
+                      {item.description}
+                    </p>
+                  ) : (
+                    <span className="flex-1" aria-hidden />
+                  )}
+                  <p className="mt-2 line-clamp-1 font-heading text-[15px] font-bold text-ink">
                     {formatCatalogPrice(item)}
                   </p>
                 </div>
@@ -472,7 +498,7 @@ export function VendorOwnerCatalogSection({
             <button
               type="button"
               onClick={openCreate}
-              className="edit-only flex min-h-[170px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] text-[13.5px] font-semibold text-chat-accent"
+              className="edit-only flex h-full min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] text-[13.5px] font-semibold text-chat-accent"
             >
               <Plus className="size-7" strokeWidth={2} aria-hidden />
               Add item

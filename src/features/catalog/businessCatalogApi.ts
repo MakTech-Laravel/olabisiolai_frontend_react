@@ -89,18 +89,58 @@ export function parseCatalogItems(raw: unknown): BusinessCatalogItem[] {
   return raw.map(parseCatalogItem).filter((item): item is BusinessCatalogItem => item !== null)
 }
 
+function formatNairaFromKobo(priceKobo: number): string {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    maximumFractionDigits: 0,
+  }).format(priceKobo / 100)
+}
+
+/** Digits-only naira amount for the catalog price field (no currency symbols). */
+export function sanitizeCatalogPriceDigits(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, 12)
+}
+
+/** Prefill editor from stored kobo or a numeric-looking label. */
+export function catalogPriceEditorValue(
+  item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel'>,
+): string {
+  if (item.priceKobo !== null && item.priceKobo >= 0) {
+    return String(Math.round(item.priceKobo / 100))
+  }
+  const digits = sanitizeCatalogPriceDigits(item.priceLabel ?? '')
+  if (!digits) return ''
+  const asNumber = Number(digits)
+  return Number.isFinite(asNumber) ? String(asNumber) : digits
+}
+
+export function nairaDigitsToKobo(digits: string): number | null {
+  const cleaned = sanitizeCatalogPriceDigits(digits)
+  if (!cleaned) return null
+  const naira = Number(cleaned)
+  if (!Number.isFinite(naira) || naira < 0) return null
+  return Math.round(naira * 100)
+}
+
 export function formatCatalogPrice(item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel' | 'priceFrom'>): string {
-  if (item.priceLabel?.trim()) {
-    return item.priceFrom ? `from ${item.priceLabel}` : item.priceLabel
+  if (item.priceKobo !== null && item.priceKobo >= 0) {
+    const naira = formatNairaFromKobo(item.priceKobo)
+    return item.priceFrom ? `from ${naira}` : naira
   }
 
-  if (item.priceKobo !== null && item.priceKobo >= 0) {
-    const naira = new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      maximumFractionDigits: 0,
-    }).format(item.priceKobo / 100)
-    return item.priceFrom ? `from ${naira}` : naira
+  const label = item.priceLabel?.trim()
+  if (label) {
+    const digits = sanitizeCatalogPriceDigits(label)
+    const hasNonNumericJunk = /[^\d\s₦,.]/.test(label)
+    if (digits && !hasNonNumericJunk) {
+      const kobo = nairaDigitsToKobo(digits)
+      if (kobo !== null) {
+        const naira = formatNairaFromKobo(kobo)
+        return item.priceFrom ? `from ${naira}` : naira
+      }
+    }
+    return item.priceFrom ? `from ${label}` : label
   }
 
   return 'Price on request'
@@ -128,7 +168,9 @@ export type CatalogItemInput = {
   type: CatalogItemType
   name: string
   description?: string
+  /** Whole-naira amount as digits; converted to `price_kobo` on save. */
   priceLabel?: string
+  priceKobo?: number | null
   priceFrom?: boolean
   images?: File[]
   /** @deprecated use `images` */
@@ -142,7 +184,24 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
   formData.append('type', input.type)
   formData.append('name', input.name.trim())
   if (input.description?.trim()) formData.append('description', input.description.trim())
-  if (input.priceLabel?.trim()) formData.append('price_label', input.priceLabel.trim())
+
+  const priceKobo =
+    input.priceKobo !== undefined
+      ? input.priceKobo
+      : input.priceLabel !== undefined
+        ? nairaDigitsToKobo(input.priceLabel)
+        : undefined
+
+  if (priceKobo !== undefined) {
+    if (priceKobo === null) {
+      formData.append('price_kobo', '')
+    } else {
+      formData.append('price_kobo', String(priceKobo))
+    }
+    // Clear free-text labels so cards always show a numeric price.
+    formData.append('price_label', '')
+  }
+
   formData.append('price_from', input.priceFrom ? '1' : '0')
 
   const files = [
