@@ -28,6 +28,12 @@ export default function CategoriesTable() {
   const [editIconPreview, setEditIconPreview] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [deleteTarget, setDeleteTarget] = useState<CategoryDto | null>(null);
+  const [moveToCategoryId, setMoveToCategoryId] = useState<number | "">("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [moveOptions, setMoveOptions] = useState<CategoryDto[]>([]);
+  const [loadingMoveOptions, setLoadingMoveOptions] = useState(false);
+
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
     return () => window.clearTimeout(t);
@@ -87,13 +93,20 @@ export default function CategoriesTable() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: number) => adminDeleteCategory(id),
+    mutationFn: ({ id, moveToCategoryId }: { id: number; moveToCategoryId?: number }) =>
+      adminDeleteCategory(id, moveToCategoryId != null ? { moveToCategoryId } : undefined),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "categories"] });
+      closeDeleteModal();
       alert.crud.deleted("Category");
     },
     onError: (e: unknown) => {
-      showError(messageFromUnknown(e));
+      const message = messageFromUnknown(e);
+      if (deleteTarget && (deleteTarget.business_count ?? 0) > 0) {
+        setDeleteError(message);
+      } else {
+        showError(message);
+      }
     },
   });
 
@@ -112,6 +125,21 @@ export default function CategoriesTable() {
     };
   }, [showEditModal]);
 
+  useEffect(() => {
+    if (!deleteTarget) return;
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, [deleteTarget]);
+
   const closeModal = () => {
     setShowEditModal(false);
     setEditingCategory(null);
@@ -121,10 +149,53 @@ export default function CategoriesTable() {
     setFormError(null);
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    const confirmed = await alert.confirmDelete(name);
-    if (!confirmed) return;
-    deleteMut.mutate(id);
+  const closeDeleteModal = () => {
+    setDeleteTarget(null);
+    setMoveToCategoryId("");
+    setDeleteError(null);
+    setMoveOptions([]);
+    setLoadingMoveOptions(false);
+  };
+
+  const handleDelete = async (category: CategoryDto) => {
+    const businessCount = category.business_count ?? 0;
+
+    if (businessCount <= 0) {
+      const confirmed = await alert.confirmDelete(category.name);
+      if (!confirmed) return;
+      deleteMut.mutate({ id: category.id });
+      return;
+    }
+
+    setDeleteTarget(category);
+    setMoveToCategoryId("");
+    setDeleteError(null);
+    setLoadingMoveOptions(true);
+
+    try {
+      const result = await adminListCategories({ per_page: 100, page: 1 });
+      setMoveOptions(result.categories.filter((item) => item.id !== category.id));
+    } catch (e: unknown) {
+      setDeleteError(messageFromUnknown(e));
+      setMoveOptions(categories.filter((item) => item.id !== category.id));
+    } finally {
+      setLoadingMoveOptions(false);
+    }
+  };
+
+  const confirmDeleteWithMove = () => {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+
+    if (moveToCategoryId === "") {
+      setDeleteError("Select a category to move these businesses to.");
+      return;
+    }
+
+    deleteMut.mutate({
+      id: deleteTarget.id,
+      moveToCategoryId: Number(moveToCategoryId),
+    });
   };
 
   const handleEdit = (category: CategoryDto) => {
@@ -317,7 +388,7 @@ export default function CategoriesTable() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(cat.id, cat.name)}
+                        onClick={() => handleDelete(cat)}
                         disabled={deleteMut.isPending}
                         className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 disabled:opacity-50"
                         aria-label={`Delete ${cat.name}`}
@@ -365,7 +436,7 @@ export default function CategoriesTable() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(cat.id, cat.name)}
+                  onClick={() => handleDelete(cat)}
                   disabled={deleteMut.isPending}
                   className="text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-md hover:bg-red-50 disabled:opacity-50"
                   aria-label={`Delete ${cat.name}`}
@@ -504,6 +575,89 @@ export default function CategoriesTable() {
           </div>
         </div>
       )}
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/50 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
+              <h3 className="text-base font-semibold text-gray-900">Delete category</h3>
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Close delete modal"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-4 py-4 sm:px-5">
+              <p className="text-sm leading-relaxed text-gray-600">
+                <span className="font-semibold text-gray-900">{deleteTarget.name}</span> has{" "}
+                <span className="font-semibold text-gray-900">
+                  {deleteTarget.business_count ?? 0} business
+                  {(deleteTarget.business_count ?? 0) === 1 ? "" : "es"}
+                </span>
+                . Move them to another category first — businesses will not be deleted.
+              </p>
+
+              {deleteError ? (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{deleteError}</p>
+              ) : null}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Move businesses to
+                </label>
+                {loadingMoveOptions ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="size-4 animate-spin text-blue-500" aria-hidden />
+                    Loading categories…
+                  </div>
+                ) : moveOptions.length === 0 ? (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Create another category first, then delete this one.
+                  </p>
+                ) : (
+                  <select
+                    value={moveToCategoryId === "" ? "" : String(moveToCategoryId)}
+                    onChange={(e) =>
+                      setMoveToCategoryId(e.target.value ? Number(e.target.value) : "")
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a category…</option>
+                    {moveOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-100 bg-white px-4 pb-4 pt-3 sm:justify-end sm:px-5 sm:pb-5">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 sm:flex-none sm:py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteWithMove}
+                disabled={deleteMut.isPending || moveOptions.length === 0 || loadingMoveOptions}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-60 sm:flex-none sm:py-2"
+              >
+                {deleteMut.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                Move & delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

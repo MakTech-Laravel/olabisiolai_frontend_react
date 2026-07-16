@@ -99,6 +99,15 @@ export async function adminUpdateCategory(payload: {
   return cat
 }
 
-export async function adminDeleteCategory(id: number): Promise<void> {
-  await request.post('/admin/categories/delete', { id })
+export async function adminDeleteCategory(
+  id: number,
+  options?: { moveToCategoryId?: number },
+): Promise<void> {
+  await request.post('/admin/categories/delete', {
+    id,
+    ...(options?.moveToCategoryId != null
+      ? { move_to_category_id: options.moveToCategoryId }
+      : {}),
+  })
 }
+
