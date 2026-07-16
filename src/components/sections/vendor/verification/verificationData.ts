@@ -21,19 +21,19 @@ export type Plan = {
 };
 
 export const plans: Plan[] = [
-    {
-        id: "individual",
-        title: "Individual",
-        amount: 2500,
-        description:
-            "Best for solo entrepreneurs and independent contractors. Requires government ID and personal biometric verification.",
-        afterPurchaseNote:
-            "After payment you will upload your ID and business documents. Track each file on your status page — see what is approved, rejected, or still under review, and re-upload if admin requests changes.",
-        perks: ["Trusted badge"],
-        icon: CircleUserRound,
-        surface: "tint",
-        perkStyle: "badge",
-    },
+    // {
+    //     id: "individual",
+    //     title: "Individual",
+    //     amount: 2500,
+    //     description:
+    //         "Best for solo entrepreneurs and independent contractors. Requires government ID and personal biometric verification.",
+    //     afterPurchaseNote:
+    //         "After payment you will upload your ID and business documents. Track each file on your status page — see what is approved, rejected, or still under review, and re-upload if admin requests changes.",
+    //     perks: ["Trusted badge"],
+    //     icon: CircleUserRound,
+    //     surface: "tint",
+    //     perkStyle: "badge",
+    // },
     {
         id: "business",
         title: "Business Name",
