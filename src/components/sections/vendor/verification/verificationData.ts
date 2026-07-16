@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, CircleUserRound, FileText, Lock, ShieldCheck, Store } from "lucide-react";
+import { ArrowRight, FileText, Lock, ShieldCheck, Store } from "lucide-react";
 
 import type { VerificationPackage } from "@/features/verification/vendorVerificationApi";
 
