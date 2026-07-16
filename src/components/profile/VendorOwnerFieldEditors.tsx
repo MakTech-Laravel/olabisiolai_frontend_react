@@ -38,7 +38,9 @@ import {
 } from '@/constants/businessOverview'
 import {
   normalizeSocialInput,
+  socialInputPlaceholder,
   socialPlatformLabel,
+  validateSocialInput,
   type SocialAccount,
   type SocialPlatform,
 } from '@/features/business/socialAccounts'
@@ -570,7 +572,16 @@ export function VendorOwnerContactEditButton({
         open={open}
         loading={loading}
         onClose={() => setOpen(false)}
-        onSave={() =>
+        onSave={() => {
+          for (const platform of CONTACT_SOCIAL_PLATFORMS) {
+            const value = socialValues[platform] ?? ''
+            const socialError = validateSocialInput(platform, value)
+            if (socialError) {
+              showError(socialError)
+              return
+            }
+          }
+
           void saveProfile(
             {
               phone: phone.trim(),
@@ -580,7 +591,7 @@ export function VendorOwnerContactEditButton({
             },
             'Contact details updated.',
           )
-        }
+        }}
         saveDisabled={!phone.trim()}
       >
         <div className="space-y-4">
@@ -605,8 +616,13 @@ export function VendorOwnerContactEditButton({
                   setSocialValues((current) => ({ ...current, [platform]: event.target.value }))
                 }
                 disabled={loading}
-                placeholder="@handle or profile link"
+                placeholder={socialInputPlaceholder(platform)}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {platform === 'instagram'
+                  ? 'Username (@handle) or full profile link'
+                  : 'Full profile link required (URL)'}
+              </p>
             </div>
           ))}
         </div>

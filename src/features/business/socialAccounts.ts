@@ -28,6 +28,11 @@ export const SOCIAL_PLATFORM_OPTIONS: { value: SocialPlatform; label: string }[]
 
 const PLATFORM_SET = new Set(SOCIAL_PLATFORM_OPTIONS.map((p) => p.value));
 
+/** Only Instagram accepts @username / bare handle; other platforms require a profile URL. */
+export function platformAllowsHandle(platform: SocialPlatform): boolean {
+  return platform === "instagram";
+}
+
 export function isSocialPlatform(value: string): value is SocialPlatform {
   return PLATFORM_SET.has(value as SocialPlatform);
 }
@@ -36,8 +41,23 @@ export function socialPlatformLabel(platform: SocialPlatform): string {
   return SOCIAL_PLATFORM_OPTIONS.find((p) => p.value === platform)?.label ?? platform;
 }
 
+export function socialInputPlaceholder(platform: SocialPlatform): string {
+  if (platformAllowsHandle(platform)) {
+    return "@username or profile link";
+  }
+  return "https://… profile link";
+}
+
 function stripHandle(raw: string): string {
   return raw.trim().replace(/^@+/, "").replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function looksLikeProfileUrl(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.startsWith("@")) return false;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  const withoutScheme = trimmed.replace(/^https?:\/\//i, "").replace(/^\/+/, "");
+  return /^[a-z0-9.-]+\.[a-z]{2,}(\/|\?|#|$)/i.test(withoutScheme);
 }
 
 function profileUrlForHandle(platform: SocialPlatform, handle: string): string {
@@ -65,7 +85,10 @@ function profileUrlForHandle(platform: SocialPlatform, handle: string): string {
   }
 }
 
-/** Normalize a social input to a full profile URL (supports @handle and bare handles). */
+/**
+ * Normalize a social input to a full profile URL.
+ * Instagram supports @handle / bare handle; other platforms require a profile URL.
+ */
 export function normalizeSocialInput(platform: SocialPlatform, raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
@@ -77,6 +100,10 @@ export function normalizeSocialInput(platform: SocialPlatform, raw: string): str
   const withoutScheme = trimmed.replace(/^https?:\/\//i, "");
   if (/^[a-z0-9.-]+\.[a-z]{2,}/i.test(withoutScheme) && !withoutScheme.startsWith("@")) {
     return `https://${withoutScheme.replace(/^\/+/, "")}`;
+  }
+
+  if (!platformAllowsHandle(platform)) {
+    return "";
   }
 
   const handle = stripHandle(trimmed);
@@ -132,17 +159,41 @@ export function appendSocialAccountsToFormData(
     });
 }
 
+/** Validate a single optional social field. Empty is allowed. */
+export function validateSocialInput(platform: SocialPlatform, raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const label = socialPlatformLabel(platform);
+
+  if (!platformAllowsHandle(platform) && !looksLikeProfileUrl(trimmed)) {
+    return `${label} requires a full profile link (URL), not a username.`;
+  }
+
+  const url = normalizeSocialInput(platform, trimmed);
+  if (!url) {
+    return platformAllowsHandle(platform)
+      ? `Enter a valid ${label} @handle or profile link.`
+      : `Enter a valid ${label} profile link (URL).`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname) {
+      return `Enter a valid ${label} profile link.`;
+    }
+  } catch {
+    return `Enter a valid ${label} profile link.`;
+  }
+
+  return null;
+}
+
 export function validateSocialAccounts(accounts: SocialAccount[]): string | null {
   for (const account of accounts) {
     if (!account.platform) return "Select a platform for each social account.";
-    const url = normalizeSocialInput(account.platform, account.url);
-    if (!url) return "Enter a handle (e.g. @gidira) or profile link for each social account.";
-    try {
-      const parsed = new URL(url);
-      if (!parsed.hostname) return "Enter a valid social profile link or handle.";
-    } catch {
-      return "Enter a valid social profile link or handle.";
-    }
+    const error = validateSocialInput(account.platform, account.url);
+    if (error) return error;
   }
   if (accounts.length > 10) return "You can add up to 10 social accounts.";
   return null;
