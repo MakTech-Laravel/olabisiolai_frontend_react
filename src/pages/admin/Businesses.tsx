@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Ban,
@@ -8,12 +8,13 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Crown,
   Eye,
   Loader2,
   Search,
   Trash2,
 } from "lucide-react";
-import { BusinessDetailsModal } from "@/components/Modal/BusinessDetailsModal";
+import { MoveToPremiumModal } from "@/components/Modal/MoveToPremiumModal";
 import {
   changeAdminBusinessStatus,
   deleteAdminBusiness,
@@ -83,6 +84,12 @@ function formatDate(value: string) {
   return date.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" });
 }
 
+function shortenName(value: string, max = 22): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1)}…`;
+}
+
 function SelectFilter({
   placeholder,
   value,
@@ -132,8 +139,8 @@ export default function BusinessTable() {
   const [businessStatusFilter, setBusinessStatusFilter] = useState("all");
   const [boostFilter, setBoostFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
-  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [premiumSourceFilter, setPremiumSourceFilter] = useState("all");
+  const [premiumTarget, setPremiumTarget] = useState<Business | null>(null);
   const [openingChatBusinessId, setOpeningChatBusinessId] = useState<number | null>(null);
   const [actionBusinessId, setActionBusinessId] = useState<number | null>(null);
   const [actionType, setActionType] = useState<"status" | "delete" | null>(null);
@@ -148,7 +155,7 @@ export default function BusinessTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, verificationFilter, businessStatusFilter, categoryFilter, boostFilter, planFilter]);
+  }, [debouncedSearch, verificationFilter, businessStatusFilter, categoryFilter, boostFilter, planFilter, premiumSourceFilter]);
 
   const listQueryKey = [
     "admin",
@@ -161,6 +168,7 @@ export default function BusinessTable() {
     categoryFilter,
     boostFilter,
     planFilter,
+    premiumSourceFilter,
   ] as const;
 
   const listQuery = useQuery({
@@ -175,6 +183,7 @@ export default function BusinessTable() {
         category_id: categoryFilter === "all" ? undefined : Number(categoryFilter),
         boost_status: boostFilter,
         subscription_plan: planFilter,
+        premium_source: premiumSourceFilter,
       }),
   });
 
@@ -194,7 +203,8 @@ export default function BusinessTable() {
     businessStatusFilter !== "all" ||
     categoryFilter !== "all" ||
     boostFilter !== "all" ||
-    planFilter !== "all";
+    planFilter !== "all" ||
+    premiumSourceFilter !== "all";
 
   const clearFilters = () => {
     setSearch("");
@@ -203,6 +213,7 @@ export default function BusinessTable() {
     setCategoryFilter("all");
     setBoostFilter("all");
     setPlanFilter("all");
+    setPremiumSourceFilter("all");
   };
 
   const statusMutation = useMutation({
@@ -368,8 +379,14 @@ export default function BusinessTable() {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-semibold leading-tight text-ink-heading sm:text-3xl">Businesses</h1>
+        <Link
+          to="/admin/premium-expiration"
+          className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          Premium expiration tracker
+        </Link>
       </div>
 
       <section className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -441,6 +458,13 @@ export default function BusinessTable() {
                 disabled={listQuery.isLoading && !filterOptions}
               />
               <SelectFilter
+                placeholder="Premium source"
+                value={premiumSourceFilter}
+                onChange={setPremiumSourceFilter}
+                options={filterOptions?.premium_sources ?? [{ value: "manual", label: "Manual (admin)" }]}
+                disabled={listQuery.isLoading && !filterOptions}
+              />
+              <SelectFilter
                 placeholder="Verification"
                 value={verificationFilter}
                 onChange={setVerificationFilter}
@@ -494,10 +518,10 @@ export default function BusinessTable() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] text-sm">
+            <table className="w-full min-w-[1360px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {["SN", "Business Name", "Vendor", "Join Date", "Plan", "Status", "Verification", "Boost", "Actions"].map((h) => (
+                  {["SN", "Business Name", "Vendor", "Join Date", "Plan", "Expires", "Status", "Verification", "Boost", "Actions"].map((h) => (
                     <th
                       key={h}
                       className={`px-6 py-3 text-left text-xs font-medium text-gray-900 ${h === "Actions" ? "text-right" : ""}`}
@@ -518,7 +542,11 @@ export default function BusinessTable() {
                 {businesses.map((b, index) => (
                   <tr key={b.id} className="group hover:bg-gray-50/60 transition-colors">
                     <td className="px-6 py-3.5 text-gray-900">{index + 1}</td>
-                    <td className="px-6 py-3.5 font-medium text-gray-900 whitespace-nowrap">{b.name}</td>
+                    <td className="px-6 py-3.5 font-medium text-gray-900">
+                      <span className="inline-block max-w-[160px] truncate align-middle" title={b.name}>
+                        {shortenName(b.name)}
+                      </span>
+                    </td>
                     <td className="px-6 py-3.5 text-gray-900">
                       <div className="max-w-[180px] truncate" title={b.vendorName}>
                         {b.vendorName}
@@ -529,14 +557,27 @@ export default function BusinessTable() {
                         </div>
                       ) : null}
                     </td>
-                    {/* <td className="px-6 py-3.5 text-gray-900">{b.category}</td>
-                    <td className="px-6 py-3.5 text-gray-900">{b.location}</td> */}
                     <td className="px-6 py-3.5 text-gray-900 whitespace-nowrap">{formatDate(b.joinDate)}</td>
-                    <td className="px-6 py-3.5">
-                      <Badge
-                        label={b.plan === "premium" ? "Premium" : "Free"}
-                        className={planStyles[b.plan]}
-                      />
+                    <td className="px-6 py-3.5 whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Badge
+                          label={b.plan === "premium" ? "Premium" : "Free"}
+                          className={planStyles[b.plan]}
+                        />
+                        {b.plan === "premium" && b.isManualPremium ? (
+                          <span
+                            className="inline-flex h-[22px] shrink-0 items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 text-[10px] font-semibold leading-none text-indigo-700"
+                            title="Granted manually by admin"
+                          >
+                            Manual
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-6 py-3.5 whitespace-nowrap text-gray-900">
+                      {b.plan === "premium" && b.subscriptionExpiresAt
+                        ? formatDate(b.subscriptionExpiresAt)
+                        : "—"}
                     </td>
                     <td className="px-6 py-3.5">
                       <Badge label={statusLabel(b.status)} className={statusStyles[b.status]} />
@@ -555,6 +596,17 @@ export default function BusinessTable() {
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center justify-end gap-2">
+                        {b.plan !== "premium" ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-brand-red/30 bg-red-50 px-3 text-xs font-semibold text-brand-red transition-colors hover:bg-red-100 disabled:opacity-60"
+                            title={`Move ${b.name} to premium`}
+                            onClick={() => setPremiumTarget(b)}
+                          >
+                            <Crown className="size-3" aria-hidden />
+                            Move to Premium
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="inline-flex h-8 items-center gap-1 rounded-md bg-brand-red px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-red/90 disabled:opacity-60"
@@ -576,10 +628,7 @@ export default function BusinessTable() {
                           type="button"
                           className="inline-flex h-8 w-9 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100"
                           title="View details"
-                          onClick={() => {
-                            setSelectedBusinessId(b.id);
-                            setIsModalOpen(true);
-                          }}
+                          onClick={() => navigate(`/admin/businesses/${b.id}`)}
                         >
                           <Eye className="size-4" />
                         </button>
@@ -684,13 +733,20 @@ export default function BusinessTable() {
         </div>
       </div>
 
-      <BusinessDetailsModal
-        open={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedBusinessId(null);
-        }}
-        businessId={selectedBusinessId}
+      <MoveToPremiumModal
+        open={premiumTarget !== null}
+        business={
+          premiumTarget
+            ? {
+              id: premiumTarget.id,
+              name: premiumTarget.name,
+              vendorName: premiumTarget.vendorName,
+              vendorEmail: premiumTarget.vendorEmail,
+              plan: premiumTarget.plan,
+            }
+            : null
+        }
+        onClose={() => setPremiumTarget(null)}
       />
 
       {deleteTarget ? (

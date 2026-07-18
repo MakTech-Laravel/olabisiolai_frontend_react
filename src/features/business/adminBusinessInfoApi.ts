@@ -17,6 +17,8 @@ export type AdminBusinessInfo = {
   is_flagged?: boolean;
   boost: "none" | "active";
   plan: "free" | "premium";
+  isManualPremium: boolean;
+  subscriptionExpiresAt: string | null;
   joinDate: string;
 };
 
@@ -48,6 +50,8 @@ export type AdminBusinessListParams = {
   boost_status?: string;
   /** API: premium | free */
   subscription_plan?: string;
+  /** API: all | manual */
+  premium_source?: string;
 };
 
 export type AdminFilterOption = { value: string; label: string };
@@ -57,6 +61,7 @@ export type AdminBusinessFilterOptions = {
   business_statuses: AdminFilterOption[];
   boost_statuses: AdminFilterOption[];
   subscription_plans: AdminFilterOption[];
+  premium_sources: AdminFilterOption[];
   categories: AdminCategoryOption[];
 };
 
@@ -84,6 +89,34 @@ export type AdminBusinessMessage = {
   createdAt: string;
 };
 
+export type AdminBusinessPaymentHistoryItem = {
+  id: number;
+  reference: string;
+  amount: number;
+  currency: string;
+  method: string;
+  status: string;
+  transactionType: string;
+  packageId: string | null;
+  packageLabel: string | null;
+  dateShort: string;
+  dateTimeLong: string;
+  manualGrant: boolean;
+};
+
+export type AdminBusinessPaymentHistorySummary = {
+  totalTransactions: number;
+  completedTransactions: number;
+  pendingTransactions: number;
+  failedTransactions: number;
+  totalAmountCompleted: number;
+};
+
+export type AdminBusinessPaymentHistory = {
+  summary: AdminBusinessPaymentHistorySummary;
+  items: AdminBusinessPaymentHistoryItem[];
+};
+
 export type AdminBusinessDetail = {
   id: number;
   name: string;
@@ -107,6 +140,7 @@ export type AdminBusinessDetail = {
   updatedAt: string;
   vendor: AdminBusinessVendor | null;
   messages: AdminBusinessMessage[];
+  paymentHistory: AdminBusinessPaymentHistory;
 };
 
 const DEFAULT_FILTER_OPTIONS: AdminBusinessFilterOptions = {
@@ -128,6 +162,9 @@ const DEFAULT_FILTER_OPTIONS: AdminBusinessFilterOptions = {
   subscription_plans: [
     { value: "premium", label: "Premium" },
     { value: "free", label: "Free" },
+  ],
+  premium_sources: [
+    { value: "manual", label: "Manual (admin)" },
   ],
   categories: [],
 };
@@ -278,14 +315,18 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
   const plan = asBoolean(item.is_premium) === true
     ? "premium"
     : toPlan(
-        (
-          pickString(item, ["subscription_plan"], "") ||
-          pickString(planObj ?? {}, ["name", "tier"], "") ||
-          pickString(item, ["plan"], "free")
-        ).toLowerCase(),
-      );
+      (
+        pickString(item, ["subscription_plan"], "") ||
+        pickString(planObj ?? {}, ["name", "tier"], "") ||
+        pickString(item, ["plan"], "free")
+      ).toLowerCase(),
+    );
   const vendorName = pickString(vendorObj ?? {}, ["name"], pickString(item, ["vendor_name"], "—"));
   const vendorEmail = pickString(vendorObj ?? {}, ["email"], pickString(item, ["vendor_email"], ""));
+  const isManualPremium =
+    asBoolean(item.is_manual_premium) === true || asBoolean(item.is_manual_grant) === true;
+  const subscriptionExpiresAt =
+    pickString(item, ["subscription_expires_at_iso", "subscription_expires_at"], "") || null;
 
   return {
     id,
@@ -300,6 +341,8 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
     is_flagged: isFlagged,
     boost,
     plan,
+    isManualPremium,
+    subscriptionExpiresAt: subscriptionExpiresAt || null,
     joinDate,
   };
 }
@@ -401,6 +444,10 @@ function extractFilterOptionsBlock(payload: unknown): AdminBusinessFilterOptions
     .map((row) => parseFilterOption(row))
     .filter((row): row is AdminFilterOption => row !== null);
 
+  const premiumSources = (Array.isArray(block.premium_sources) ? block.premium_sources : [])
+    .map((row) => parseFilterOption(row))
+    .filter((row): row is AdminFilterOption => row !== null);
+
   const categories = (Array.isArray(block.categories) ? block.categories : [])
     .map((row) => parseCategoryOption(row))
     .filter((row): row is AdminCategoryOption => row !== null);
@@ -411,6 +458,8 @@ function extractFilterOptionsBlock(payload: unknown): AdminBusinessFilterOptions
     boost_statuses: boost.length > 0 ? boost : DEFAULT_FILTER_OPTIONS.boost_statuses,
     subscription_plans:
       subscriptionPlans.length > 0 ? subscriptionPlans : DEFAULT_FILTER_OPTIONS.subscription_plans,
+    premium_sources:
+      premiumSources.length > 0 ? premiumSources : DEFAULT_FILTER_OPTIONS.premium_sources,
     categories,
   };
 }
@@ -465,6 +514,9 @@ export async function fetchAdminBusinessList(
   }
   if (params.subscription_plan && params.subscription_plan !== "all") {
     body.subscription_plan = params.subscription_plan;
+  }
+  if (params.premium_source && params.premium_source !== "all") {
+    body.premium_source = params.premium_source;
   }
 
   const res = await request.post("/admin/business-info", body);
@@ -535,6 +587,64 @@ function parseStringArray(value: unknown): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+const EMPTY_PAYMENT_HISTORY: AdminBusinessPaymentHistory = {
+  summary: {
+    totalTransactions: 0,
+    completedTransactions: 0,
+    pendingTransactions: 0,
+    failedTransactions: 0,
+    totalAmountCompleted: 0,
+  },
+  items: [],
+};
+
+function parsePaymentHistoryItem(raw: unknown): AdminBusinessPaymentHistoryItem | null {
+  const item = asRecord(raw);
+  if (!item) return null;
+  const id = asNumber(item.id);
+  if (id === null || id <= 0) return null;
+  const meta = asRecord(item.metadata);
+  const manualGrant =
+    asBoolean(item.manual_grant) === true ||
+    asBoolean(meta?.manual_grant) === true ||
+    String(item.method ?? "").toLowerCase() === "waived";
+
+  return {
+    id,
+    reference: pickString(item, ["reference_display", "reference", "tx_ref"], "—"),
+    amount: asNumber(item.amount) ?? 0,
+    currency: pickString(item, ["currency"], "NGN"),
+    method: pickString(item, ["method"], "card"),
+    status: pickString(item, ["status"], "pending"),
+    transactionType: pickString(item, ["transaction_type", "purpose"], "subscription"),
+    packageId: pickString(item, ["package_id"], "") || null,
+    packageLabel: pickString(item, ["package_label"], "") || null,
+    dateShort: pickString(item, ["date_short"], ""),
+    dateTimeLong: pickString(item, ["date_time_long"], ""),
+    manualGrant,
+  };
+}
+
+function parsePaymentHistory(raw: unknown): AdminBusinessPaymentHistory {
+  const block = asRecord(raw);
+  if (!block) return EMPTY_PAYMENT_HISTORY;
+  const summaryRaw = asRecord(block.summary) ?? {};
+  const itemsRaw = Array.isArray(block.items) ? block.items : [];
+
+  return {
+    summary: {
+      totalTransactions: Math.max(0, asNumber(summaryRaw.total_transactions) ?? 0),
+      completedTransactions: Math.max(0, asNumber(summaryRaw.completed_transactions) ?? 0),
+      pendingTransactions: Math.max(0, asNumber(summaryRaw.pending_transactions) ?? 0),
+      failedTransactions: Math.max(0, asNumber(summaryRaw.failed_transactions) ?? 0),
+      totalAmountCompleted: Math.max(0, asNumber(summaryRaw.total_amount_completed) ?? 0),
+    },
+    items: itemsRaw
+      .map(parsePaymentHistoryItem)
+      .filter((row): row is AdminBusinessPaymentHistoryItem => row !== null),
+  };
+}
+
 function parseAdminBusinessDetail(raw: unknown): AdminBusinessDetail | null {
   const item = asRecord(raw);
   if (!item) return null;
@@ -593,6 +703,7 @@ function parseAdminBusinessDetail(raw: unknown): AdminBusinessDetail | null {
     updatedAt: pickString(item, ["updated_at"], ""),
     vendor,
     messages: [],
+    paymentHistory: EMPTY_PAYMENT_HISTORY,
   };
 }
 
@@ -626,8 +737,9 @@ function extractAdminBusinessDetailPayload(payload: unknown): {
   const businessRaw = data?.business ?? root?.business;
   const business = parseAdminBusinessDetail(businessRaw);
   const messages = parseAdminBusinessMessages(data?.messages ?? root?.messages);
+  const paymentHistory = parsePaymentHistory(data?.payment_history ?? root?.payment_history);
   if (business) {
-    return { business: { ...business, messages }, messages };
+    return { business: { ...business, messages, paymentHistory }, messages };
   }
   return { business: null, messages };
 }

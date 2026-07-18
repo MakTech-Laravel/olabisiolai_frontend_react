@@ -25,6 +25,7 @@ type PaymentDetailsModalProps = {
 function methodLabel(method: PaymentMethod) {
   if (method === "card") return "Card";
   if (method === "bank_transfer") return "Bank transfer";
+  if (method === "waived") return "Waived";
   return "Wallet";
 }
 

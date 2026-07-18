@@ -1,5 +1,5 @@
 export type PaymentStatus = "completed" | "pending" | "failed";
-export type PaymentMethod = "card" | "bank_transfer" | "wallet";
+export type PaymentMethod = "card" | "bank_transfer" | "wallet" | "waived";
 
 export type PaymentRow = {
   id: number;

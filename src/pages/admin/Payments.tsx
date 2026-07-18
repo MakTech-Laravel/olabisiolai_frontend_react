@@ -40,6 +40,7 @@ function formatCompactNgn(amount: number) {
 function methodLabel(method: PaymentRow["method"]) {
   if (method === "card") return "Card";
   if (method === "bank_transfer") return "Bank transfer";
+  if (method === "waived") return "Waived";
   return "Wallet";
 }
 

@@ -12,6 +12,7 @@ const adminDenied = "/admin/dashboard";
 const Dashboard = lazy(() => import("@/pages/admin/Dashboard"));
 const Users = lazy(() => import("@/pages/admin/Users"));
 const Businesses = lazy(() => import("@/pages/admin/Businesses"));
+const AdminBusinessDetail = lazy(() => import("@/pages/admin/AdminBusinessDetail"));
 const Categories = lazy(() => import("@/pages/admin/Categories"));
 const Career = lazy(() => import("@/pages/admin/Career"));
 const CareerEdit = lazy(() => import("@/pages/admin/CareerEdit"));
@@ -27,6 +28,7 @@ const Reviews = lazy(() => import("@/pages/admin/Reviews"));
 const Payments = lazy(() => import("@/pages/admin/Payments"));
 const BoostSystem = lazy(() => import("@/pages/admin/BoostSystem"));
 const SubscriptionPlans = lazy(() => import("@/pages/admin/SubscriptionPlans"));
+const PremiumExpirationTracker = lazy(() => import("@/pages/admin/PremiumExpirationTracker"));
 const AdminBoostRequestDetail = lazy(() => import("@/pages/admin/AdminBoostRequestDetail"));
 const UserManagement = lazy(() => import("@/pages/admin/UserManagement"));
 const AdminAccounts = lazy(() => import("@/pages/admin/AdminAccounts"));
@@ -78,6 +80,14 @@ export const adminRoutes: RouteObject = {
       element: (
         <PermissionGate permission="view products" fallback={adminDenied}>
           {suspensePage(Businesses)}
+        </PermissionGate>
+      ),
+    },
+    {
+      path: "/admin/businesses/:businessId",
+      element: (
+        <PermissionGate permission="view products" fallback={adminDenied}>
+          {suspensePage(AdminBusinessDetail)}
         </PermissionGate>
       ),
     },
@@ -138,5 +148,13 @@ export const adminRoutes: RouteObject = {
       element: suspensePage(AdminBoostRequestDetail),
     },
     { path: "/admin/subscription-plans", element: suspensePage(SubscriptionPlans) },
+    {
+      path: "/admin/premium-expiration",
+      element: (
+        <PermissionGate permission="view orders" fallback={adminDenied}>
+          {suspensePage(PremiumExpirationTracker)}
+        </PermissionGate>
+      ),
+    },
   ],
 };

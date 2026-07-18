@@ -91,7 +91,7 @@ function parseStatus(value: unknown): PaymentStatus {
 }
 
 function parseMethod(value: unknown): PaymentMethod {
-  if (value === "card" || value === "bank_transfer" || value === "wallet") return value;
+  if (value === "card" || value === "bank_transfer" || value === "wallet" || value === "waived") return value;
   return "card";
 }
 
@@ -280,19 +280,12 @@ export async function grantAdminPayment(
   return { message: (typeof root.message === "string" && root.message) || "Payment granted." };
 }
 
-export async function grantAdminPremium(body: {
-  business_id: number;
-  reason: string;
-  duration_days?: number;
-  paystack_reference?: string;
-}): Promise<{ message: string }> {
-  const res = await request.post("/admin/subscriptions/grant-premium", body);
-  const root = asRecord(res.data);
-  if (!root || root.success !== true) {
-    throw new Error((typeof root?.message === "string" && root.message) || "Could not grant premium.");
-  }
-  return { message: (typeof root.message === "string" && root.message) || "Premium granted." };
-}
+export {
+  grantAdminPremium,
+  type GrantAdminPremiumBody,
+  type GrantPremiumPaymentHandling,
+  type GrantPremiumPaymentMethod,
+} from "@/features/payments/adminPremiumApi";
 
 export async function exportAdminPaymentsCsv(params: AdminPaymentsListParams = {}): Promise<Blob> {
   const query: Record<string, string> = {};
