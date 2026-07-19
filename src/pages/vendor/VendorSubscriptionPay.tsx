@@ -235,7 +235,7 @@ export default function VendorSubscriptionPayPage() {
 
   const { data: walletData } = useQuery({
     queryKey: ["user", "wallet"],
-    queryFn: fetchUserWallet,
+    queryFn: () => fetchUserWallet(),
     enabled: canFetchPackages,
     staleTime: 15_000,
   });

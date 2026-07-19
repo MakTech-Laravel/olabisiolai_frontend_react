@@ -86,7 +86,7 @@ export default function UnifiedProfile() {
 
   const walletQuery = useQuery({
     queryKey: ['user', 'wallet'],
-    queryFn: fetchUserWallet,
+    queryFn: () => fetchUserWallet(),
     enabled: Boolean(user?.id),
     staleTime: 30_000,
   })

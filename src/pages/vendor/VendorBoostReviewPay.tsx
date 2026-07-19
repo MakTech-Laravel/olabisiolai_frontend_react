@@ -116,7 +116,7 @@ export default function VendorBoostReviewPayPage() {
 
   const { data: walletData } = useQuery({
     queryKey: ["user", "wallet"],
-    queryFn: fetchUserWallet,
+    queryFn: () => fetchUserWallet(),
     enabled: Boolean(getAccessToken()),
     staleTime: 15_000,
   });

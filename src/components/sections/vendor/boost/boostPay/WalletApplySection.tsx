@@ -16,7 +16,7 @@ export function WalletApplySection({
 }) {
   const { data: wallet, isLoading } = useQuery({
     queryKey: ["user", "wallet"],
-    queryFn: fetchUserWallet,
+    queryFn: () => fetchUserWallet(),
     staleTime: 15_000,
   });
 
