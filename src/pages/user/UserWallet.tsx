@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3'
 import PaystackPop from '@paystack/inline-js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Gift, Loader2, PlusCircle, Wallet } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Gift, Loader2, PlusCircle, Wallet } from 'lucide-react'
 
 import { useAuth } from '@/auth/useAuth'
 import {
@@ -26,6 +26,7 @@ type TopUpGateway = 'paystack' | 'flutterwave'
 
 const TOP_UP_PRESETS = [1000, 2500, 5000, 10000, 25000] as const
 const MIN_TOP_UP = 500
+const TX_PER_PAGE = 20
 
 function formatNaira(amount: number): string {
   return new Intl.NumberFormat('en-NG', {
@@ -49,14 +50,25 @@ export default function UserWalletPage() {
   const [isPaying, setIsPaying] = useState(false)
   const [shouldOpenFlutterwave, setShouldOpenFlutterwave] = useState(false)
   const [pendingCheckout, setPendingCheckout] = useState<WalletTopUpInit | null>(null)
+  const [page, setPage] = useState(1)
 
   const walletQuery = useQuery({
-    queryKey: ['user', 'wallet'],
-    queryFn: fetchUserWallet,
+    queryKey: ['user', 'wallet', page, TX_PER_PAGE],
+    queryFn: () => fetchUserWallet({ page, per_page: TX_PER_PAGE }),
     staleTime: 15_000,
+    placeholderData: (previous) => previous,
   })
 
   const wallet = walletQuery.data
+  const pagination = wallet?.pagination
+  const lastPage = pagination?.last_page ?? 1
+  const pageNumbers = useMemo(() => {
+    const total = lastPage
+    const current = pagination?.current_page ?? page
+    const start = Math.max(1, current - 2)
+    const end = Math.min(total, start + 4)
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  }, [lastPage, page, pagination?.current_page])
   const amountNgn = parseTopUpAmount(topUpAmount) ?? 0
   const customerEmail = user?.email?.trim() || 'guest@gidira.app'
   const customerName = user?.name?.trim() || 'Gidira User'
@@ -68,6 +80,7 @@ export default function UserWalletPage() {
   }, [queryClient])
 
   const handleTopUpSuccess = useCallback(async () => {
+    setPage(1)
     await refreshWallet()
     showSuccess('Wallet topped up successfully.')
   }, [refreshWallet])
@@ -331,9 +344,19 @@ export default function UserWalletPage() {
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
-          <h2 className="font-heading text-lg font-bold">Recent transactions</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-heading text-lg font-bold">Recent transactions</h2>
+            {walletQuery.isFetching && !walletQuery.isLoading ? (
+              <Loader2 className="size-4 animate-spin text-body-secondary" aria-label="Refreshing" />
+            ) : null}
+          </div>
           <div className="mt-4 space-y-3">
-            {(wallet?.transactions ?? []).length === 0 ? (
+            {walletQuery.isLoading ? (
+              <p className="inline-flex items-center gap-2 text-sm text-body-secondary">
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                Loading transactions…
+              </p>
+            ) : (wallet?.transactions ?? []).length === 0 ? (
               <p className="text-sm text-body-secondary">No transactions yet.</p>
             ) : (
               wallet?.transactions.map((tx) => (
@@ -343,7 +366,9 @@ export default function UserWalletPage() {
                 >
                   <div>
                     <p className="text-sm font-semibold text-ink">{tx.description}</p>
-                    <p className="text-xs text-chat-meta">{new Date(tx.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-chat-meta">
+                      {tx.created_at_human || (tx.created_at ? new Date(tx.created_at).toLocaleString() : '—')}
+                    </p>
                   </div>
                   <p
                     className={
@@ -357,6 +382,49 @@ export default function UserWalletPage() {
               ))
             )}
           </div>
+
+          {pagination && pagination.total > TX_PER_PAGE ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-body-secondary">
+                Page {pagination.current_page} of {lastPage} · {pagination.total.toLocaleString()} total
+              </p>
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || walletQuery.isFetching}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-body-secondary hover:bg-auth-bg disabled:opacity-40"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                {pageNumbers.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    disabled={walletQuery.isFetching}
+                    className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium ${
+                      page === p
+                        ? 'bg-ink text-white'
+                        : 'border border-border-light text-body-secondary hover:bg-auth-bg'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                  disabled={page >= lastPage || walletQuery.isFetching}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-light text-body-secondary hover:bg-auth-bg disabled:opacity-40"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </main>
     </div>

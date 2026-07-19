@@ -11,6 +11,7 @@ const adminDenied = "/admin/dashboard";
 
 const Dashboard = lazy(() => import("@/pages/admin/Dashboard"));
 const Users = lazy(() => import("@/pages/admin/Users"));
+const AdminUserWallet = lazy(() => import("@/pages/admin/UserWallet"));
 const Businesses = lazy(() => import("@/pages/admin/Businesses"));
 const AdminBusinessDetail = lazy(() => import("@/pages/admin/AdminBusinessDetail"));
 const Categories = lazy(() => import("@/pages/admin/Categories"));
@@ -66,6 +67,10 @@ export const adminRoutes: RouteObject = {
       ),
     },
     { path: "/admin/user-management/user", element: suspensePage(Users) },
+    {
+      path: "/admin/user-management/user/:userId/wallet",
+      element: suspensePage(AdminUserWallet),
+    },
     {
       path: "/admin/user-management/roles",
       element: (

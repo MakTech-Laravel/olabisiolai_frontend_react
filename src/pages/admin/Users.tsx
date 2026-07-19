@@ -13,9 +13,11 @@ import {
   Trash2,
   UserPlus,
   UsersRound,
+  Wallet,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   UserDetailsModal,
@@ -310,6 +312,7 @@ async function fetchAllAdminUsersForExport(): Promise<(UserRow & { sn: number })
 }
 
 export default function Users() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [search, setSearch] = useState("");
@@ -548,6 +551,15 @@ export default function Users() {
       setActionUserId(null);
       setActionType(null);
     }
+  };
+
+  const handleViewWallet = (user: UserRow) => {
+    navigate(`/admin/user-management/user/${user.id}/wallet`, {
+      state: {
+        userName: user.name,
+        userEmail: user.email,
+      },
+    });
   };
 
   return (
@@ -790,6 +802,15 @@ export default function Users() {
                         <td className="px-2 py-3 text-xs text-body-secondary sm:px-4 sm:py-4 sm:text-sm">{user.joinDate}</td>
                         <td className="px-2 py-3 sm:px-4 sm:py-4">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"
+                              onClick={() => handleViewWallet(user)}
+                              title="View wallet"
+                              aria-label={`View wallet for ${user.name}`}
+                            >
+                              <Wallet className="size-4 text-body-secondary" />
+                            </button>
                             <button
                               type="button"
                               className="inline-flex h-7 w-10 items-center justify-center rounded-xl hover:bg-muted"

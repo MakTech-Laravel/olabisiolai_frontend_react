@@ -14,7 +14,7 @@ const REPORT_TYPES = {
   vendor: {
     title: 'Report a Vendor',
     subject: 'Report a vendor listing',
-    description: 'Tell us which vendor and what happened. Include links or screenshots if helpful.',
+    description: 'Tell us which vendor and what happened. Include links.',
   },
   customer: {
     title: 'Report a Customer',
