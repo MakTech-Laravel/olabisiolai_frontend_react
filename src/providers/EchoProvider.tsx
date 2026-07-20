@@ -123,9 +123,11 @@ export function EchoProvider({ children }: { children: React.ReactNode }) {
         connection.unbind('failed', onFailed)
         connection.unbind('error', onError)
       }
-      instance.disconnect()
-      setEcho(null)
-      setSocketId(null)
+      // Do not disconnect the shared singleton here: createEcho()/disconnectEcho()
+      // in lib/echo.ts own its lifecycle. Disconnecting on every effect cleanup
+      // tears down the socket mid-handshake on React Strict Mode's dev-only
+      // mount->unmount->remount cycle, since the remount reuses the same
+      // fingerprinted instance that was just killed.
     }
   }, [enabled, accessToken])
 
