@@ -213,8 +213,6 @@ export default function UnifiedProfile() {
                 </div>
               </ProfileHubSection>
 
-              <ProfilePersonalTools />
-
               <ProfileBusinessSection
                 businesses={hubBusinesses}
                 isLoading={businessesQuery.isLoading}
@@ -222,6 +220,9 @@ export default function UnifiedProfile() {
                 onManage={handleManage}
                 onAddBusiness={() => void handleAddBusiness()}
               />
+
+              <ProfilePersonalTools />
+
               <ProfileHubFooter />
             </div>
           </div>
