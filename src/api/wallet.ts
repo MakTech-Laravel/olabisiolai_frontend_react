@@ -1,4 +1,5 @@
 import { request } from '@/api/request'
+import type { ReferralInvite, ReferralInviteStatus } from '@/api/referrals'
 
 export type WalletTransaction = {
   id: number
@@ -33,6 +34,12 @@ export type AdminUserWallet = UserWallet & {
     transaction_count: number
     total_credited: number
     total_debited: number
+  }
+  referrals: {
+    code: string
+    total_earned: number
+    total_invites: number
+    invites: ReferralInvite[]
   }
 }
 
@@ -78,6 +85,28 @@ function parseTransaction(raw: unknown): WalletTransaction | null {
   }
 }
 
+function parseReferralInvite(raw: unknown): ReferralInvite | null {
+  const row = asRecord(raw)
+  if (!row) return null
+
+  const rawStatus = pickString(row, ['status'], 'pending')
+  const status: ReferralInviteStatus = ['pending', 'joined', 'verified', 'paid'].includes(rawStatus)
+    ? (rawStatus as ReferralInviteStatus)
+    : 'pending'
+
+  return {
+    id: asNumber(row.id),
+    invitee_name: pickString(row, ['invitee_name', 'inviteeName'], '') || null,
+    invitee_email: pickString(row, ['invitee_email', 'inviteeEmail'], '') || null,
+    status,
+    credited_amount:
+      row.credited_amount != null || row.creditedAmount != null
+        ? asNumber(row.credited_amount ?? row.creditedAmount)
+        : null,
+    created_at: pickString(row, ['created_at', 'createdAt']),
+  }
+}
+
 function parseWallet(raw: unknown): UserWallet {
   const row = asRecord(raw) ?? {}
   const transactionsRaw = Array.isArray(row.transactions) ? row.transactions : []
@@ -103,6 +132,8 @@ function parseAdminWallet(raw: unknown): AdminUserWallet {
   const base = parseWallet(raw)
   const row = asRecord(raw) ?? {}
   const summary = asRecord(row.summary)
+  const referrals = asRecord(row.referrals) ?? {}
+  const referralInvites = Array.isArray(referrals.invites) ? referrals.invites : []
   return {
     ...base,
     id: asNumber(row.id) || undefined,
@@ -116,6 +147,14 @@ function parseAdminWallet(raw: unknown): AdminUserWallet {
           total_debited: asNumber(summary.total_debited ?? summary.totalDebited),
         }
       : undefined,
+    referrals: {
+      code: pickString(referrals, ['code']),
+      total_earned: asNumber(referrals.total_earned ?? referrals.totalEarned),
+      total_invites: asNumber(referrals.total_invites ?? referrals.totalInvites, referralInvites.length),
+      invites: referralInvites
+        .map((item) => parseReferralInvite(item))
+        .filter((item): item is ReferralInvite => item !== null),
+    },
   }
 }
 
@@ -139,12 +178,13 @@ export async function fetchUserWallet(params?: {
 
 export async function fetchAdminUserWallet(
   userId: number,
-  params?: { page?: number; per_page?: number },
+  params?: { page?: number; per_page?: number; type?: 'credit' | 'debit' },
 ): Promise<AdminUserWallet> {
   const res = await request.post('/admin/users/wallet', {
     user_id: userId,
     page: params?.page ?? 1,
     per_page: params?.per_page ?? 50,
+    type: params?.type,
   })
   const root = asRecord(res.data)
   if (!root || root.success !== true) {
