@@ -166,7 +166,7 @@ export function BusinessOwnerEditView({
 
   return (
     <div className={businessPageOwnerOuter}>
-      <div id="owner-details" className={cn('scroll-mt-28 space-y-4 grid grid-cols-2 gap-3', businessPageSectionX)}>
+      <div id="owner-details" className={cn('scroll-mt-28 space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-3', businessPageSectionX)}>
         <div className="relative">
           <AspectCover src={heroCover} className={businessPageHero} />
           <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-black/5 lg:rounded-2xl" aria-hidden />

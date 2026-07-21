@@ -53,7 +53,7 @@ export function VendorOwnerModalShell({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-card shadow-xl sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="relative z-10 flex h-dvh w-full max-w-2xl flex-col overflow-hidden bg-card shadow-xl sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl">
         <div className="mx-auto mb-1 mt-2 h-1 w-10 shrink-0 rounded-full bg-border-light sm:hidden" aria-hidden />
 
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border-light px-5 py-3 sm:rounded-t-2xl sm:py-4">
