@@ -1,6 +1,11 @@
 import { Clock } from "lucide-react";
 
-import type { BusinessHourEntry } from "@/features/business/businessHours";
+import {
+  isTwentyFourHours,
+  TWENTY_FOUR_HOURS_CLOSES_AT,
+  TWENTY_FOUR_HOURS_OPENS_AT,
+  type BusinessHourEntry,
+} from "@/features/business/businessHours";
 import { cn } from "@/lib/utils";
 
 function ClosedToggle({
@@ -25,6 +30,32 @@ function ClosedToggle({
         aria-label={`${label} closed`}
       />
       Closed
+    </label>
+  );
+}
+
+function TwentyFourHoursToggle({
+  checked,
+  disabled,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 rounded border-border-light text-sky-600 focus-visible:ring-2 focus-visible:ring-sky-500/25"
+        aria-label={`${label} open 24 hours`}
+      />
+      24 hrs
     </label>
   );
 }
@@ -70,6 +101,34 @@ export function BusinessHoursEditor({ hours, disabled, errors, onChange, classNa
     );
   };
 
+  const setDayTwentyFourHours = (day: BusinessHourEntry["day"], enabled: boolean) => {
+    onChange(
+      hours.map((entry) =>
+        entry.day === day
+          ? {
+            ...entry,
+            isClosed: false,
+            opensAt: enabled ? TWENTY_FOUR_HOURS_OPENS_AT : null,
+            closesAt: enabled ? TWENTY_FOUR_HOURS_CLOSES_AT : null,
+          }
+          : entry,
+      ),
+    );
+  };
+
+  const allTwentyFourSeven = hours.length > 0 && hours.every((entry) => isTwentyFourHours(entry));
+
+  const setAllTwentyFourSeven = (enabled: boolean) => {
+    onChange(
+      hours.map((entry) => ({
+        ...entry,
+        isClosed: false,
+        opensAt: enabled ? TWENTY_FOUR_HOURS_OPENS_AT : null,
+        closesAt: enabled ? TWENTY_FOUR_HOURS_CLOSES_AT : null,
+      })),
+    );
+  };
+
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-stat-muted">
@@ -80,10 +139,28 @@ export function BusinessHoursEditor({ hours, disabled, errors, onChange, classNa
         Set when customers can reach you. Closed days appear in red on your public profile.
       </p>
 
+      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border-light bg-card px-4 py-3">
+        <span className="text-sm font-medium text-body-secondary">
+          Open 24/7
+          <span className="block text-xs font-normal text-muted-foreground">
+            Your business is open 24 hours, every day.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={allTwentyFourSeven}
+          disabled={disabled}
+          onChange={(e) => setAllTwentyFourSeven(e.target.checked)}
+          className="size-4 rounded border-border-light text-sky-600 focus-visible:ring-2 focus-visible:ring-sky-500/25"
+          aria-label="Open 24/7"
+        />
+      </label>
+
       <ul className="divide-y divide-border-light rounded-xl border border-border-light bg-card">
         {hours.map((entry) => {
           const openError = fieldError(errors, entry.day, "opens_at");
           const closeError = fieldError(errors, entry.day, "closes_at");
+          const twentyFourHours = isTwentyFourHours(entry);
 
           return (
             <li
@@ -102,7 +179,13 @@ export function BusinessHoursEditor({ hours, disabled, errors, onChange, classNa
                 >
                   {entry.dayLabel}
                 </span>
-                <div className="sm:hidden">
+                <div className="flex items-center gap-3 sm:hidden">
+                  <TwentyFourHoursToggle
+                    checked={twentyFourHours}
+                    disabled={disabled}
+                    label={entry.dayLabel}
+                    onChange={(checked) => setDayTwentyFourHours(entry.day, checked)}
+                  />
                   <ClosedToggle
                     checked={entry.isClosed}
                     disabled={disabled}
@@ -116,6 +199,10 @@ export function BusinessHoursEditor({ hours, disabled, errors, onChange, classNa
                 {entry.isClosed ? (
                   <span className="text-sm font-semibold text-brand-red sm:min-w-[200px] sm:text-right">
                     Closed
+                  </span>
+                ) : twentyFourHours ? (
+                  <span className="text-sm font-semibold text-[#13a36b] sm:min-w-[200px] sm:text-right">
+                    Open 24 hours
                   </span>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -139,7 +226,13 @@ export function BusinessHoursEditor({ hours, disabled, errors, onChange, classNa
                   </div>
                 )}
 
-                <div className="hidden sm:block">
+                <div className="hidden items-center gap-3 sm:flex">
+                  <TwentyFourHoursToggle
+                    checked={twentyFourHours}
+                    disabled={disabled}
+                    label={entry.dayLabel}
+                    onChange={(checked) => setDayTwentyFourHours(entry.day, checked)}
+                  />
                   <ClosedToggle
                     checked={entry.isClosed}
                     disabled={disabled}

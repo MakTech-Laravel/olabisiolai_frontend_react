@@ -27,6 +27,22 @@ export type BusinessHoursDisplayRow = {
   closesAtFormatted: string | null;
 };
 
+/** Sentinel times representing an "open 24 hours" day (no DB schema change needed). */
+export const TWENTY_FOUR_HOURS_OPENS_AT = "00:00";
+export const TWENTY_FOUR_HOURS_CLOSES_AT = "23:59";
+
+export function isTwentyFourHours(entry: {
+  isClosed: boolean;
+  opensAt: string | null;
+  closesAt: string | null;
+}): boolean {
+  return (
+    !entry.isClosed &&
+    entry.opensAt === TWENTY_FOUR_HOURS_OPENS_AT &&
+    entry.closesAt === TWENTY_FOUR_HOURS_CLOSES_AT
+  );
+}
+
 export const BUSINESS_DAYS: Array<{ day: BusinessDay; label: string; short: string }> = [
   { day: "monday", label: "Monday", short: "Mon" },
   { day: "tuesday", label: "Tuesday", short: "Tue" },
@@ -168,6 +184,8 @@ export function parseBusinessHoursDisplay(raw: unknown): BusinessHoursDisplayRow
 export function formatHoursRange(entry: BusinessHoursDisplayRow | BusinessHourEntry): string {
   if (entry.isClosed) return "Closed";
 
+  if (isTwentyFourHours(entry)) return "Open 24 hours";
+
   const open = ("opensAtFormatted" in entry ? entry.opensAtFormatted : null) ?? formatTime12h(entry.opensAt);
   const close = ("closesAtFormatted" in entry ? entry.closesAtFormatted : null) ?? formatTime12h(entry.closesAt);
 
@@ -210,11 +228,12 @@ export function validateBusinessHours(hours: BusinessHourEntry[]): Record<string
 
 export function serializeBusinessHoursForApi(
   hours: BusinessHourEntry[],
-): Array<{ day: string; is_closed: boolean; opens_at?: string; closes_at?: string }> {
+): Array<{ day: string; is_closed: boolean; is_24_hours: boolean; opens_at?: string; closes_at?: string }> {
   return hours.map((entry) => {
-    const row: { day: string; is_closed: boolean; opens_at?: string; closes_at?: string } = {
+    const row: { day: string; is_closed: boolean; is_24_hours: boolean; opens_at?: string; closes_at?: string } = {
       day: entry.day,
       is_closed: entry.isClosed,
+      is_24_hours: isTwentyFourHours(entry),
     };
     if (!entry.isClosed && entry.opensAt) {
       row.opens_at = entry.opensAt;
@@ -230,6 +249,7 @@ export function appendBusinessHoursToFormData(formData: FormData, hours: Busines
   hours.forEach((entry, index) => {
     formData.append(`business_hours[${index}][day]`, entry.day);
     formData.append(`business_hours[${index}][is_closed]`, entry.isClosed ? "1" : "0");
+    formData.append(`business_hours[${index}][is_24_hours]`, isTwentyFourHours(entry) ? "1" : "0");
     if (!entry.isClosed && entry.opensAt) {
       formData.append(`business_hours[${index}][opens_at]`, entry.opensAt);
     }
@@ -274,6 +294,9 @@ function isOpenAtMinutes(
   const open = timeToMinutes(opensAt);
   const close = timeToMinutes(closesAt);
   if (open === null || close === null) return false;
+  if (opensAt === TWENTY_FOUR_HOURS_OPENS_AT && closesAt === TWENTY_FOUR_HOURS_CLOSES_AT) {
+    return true;
+  }
   if (close <= open) {
     return nowMinutes >= open || nowMinutes < close;
   }
