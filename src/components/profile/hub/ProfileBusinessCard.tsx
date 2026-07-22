@@ -1,8 +1,11 @@
-import { BadgeCheck, ChevronRight, Crown, Rocket } from 'lucide-react'
+import { BadgeCheck, Crown, Rocket } from 'lucide-react'
 
 import { profileHubChipClass } from '@/components/profile/hub/ProfileIdentitySection'
 
 import { isBusinessVerified, type ProfileHubBusiness } from './profileHubUtils'
+import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
+import { businessProfilePath } from '@/lib/businessProfile'
 
 type ProfileBusinessCardProps = {
   business: ProfileHubBusiness
@@ -32,7 +35,6 @@ export function ProfileBusinessCard({ business, onManage }: ProfileBusinessCardP
   return (
     <button
       type="button"
-      onClick={onManage}
       className="w-full overflow-hidden rounded-2xl border border-border-light bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-transform active:scale-[0.99] lg:transition-shadow lg:hover:shadow-[0_6px_22px_rgba(16,22,32,0.08)]"
     >
       <div className="flex items-center gap-3.5 p-3.5">
@@ -76,8 +78,13 @@ export function ProfileBusinessCard({ business, onManage }: ProfileBusinessCardP
             ) : null}
           </div>
         </div>
-
-        <ChevronRight className="size-5 shrink-0 text-[#c3cad4]" strokeWidth={2} aria-hidden />
+        
+        <div className="flex flex-col gap-2">
+          <Link to={businessProfilePath(business.id)}>
+            <Button variant="default" size="sm" className="w-full">View & Edit Page</Button>
+          </Link>
+          <Button onClick={onManage} variant="outline" size="sm" className="w-full border border-primary text-primary">Dashboard</Button>
+        </div>
       </div>
     </button>
   )
