@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { getAuthErrorMessage, getAuthFieldErrors } from "@/features/auth/errorMessage";
 import { resolveAuthRole, saveAuthRole } from "@/features/auth/roleSelection";
 import { registerAndLoginUser } from "@/features/auth/service";
-import { type AuthRole, type VerificationChannel } from "@/features/auth/types";
+import { type AuthRole } from "@/features/auth/types";
 import {
   getSavedVendorPlan,
   saveVendorPlan,
@@ -20,7 +20,6 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
-  const [verificationChannel, setVerificationChannel] = React.useState<VerificationChannel>("phone");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -84,12 +83,12 @@ export default function Register() {
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
 
-    if (verificationChannel === "email" && !trimmedEmail) {
+    if (!trimmedEmail) {
       setError("Please enter your email address.");
       return;
     }
 
-    if (verificationChannel === "phone" && !trimmedPhone) {
+    if (!trimmedPhone) {
       setError("Please enter your phone number.");
       return;
     }
@@ -103,8 +102,8 @@ export default function Register() {
       await registerAndLoginUser({
         first_name: firstName,
         last_name: lastName,
-        verification_channel: verificationChannel,
-        ...(verificationChannel === "email" ? { email: trimmedEmail } : { phone: trimmedPhone }),
+        email: trimmedEmail,
+        phone: trimmedPhone,
         password,
         password_confirmation: passwordConfirmation,
         role,
@@ -115,13 +114,10 @@ export default function Register() {
       const params = new URLSearchParams({
         purpose: "register",
         role,
-        channel: verificationChannel,
+        channel: "both",
+        email: trimmedEmail,
+        phone: trimmedPhone,
       });
-      if (verificationChannel === "email") {
-        params.set("email", trimmedEmail);
-      } else {
-        params.set("phone", trimmedPhone);
-      }
       if (role === "vendor" && vendorPlan) {
         params.set("plan", vendorPlan);
       }
@@ -162,7 +158,7 @@ export default function Register() {
             ) : null}
             <p className="text-sm font-inter text-muted-foreground">
               Already have an account?{" "}
-              <Link to={`/login/email?role=${role}`} className="text-primary hover:underline">
+              <Link to={`/login/phone?role=${role}`} className="text-primary hover:underline">
                 Login
               </Link>
             </p>
@@ -200,69 +196,39 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-normal text-muted-foreground mb-2">
-                Sign up with <span className="text-brand-red">*</span>
+                Email <span className="text-brand-red">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
-                <button
-                  type="button"
-                  onClick={() => setVerificationChannel("email")}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "email"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVerificationChannel("phone")}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${verificationChannel === "phone"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  Phone number
-                </button>
-              </div>
+              <Input
+                type="email"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              {fieldErrors.email ? (
+                <p className="mt-1 text-sm text-destructive">{fieldErrors.email}</p>
+              ) : null}
             </div>
 
-            {verificationChannel === "email" ? (
-              <div>
-                <label className="block text-sm font-normal text-muted-foreground mb-2">
-                  Email <span className="text-brand-red">*</span>
-                </label>
-                <Input
-                  type="email"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                {fieldErrors.email ? (
-                  <p className="mt-1 text-sm text-destructive">{fieldErrors.email}</p>
-                ) : null}
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-normal text-muted-foreground mb-2">
-                  Phone Number <span className="text-brand-red">*</span>
-                </label>
-                <Input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="e.g. 08012345678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-                {fieldErrors.phone ? (
-                  <p className="mt-1 text-sm text-destructive">{fieldErrors.phone}</p>
-                ) : null}
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-normal text-muted-foreground mb-2">
+                Phone Number <span className="text-brand-red">*</span>
+              </label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="e.g. 08012345678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+              {fieldErrors.phone ? (
+                <p className="mt-1 text-sm text-destructive">{fieldErrors.phone}</p>
+              ) : null}
+            </div>
 
             <div>
               <label className="flex items-center gap-1.5 text-sm font-normal text-muted-foreground mb-2">

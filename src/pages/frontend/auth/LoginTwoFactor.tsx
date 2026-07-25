@@ -69,7 +69,7 @@ export default function LoginTwoFactor() {
 
   React.useEffect(() => {
     if (!twoFactorToken) {
-      navigate(isAdmin ? '/admin/login' : '/login/email', { replace: true })
+      navigate(isAdmin ? '/admin/login' : '/login/phone', { replace: true })
       return
     }
 
@@ -302,7 +302,7 @@ export default function LoginTwoFactor() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link to={isAdmin ? '/admin/login' : '/login/email'} className="text-primary hover:underline">
+            <Link to={isAdmin ? '/admin/login' : '/login/phone'} className="text-primary hover:underline">
               Back to login
             </Link>
           </p>

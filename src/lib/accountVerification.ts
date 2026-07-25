@@ -52,12 +52,20 @@ export function resolveRegistrationVerificationChannel(
 ): VerificationChannel {
   const extended = user as UserWithSettings | null | undefined
   const stored = extended?.settings?.registration_verification_channel
-  if (stored === 'phone' || stored === 'email') {
+  if (stored === 'phone' || stored === 'email' || stored === 'both') {
     return stored
   }
 
-  if (extended?.verification_channel === 'phone' || extended?.verification_channel === 'email') {
+  if (
+    extended?.verification_channel === 'phone' ||
+    extended?.verification_channel === 'email' ||
+    extended?.verification_channel === 'both'
+  ) {
     return extended.verification_channel
+  }
+
+  if (user?.email && user?.phone) {
+    return 'both'
   }
 
   if (user?.phone && !user.email) {
@@ -77,7 +85,10 @@ export function accountVerificationDestination(
     role: user?.role === 'vendor' ? 'vendor' : 'user',
   })
 
-  if (channel === 'phone' && user?.phone) {
+  if (channel === 'both') {
+    if (user?.email) params.set('email', user.email)
+    if (user?.phone) params.set('phone', user.phone)
+  } else if (channel === 'phone' && user?.phone) {
     params.set('phone', user.phone)
   } else if (user?.email) {
     params.set('email', user.email)

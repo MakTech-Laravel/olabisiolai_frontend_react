@@ -68,9 +68,11 @@ export function isLoginVerificationRequired(body: unknown): boolean {
   )
 }
 
-export function extractLoginVerificationChannel(body: unknown): 'email' | 'phone' {
+export function extractLoginVerificationChannel(body: unknown): 'email' | 'phone' | 'both' {
   const data = unwrapLaravelData<Record<string, unknown>>(body)
-  return data?.verification_channel === 'phone' ? 'phone' : 'email'
+  if (data?.verification_channel === 'phone') return 'phone'
+  if (data?.verification_channel === 'both') return 'both'
+  return 'email'
 }
 
 export function isTwoFactorLoginRequired(body: unknown): body is {

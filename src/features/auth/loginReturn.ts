@@ -24,4 +24,4 @@ export function loginReturnFromLocation(location: Location): LoginReturnTarget {
   };
 }
 
-export const CUSTOMER_LOGIN_PATH = "/login/email?role=user";
+export const CUSTOMER_LOGIN_PATH = "/login/phone?role=user";

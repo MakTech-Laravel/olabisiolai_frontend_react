@@ -171,19 +171,25 @@ export type LoginUserResult =
 
 export function buildRegisterOtpVerificationPath(options: {
   role: AuthRole
-  channel: VerificationChannel
+  channel?: VerificationChannel
   email?: string
   phone?: string
 }): string {
+  const hasEmail = Boolean(options.email)
+  const hasPhone = Boolean(options.phone)
+  const channel: VerificationChannel =
+    options.channel ??
+    (hasEmail && hasPhone ? 'both' : hasPhone ? 'phone' : 'email')
+
   const params = new URLSearchParams({
     purpose: 'register',
     role: options.role,
-    channel: options.channel,
+    channel,
   })
-  if (options.channel === 'email' && options.email) {
+  if (options.email) {
     params.set('email', options.email)
   }
-  if (options.channel === 'phone' && options.phone) {
+  if (options.phone) {
     params.set('phone', options.phone)
   }
   return `/otp-verification?${params.toString()}`
@@ -588,7 +594,9 @@ export async function registerAndLoginUser(payload: RegisterPayload) {
   const contactId =
     payload.verification_channel === 'phone'
       ? (payload.phone ?? '')
-      : (payload.email ?? '')
+      : payload.verification_channel === 'both'
+        ? (payload.email ?? payload.phone ?? '')
+        : (payload.email ?? '')
 
   const storedUser =
     responseUser ??

@@ -12,18 +12,19 @@ export type AdminLoginPayload = {
   password: string
 }
 
-export type VerificationChannel = 'email' | 'phone'
+export type VerificationChannel = 'email' | 'phone' | 'both'
 
 export type RegisterPayload = {
   first_name: string
   last_name: string
-  verification_channel: VerificationChannel
-  email?: string
-  phone?: string
+  email: string
+  phone: string
   password: string
   password_confirmation: string
   role: AuthRole
   ref?: string
+  /** @deprecated Dual-channel registration; kept optional for older clients. */
+  verification_channel?: VerificationChannel
 }
 
 export type PhoneLoginRequestPayload = {

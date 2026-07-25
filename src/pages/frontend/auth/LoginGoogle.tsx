@@ -77,17 +77,7 @@ export default function LoginGoogle() {
                 to="/login/phone"
                 className="inline-flex items-center gap-2 bg-brand"
               >
-                Login with phone
-              </Link>
-            </Button>
-            <Button
-              asChild
-              type="button"
-              variant="outline"
-              className="flex justify-center w-full h-11 rounded-lg px-6 text-base font-medium shadow-none"
-            >
-              <Link to="/login/email" className="inline-flex items-center gap-2">
-                Login with email
+                Login with email or phone
               </Link>
             </Button>
           </div>

@@ -118,12 +118,14 @@ export default function OTPVerification() {
   }, [vendorPlan]);
 
   const identifier =
-    purpose === "login" ||
-    (purpose === "register" && channel === "phone") ||
-    (purpose === "new_device" && channel === "phone") ||
-    (purpose === "reset" && channel === "phone")
-      ? phone
-      : email;
+    purpose === "register" && email && phone
+      ? `${email}|${phone}`
+      : purpose === "login" ||
+          (purpose === "register" && channel === "phone") ||
+          (purpose === "new_device" && channel === "phone") ||
+          (purpose === "reset" && channel === "phone")
+        ? phone
+        : email;
   const limiterKey = React.useMemo(() => {
     if (!identifier) return null;
     return getLimiterStorageKey(purpose, identifier);
@@ -148,7 +150,7 @@ export default function OTPVerification() {
   React.useEffect(() => {
     if (purpose !== "new_device") return;
     if (getDeviceVerificationSession()?.token) return;
-    navigate("/login/email", { replace: true });
+    navigate("/login/phone", { replace: true });
   }, [navigate, purpose]);
 
   React.useEffect(() => {
@@ -351,6 +353,11 @@ export default function OTPVerification() {
       return;
     }
 
+    if (channel === "both" && (!email || !phone)) {
+      setError("Missing contact details for OTP verification. Please register again.");
+      return;
+    }
+
     setLoading(true);
     saveAuthRole(role);
 
@@ -381,9 +388,11 @@ export default function OTPVerification() {
 
     if (!identifier) {
       setError(
-        purpose === "login" || channel === "phone"
-          ? "Missing phone number. Please go back and try again."
-          : "Missing email. Please go back and try again.",
+        purpose === "register" && channel === "both"
+          ? "Missing contact details. Please go back and try again."
+          : purpose === "login" || channel === "phone"
+            ? "Missing phone number. Please go back and try again."
+            : "Missing email. Please go back and try again.",
       );
       return;
     }
@@ -425,7 +434,12 @@ export default function OTPVerification() {
     setResending(true);
     try {
       if (purpose === "register") {
-        if (channel === "phone" && phone) {
+        if (channel === "both") {
+          await resendRegistrationOtp({
+            ...(normalizedEmail ? { email: normalizedEmail } : {}),
+            ...(phone ? { phone } : {}),
+          });
+        } else if (channel === "phone" && phone) {
           await resendRegistrationOtp({ phone });
         } else if (normalizedEmail) {
           await resendRegistrationOtp({ email: normalizedEmail });
@@ -494,6 +508,8 @@ export default function OTPVerification() {
                     ? `We noticed a sign-in from a new device. Enter the code we sent to ${email || "your email"}.`
                     : purpose === "new_device"
                       ? `We noticed a sign-in from a new device. Enter the code we sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`
+                  : purpose === "register" && channel === "both"
+                    ? `Enter the verification code we just sent to ${email || "your email"} and your phone${phone ? ` ending in ${phone.slice(-4)}` : ""}.`
                   : purpose === "register" && channel === "email"
                     ? `Enter the verification code we just sent to ${email || "your email"}.`
                     : `Enter the verification code we just sent to your phone number${phone ? ` ending in ${phone.slice(-4)}` : ""}.`}

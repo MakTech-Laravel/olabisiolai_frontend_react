@@ -72,7 +72,7 @@ export default function ResetPassword() {
       });
       setSuccess("Password reset successful. Redirecting to login...");
       window.setTimeout(() => {
-        navigate("/login/email", { replace: true });
+        navigate("/login/phone", { replace: true });
       }, 1200);
     } catch (err) {
       const errors = getAuthFieldErrors(err);
@@ -182,7 +182,7 @@ export default function ResetPassword() {
 
           <p className="text-center text-sm text-muted-foreground">
             Remember your password?{" "}
-            <Link to="/login/email" className="text-primary hover:underline">
+            <Link to="/login/phone" className="text-primary hover:underline">
               Back to login
             </Link>
           </p>

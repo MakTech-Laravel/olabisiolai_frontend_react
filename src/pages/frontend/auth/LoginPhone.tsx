@@ -18,13 +18,15 @@ import {
 import { type AuthRole } from "@/features/auth/types";
 import { type LoginReturnTarget } from "@/features/auth/loginReturn";
 import { navigateAfterLogin } from "@/features/auth/navigateAfterLogin";
+import { parseAuthContactInput } from "@/lib/parseAuthContact";
+
 export default function LoginPhone() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
 
-  const [phone, setPhone] = React.useState("");
+  const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState<AuthRole>("user");
   const [showPassword, setShowPassword] = React.useState(false);
@@ -46,11 +48,14 @@ export default function LoginPhone() {
     saveAuthRole(role);
 
     try {
+      const contact = parseAuthContactInput(identifier);
       const returnTo = (location.state as { from?: LoginReturnTarget } | null)?.from;
 
       const loginResult = await loginUserWithRole(
         {
-          phone: phone.trim(),
+          ...(contact.channel === "email"
+            ? { email: contact.email }
+            : { phone: contact.phone }),
           password,
           role,
         },
@@ -60,9 +65,11 @@ export default function LoginPhone() {
       if (loginResult.kind === "verification_required") {
         try {
           await resendRegistrationOtp({
-            ...(loginResult.verificationChannel === "phone"
-              ? { phone: loginResult.phone ?? phone.trim() }
-              : { email: loginResult.email }),
+            ...(loginResult.email ? { email: loginResult.email } : {}),
+            ...(loginResult.phone || contact.phone
+              ? { phone: loginResult.phone ?? contact.phone }
+              : {}),
+            ...(!loginResult.email && contact.email ? { email: contact.email } : {}),
           });
         } catch {
           // User can resend manually on the OTP page.
@@ -71,9 +78,9 @@ export default function LoginPhone() {
         navigate(
           buildRegisterOtpVerificationPath({
             role,
-            channel: loginResult.verificationChannel,
-            email: loginResult.email,
-            phone: loginResult.phone ?? phone.trim(),
+            channel: loginResult.verificationChannel === "both" ? "both" : loginResult.verificationChannel,
+            email: loginResult.email ?? contact.email,
+            phone: loginResult.phone ?? contact.phone,
           }),
           { replace: true },
         );
@@ -84,9 +91,9 @@ export default function LoginPhone() {
         navigate(
           buildNewDeviceOtpVerificationPath({
             role,
-            channel: loginResult.verificationChannel,
-            email: loginResult.email,
-            phone: loginResult.phone ?? phone.trim(),
+            channel: loginResult.verificationChannel === "both" ? "email" : loginResult.verificationChannel,
+            email: loginResult.email ?? contact.email,
+            phone: loginResult.phone ?? contact.phone,
           }),
           {
             replace: true,
@@ -117,6 +124,11 @@ export default function LoginPhone() {
 
       navigate(await resolvePostLoginPath(loginResult.user, role), { replace: true });
     } catch (err) {
+      if (err instanceof Error && !("response" in err)) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
       const errors = getAuthFieldErrors(err);
       setFieldErrors(errors);
       setError(getAuthErrorMessage(err, "Login failed. Please try again."));
@@ -131,30 +143,32 @@ export default function LoginPhone() {
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-inter font-semibold text-foreground mb-2">
-              Login with phone
+              Login
             </h2>
             <p className="text-sm text-muted-foreground">
-              Enter your phone number and password to sign in.
+              Enter your email or phone number and password to sign in.
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={onSubmit}>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Phone number
+                Email or Phone
               </label>
               <Input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
+                type="text"
+                inputMode="text"
+                autoComplete="username"
                 className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="e.g. 08012345678 or +234 812 345 6789"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                placeholder="Enter your Email or Phone"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
                 required
               />
-              {fieldErrors.phone ? (
-                <p className="mt-1 text-sm text-destructive">{fieldErrors.phone}</p>
+              {fieldErrors.email || fieldErrors.phone ? (
+                <p className="mt-1 text-sm text-destructive">
+                  {fieldErrors.email || fieldErrors.phone}
+                </p>
               ) : null}
             </div>
 
@@ -209,12 +223,6 @@ export default function LoginPhone() {
           </form>
 
           <div className="flex flex-col items-center gap-3 mb-5">
-            <Link
-              to={`/login/email?role=${role}`}
-              className="text-sm text-primary hover:underline"
-            >
-              Login with email instead
-            </Link>
             <div className="flex items-center gap-2">
               <p className="text-base font-inter font-normal text-muted-foreground">
                 Don&apos;t have an account?
