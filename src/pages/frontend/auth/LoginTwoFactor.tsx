@@ -52,7 +52,9 @@ export default function LoginTwoFactor() {
   const marketplaceRole: AuthRole = role === 'vendor' ? 'vendor' : 'user'
 
   const [verificationChannel, setVerificationChannel] = React.useState<'email' | 'phone'>(
-    state.verificationChannel ?? storedSession?.verificationChannel ?? 'email',
+    state.verificationChannel === 'phone' || storedSession?.verificationChannel === 'phone'
+      ? 'phone'
+      : 'email',
   )
   const [maskedEmail, setMaskedEmail] = React.useState(state.maskedEmail ?? storedSession?.maskedEmail)
   const [maskedPhone, setMaskedPhone] = React.useState(state.maskedPhone ?? storedSession?.maskedPhone)

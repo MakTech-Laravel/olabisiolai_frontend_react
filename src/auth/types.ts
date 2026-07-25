@@ -13,7 +13,7 @@ export type AuthUser = {
   email_verified?: boolean
   email_verification_required?: boolean
   account_verified?: boolean
-  verification_channel?: 'email' | 'phone' | null
+  verification_channel?: 'email' | 'phone' | 'both' | null
   can_make_purchases?: boolean
   /**
    * Spatie `admin` guard permission names (from AdminResource / admin login).

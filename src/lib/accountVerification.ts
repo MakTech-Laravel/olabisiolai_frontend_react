@@ -56,12 +56,9 @@ export function resolveRegistrationVerificationChannel(
     return stored
   }
 
-  if (
-    extended?.verification_channel === 'phone' ||
-    extended?.verification_channel === 'email' ||
-    extended?.verification_channel === 'both'
-  ) {
-    return extended.verification_channel
+  const fromUser = extended?.verification_channel
+  if (fromUser === 'phone' || fromUser === 'email' || fromUser === 'both') {
+    return fromUser
   }
 
   if (user?.email && user?.phone) {

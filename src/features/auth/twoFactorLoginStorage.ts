@@ -5,7 +5,8 @@ const STORAGE_KEY = 'two_factor_login_session'
 export type TwoFactorLoginSession = {
   token: string
   role: AuthRole | 'admin'
-  verificationChannel: VerificationChannel
+  /** 2FA OTP is delivered on a single channel. */
+  verificationChannel: Exclude<VerificationChannel, 'both'>
   maskedEmail?: string
   maskedPhone?: string
 }
