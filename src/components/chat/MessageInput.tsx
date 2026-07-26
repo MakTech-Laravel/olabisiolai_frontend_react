@@ -44,6 +44,70 @@ const ATTACHMENT_OPTIONS = [
   },
 ] as const
 
+const PASTE_IMAGE_MIME = /^image\/(png|jpe?g|gif|webp)$/i
+
+function extensionForImageMime(mime: string): string {
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg'
+  if (mime.includes('gif')) return 'gif'
+  if (mime.includes('webp')) return 'webp'
+  return 'png'
+}
+
+function filesFromClipboard(data: DataTransfer | null): File[] {
+  if (!data) return []
+
+  const fromItems: File[] = []
+  for (const item of Array.from(data.items ?? [])) {
+    if (item.kind !== 'file' || !PASTE_IMAGE_MIME.test(item.type)) continue
+    const raw = item.getAsFile()
+    if (!raw) continue
+    const ext = extensionForImageMime(raw.type || 'image/png')
+    const name =
+      raw.name && raw.name.trim() !== '' && raw.name !== 'image.png'
+        ? raw.name
+        : `pasted-image-${Date.now()}-${fromItems.length + 1}.${ext}`
+    fromItems.push(raw.name === name ? raw : new File([raw], name, { type: raw.type || `image/${ext}` }))
+  }
+
+  if (fromItems.length > 0) return fromItems
+
+  return Array.from(data.files ?? []).filter((file) => PASTE_IMAGE_MIME.test(file.type))
+}
+
+function PendingImageThumb({
+  file,
+  onRemove,
+}: {
+  file: File
+  onRemove: () => void
+}) {
+  const [src, setSrc] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    const url = URL.createObjectURL(file)
+    setSrc(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  return (
+    <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-chat-border bg-muted sm:size-18">
+      {src ? (
+        <img src={src} alt={file.name} className="size-full object-cover" />
+      ) : (
+        <div className="grid size-full place-items-center text-[10px] text-stat-muted">Image</div>
+      )}
+      <button
+        type="button"
+        aria-label={`Remove ${file.name}`}
+        onClick={onRemove}
+        className="absolute right-1 top-1 grid size-5 place-items-center rounded-md bg-black/70 text-white hover:bg-black/85"
+      >
+        <X className="size-3" aria-hidden />
+      </button>
+    </div>
+  )
+}
+
 interface MessageInputProps {
   value: string
   onChange: (v: string) => void
@@ -86,13 +150,29 @@ export function MessageInput({
   const pendingAcceptRef = React.useRef<string>(ATTACHMENT_OPTIONS[3].accept)
 
   const catalogImageFile = React.useMemo(
-    () => pendingFiles.find((file) => file.type.startsWith('image/')) ?? null,
-    [pendingFiles],
+    () =>
+      catalogAttachment
+        ? (pendingFiles.find((file) => file.type.startsWith('image/')) ?? null)
+        : null,
+    [pendingFiles, catalogAttachment],
   )
 
-  const extraFiles = React.useMemo(
-    () => pendingFiles.filter((file) => file !== catalogImageFile),
+  const displayFiles = React.useMemo(
+    () =>
+      catalogImageFile
+        ? pendingFiles.filter((file) => file !== catalogImageFile)
+        : pendingFiles,
     [pendingFiles, catalogImageFile],
+  )
+
+  const imageFiles = React.useMemo(
+    () => displayFiles.filter((file) => file.type.startsWith('image/')),
+    [displayFiles],
+  )
+
+  const otherFiles = React.useMemo(
+    () => displayFiles.filter((file) => !file.type.startsWith('image/')),
+    [displayFiles],
   )
 
   const handleChange = (v: string) => {
@@ -113,6 +193,20 @@ export function MessageInput({
       e.preventDefault()
       onSend()
     }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (disabled || editingMessage) return
+
+    const pastedImages = filesFromClipboard(e.clipboardData)
+    if (pastedImages.length === 0) return
+
+    e.preventDefault()
+
+    const remainingSlots = MESSAGING_ATTACHMENT_MAX_COUNT - pendingFiles.length
+    if (remainingSlots <= 0) return
+
+    onFiles(pastedImages.slice(0, remainingSlots))
   }
 
   const openFilePicker = (accept: string) => {
@@ -159,18 +253,33 @@ export function MessageInput({
         />
       ) : null}
 
-      {extraFiles.length > 0 ? (
-        <div className="flex flex-wrap gap-2 border-t border-chat-border px-4 py-2">
-          {extraFiles.map((f, i) => (
-            <button
-              key={`${f.name}-${f.size}-${i}`}
-              type="button"
-              className="rounded-lg bg-muted px-2 py-1 text-xs"
-              onClick={() => onRemoveFile?.(pendingFiles.indexOf(f))}
-            >
-              {f.name} ×
-            </button>
-          ))}
+      {imageFiles.length > 0 || otherFiles.length > 0 ? (
+        <div className="space-y-2 border-t border-chat-border px-4 py-2">
+          {imageFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {imageFiles.map((f) => (
+                <PendingImageThumb
+                  key={`${f.name}-${f.size}-${f.lastModified}`}
+                  file={f}
+                  onRemove={() => onRemoveFile?.(pendingFiles.indexOf(f))}
+                />
+              ))}
+            </div>
+          ) : null}
+          {otherFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {otherFiles.map((f, i) => (
+                <button
+                  key={`${f.name}-${f.size}-${i}`}
+                  type="button"
+                  className="rounded-lg bg-muted px-2 py-1 text-xs"
+                  onClick={() => onRemoveFile?.(pendingFiles.indexOf(f))}
+                >
+                  {f.name} ×
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -224,6 +333,7 @@ export function MessageInput({
             value={value}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={onKeyDown}
+            onPaste={handlePaste}
             placeholder={
               catalogAttachment
                 ? 'Add a message about this item…'
