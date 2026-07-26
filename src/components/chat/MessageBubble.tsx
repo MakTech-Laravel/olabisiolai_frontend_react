@@ -2,10 +2,12 @@ import * as React from 'react'
 import { MoreHorizontal, Pencil } from 'lucide-react'
 
 import { AttachmentPreview } from '@/components/chat/AttachmentPreview'
+import { CatalogCartCard } from '@/components/chat/CatalogCartCard'
 import { CatalogEnquiryCard } from '@/components/chat/CatalogEnquiryCard'
 import { MessageStatusIcon } from '@/components/chat/MessageStatusIcon'
 import { ReplyQuote } from '@/components/chat/ReplyQuote'
 import { Avatar } from '@/components/ui/Avatar'
+import { parseCartEnquiryBody } from '@/features/catalog/cartMessageContext'
 import { parseCatalogEnquiryBody } from '@/features/catalog/catalogMessageContext'
 import type { Message } from '@/types/message'
 import { cn } from '@/lib/utils'
@@ -45,6 +47,7 @@ export const MessageBubble = React.memo(function MessageBubble({
 
   const replyParent = parentMessage ?? message.parent ?? null
   const catalogEnquiry = parseCatalogEnquiryBody(message.body)
+  const cartEnquiry = catalogEnquiry ? null : parseCartEnquiryBody(message.body)
   const displayStatus = isOwn
     ? resolveOwnMessageDisplayStatus(message, peerIsOnline)
     : message.status
@@ -114,11 +117,11 @@ export const MessageBubble = React.memo(function MessageBubble({
               onScrollToParent={onScrollToParent}
             />
           ) : null}
-          {catalogEnquiry?.userText ? (
+          {catalogEnquiry?.userText || cartEnquiry?.userText ? (
             <p className="break-words whitespace-pre-wrap text-sm leading-5 [overflow-wrap:anywhere]">
-              {catalogEnquiry.userText}
+              {catalogEnquiry?.userText || cartEnquiry?.userText}
             </p>
-          ) : message.body && !catalogEnquiry ? (
+          ) : message.body && !catalogEnquiry && !cartEnquiry ? (
             <p className="break-words whitespace-pre-wrap text-sm leading-5 [overflow-wrap:anywhere]">
               {message.body}
             </p>
@@ -127,6 +130,7 @@ export const MessageBubble = React.memo(function MessageBubble({
           {catalogEnquiry && !(message.attachments?.length ?? 0) ? (
             <CatalogEnquiryCard catalog={catalogEnquiry.catalog} isOwn={isOwn} />
           ) : null}
+          {cartEnquiry ? <CatalogCartCard cart={cartEnquiry.cart} isOwn={isOwn} /> : null}
           {message.edited_at ? (
             <p
               className={cn(

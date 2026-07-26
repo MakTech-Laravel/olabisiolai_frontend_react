@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock, Pencil, Plus, Trash2 } from 'lucide-react'
 
+import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { BusinessCatalogSection } from '@/components/business/BusinessCatalogSection'
 import { VendorOwnerModalShell } from '@/components/profile/VendorOwnerModalShell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { CATALOG_MAX_ITEMS_PER_BUSINESS } from '@/constants/config'
 import {
   CATALOG_DESCRIPTION_MAX_LENGTH,
   CATALOG_NAME_MAX_LENGTH,
@@ -23,7 +25,6 @@ import {
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
-import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { CATALOG_IMAGE_ASPECT_CLASS, CATALOG_IMAGE_UPLOAD_HINT } from '@/lib/businessImageLayout'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
@@ -123,6 +124,10 @@ export function VendorOwnerCatalogSection({
   }, [sheetOpen])
 
   function openCreate() {
+    if (items.length >= CATALOG_MAX_ITEMS_PER_BUSINESS) {
+      showError(`You can add up to ${CATALOG_MAX_ITEMS_PER_BUSINESS} catalog items.`)
+      return
+    }
     setEditor(emptyEditor())
     setSheetOpen(true)
   }
@@ -153,6 +158,11 @@ export function VendorOwnerCatalogSection({
 
     if (!resolvedName) {
       showError('Enter a name for this catalog item.')
+      return
+    }
+
+    if (!editor.item && items.length >= CATALOG_MAX_ITEMS_PER_BUSINESS) {
+      showError(`You can add up to ${CATALOG_MAX_ITEMS_PER_BUSINESS} catalog items.`)
       return
     }
 
@@ -224,6 +234,8 @@ export function VendorOwnerCatalogSection({
   }
 
   const items = catalogQuery.data?.items ?? []
+  const atCatalogLimit = items.length >= CATALOG_MAX_ITEMS_PER_BUSINESS
+  const canAddItem = isPremiumActive && !atCatalogLimit
   const upgradePath = buildVendorPremiumInfoPath(businessId)
 
   const editorSheet = (
@@ -410,10 +422,12 @@ export function VendorOwnerCatalogSection({
           <h2 className="font-heading text-xl font-bold text-ink">
             Catalog{' '}
             <span className="text-[13.5px] font-semibold text-stat-muted">
-              {isPremiumActive ? `${items.length} items` : 'Premium feature'}
+              {isPremiumActive
+                ? `${items.length}/${CATALOG_MAX_ITEMS_PER_BUSINESS} items`
+                : 'Premium feature'}
             </span>
           </h2>
-          {isPremiumActive ? (
+          {canAddItem ? (
             <button
               type="button"
               onClick={openCreate}
@@ -422,11 +436,15 @@ export function VendorOwnerCatalogSection({
               <Plus className="size-4" strokeWidth={2.2} aria-hidden />
               Add item
             </button>
+          ) : isPremiumActive && atCatalogLimit ? (
+            <span className="text-[12px] font-semibold text-stat-muted">Limit reached</span>
           ) : null}
         </div>
         <p className="text-sm leading-relaxed text-body-secondary">
           {isPremiumActive
-            ? 'Products and services customers can browse.'
+            ? atCatalogLimit
+              ? `You’ve reached the maximum of ${CATALOG_MAX_ITEMS_PER_BUSINESS} catalog items.`
+              : 'Products and services customers can browse.'
             : 'Catalogs are available on Premium. Upgrade to list your products and services.'}
         </p>
 
@@ -495,14 +513,16 @@ export function VendorOwnerCatalogSection({
                 </div>
               </article>
             ))}
-            <button
-              type="button"
-              onClick={openCreate}
-              className="edit-only flex h-full min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] text-[13.5px] font-semibold text-chat-accent"
-            >
-              <Plus className="size-7" strokeWidth={2} aria-hidden />
-              Add item
-            </button>
+            {canAddItem ? (
+              <button
+                type="button"
+                onClick={openCreate}
+                className="edit-only flex h-full min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] text-[13.5px] font-semibold text-chat-accent"
+              >
+                <Plus className="size-7" strokeWidth={2} aria-hidden />
+                Add item
+              </button>
+            ) : null}
           </div>
         )}
         {editorSheet}
@@ -513,7 +533,7 @@ export function VendorOwnerCatalogSection({
   return (
     <>
       <div className="relative">
-        {isPremiumActive ? (
+        {canAddItem ? (
           <div className="mb-3 flex justify-end">
             <button
               type="button"
@@ -524,6 +544,10 @@ export function VendorOwnerCatalogSection({
               Add item
             </button>
           </div>
+        ) : isPremiumActive && atCatalogLimit ? (
+          <p className="mb-3 text-right text-xs font-semibold text-stat-muted">
+            Catalog limit: {CATALOG_MAX_ITEMS_PER_BUSINESS} items
+          </p>
         ) : null}
 
         <BusinessCatalogSection

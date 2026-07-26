@@ -1,3 +1,5 @@
+import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
+import { CatalogFloatingCartFab } from '@/components/business/CatalogFloatingCartFab'
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import FiltersSection from '@/components/sections/filters/FiltersSection'
 import { formatCatalogPrice, type CatalogItemType } from '@/features/catalog/businessCatalogApi'
@@ -7,6 +9,7 @@ import {
 } from '@/features/catalog/publicCatalogDiscoveryApi'
 import { useCategoryCatalog } from '@/features/categories/useCategoryCatalog'
 import { useLocationCatalog } from '@/features/locations/useLocationCatalog'
+import { useDiscoveryCartActions } from '@/hooks/useDiscoveryCartActions'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
@@ -36,6 +39,7 @@ export default function CatalogDiscoveryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const perPage = 24
+  const cartActions = useDiscoveryCartActions('/catalog')
 
   const categoryIdParam = searchParams.get('category_id')
   const categoryNameParam = (searchParams.get('category') ?? '').trim()
@@ -226,6 +230,7 @@ export default function CatalogDiscoveryPage() {
         vendorUserUuid: item.vendorUserUuid,
         messagesPath: '/messages',
         showMessageBusiness: true,
+        enableCatalogCart: item.isPremium,
       },
     })
   }
@@ -437,6 +442,15 @@ export default function CatalogDiscoveryPage() {
                         Trending
                       </span>
                     ) : null}
+                    {item.isPremium ? (
+                      <div className="absolute bottom-2 right-2 z-10">
+                        <CatalogAddToCartControl
+                          qty={cartActions.qtyFor(item.id)}
+                          onAdd={() => void cartActions.addItem(item.id)}
+                          onSetQty={(qty) => void cartActions.setQty(item.id, qty)}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-1 flex-col px-3 py-3">
                     <p className="line-clamp-1 text-[11px] font-medium uppercase tracking-wide text-stat-muted">
@@ -472,6 +486,7 @@ export default function CatalogDiscoveryPage() {
           </div>
         </div>
       </div>
+      <CatalogFloatingCartFab />
     </div>
   )
 }
