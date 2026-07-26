@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
-import { CatalogItemDetailSheet } from '@/components/business/CatalogItemDetailSheet'
 import {
   formatCatalogPrice,
 } from '@/features/catalog/businessCatalogApi'
@@ -13,6 +11,7 @@ import {
   type DiscoveryCatalogItem,
 } from '@/features/catalog/publicCatalogDiscoveryApi'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
+import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
 
 const GRADIENTS = [
@@ -27,8 +26,7 @@ const GRADIENTS = [
 const HOME_LIMIT = 8
 
 export default function BusinessCatalog() {
-  const [selectedItem, setSelectedItem] = useState<DiscoveryCatalogItem | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+  const navigate = useNavigate()
 
   const { data: items = [], isPending, isError, refetch } = useQuery({
     queryKey: ['catalog', 'home', HOME_LIMIT],
@@ -38,13 +36,17 @@ export default function BusinessCatalog() {
   })
 
   const openItem = (item: DiscoveryCatalogItem) => {
-    setSelectedItem(item)
-    setDetailOpen(true)
-  }
-
-  const closeDetail = () => {
-    setDetailOpen(false)
-    setSelectedItem(null)
+    navigate(catalogItemDetailPath(item.id), {
+      state: {
+        from: '/',
+        item,
+        businessInfoId: item.businessInfoId,
+        businessName: item.businessName,
+        vendorUserUuid: item.vendorUserUuid,
+        messagesPath: '/messages',
+        showMessageBusiness: true,
+      },
+    })
   }
 
   return (
@@ -152,20 +154,6 @@ export default function BusinessCatalog() {
           </Link>
         </div>
       </div>
-
-      {selectedItem ? (
-        <CatalogItemDetailSheet
-          open={detailOpen}
-          item={selectedItem}
-          businessInfoId={selectedItem.businessInfoId}
-          businessName={selectedItem.businessName}
-          vendorUserUuid={selectedItem.vendorUserUuid}
-          fromPath="/"
-          showMessageBusiness
-          messagesPath="/messages"
-          onClose={closeDetail}
-        />
-      ) : null}
     </section>
   )
 }

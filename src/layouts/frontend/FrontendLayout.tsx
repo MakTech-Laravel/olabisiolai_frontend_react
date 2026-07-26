@@ -7,7 +7,8 @@ const FOOTERLESS_PATHS = new Set(['/filters'])
 
 export function FrontendLayout() {
   const { pathname } = useLocation()
-  const hideFooter = FOOTERLESS_PATHS.has(pathname)
+  const hideFooter =
+    FOOTERLESS_PATHS.has(pathname) || pathname.startsWith('/catalog/items/')
 
   return (
     <div className="min-h-dvh bg-background">

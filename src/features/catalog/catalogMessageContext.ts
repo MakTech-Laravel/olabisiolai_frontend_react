@@ -1,4 +1,4 @@
-import { businessProfilePath } from '@/lib/businessProfile'
+import { catalogItemDetailUrl } from '@/lib/catalogItemDetail'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 
 import {
@@ -66,12 +66,8 @@ export type ParsedCatalogEnquiry = {
   userText: string
 }
 
-export function buildCatalogItemUrl(businessInfoId: number, itemId: number): string {
-  const path = businessProfilePath(businessInfoId)
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}${path}?catalog=${itemId}`
-  }
-  return `${path}?catalog=${itemId}`
+export function buildCatalogItemUrl(_businessInfoId: number, itemId: number): string {
+  return catalogItemDetailUrl(itemId, true)
 }
 
 export function buildCatalogMessagePayload(

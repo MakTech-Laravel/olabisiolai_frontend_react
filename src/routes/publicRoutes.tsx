@@ -32,6 +32,7 @@ const MarketingBeyondGidira = lazy(() => import("@/pages/frontend/BusinessTips/M
 const PricingYourServicesRight = lazy(() => import("@/pages/frontend/BusinessTips/PricingYourServicesRight"));
 const Filters = lazy(() => import("@/pages/frontend/Filters"));
 const Catalog = lazy(() => import("@/pages/frontend/Catalog"));
+const CatalogItemDetail = lazy(() => import("@/pages/frontend/CatalogItemDetail"));
 const Service = lazy(() => import("@/pages/frontend/Service"));
 const DirectMessage = lazy(() => import("@/pages/frontend/DirectMessage"));
 const GiveReview = lazy(() => import("@/pages/frontend/GiveReview"));
@@ -51,6 +52,7 @@ export const publicRoutes: RouteObject = {
     { path: "/cart", element: suspensePage(Cart) },
     { path: "/filters", element: suspensePage(Filters) },
     { path: "/catalog", element: suspensePage(Catalog) },
+    { path: "/catalog/items/:itemId", element: suspensePage(CatalogItemDetail) },
     { path: "/trade", element: <Navigate to="/vendor/choose-your-plan" replace /> },
     { path: "/service", element: suspensePage(Service) },
     { path: "/businesses/:slug", element: suspensePage(Service) },

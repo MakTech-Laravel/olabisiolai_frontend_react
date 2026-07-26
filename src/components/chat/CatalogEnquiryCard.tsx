@@ -2,6 +2,7 @@ import { ExternalLink, Store } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import type { CatalogMessagePayload } from '@/features/catalog/catalogMessageContext'
+import { resolveCatalogItemPathFromUrl } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
 
 type CatalogEnquiryCardProps = {
@@ -12,7 +13,7 @@ type CatalogEnquiryCardProps = {
 
 export function CatalogEnquiryCard({ catalog, isOwn, className }: CatalogEnquiryCardProps) {
   const { businessName, catalogUrl, item } = catalog
-  const catalogPath = catalogUrl.replace(/^https?:\/\/[^/]+/, '')
+  const catalogPath = resolveCatalogItemPathFromUrl(catalogUrl)
 
   return (
     <div

@@ -1,5 +1,4 @@
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
-import { CatalogItemDetailSheet } from '@/components/business/CatalogItemDetailSheet'
 import FiltersSection from '@/components/sections/filters/FiltersSection'
 import { formatCatalogPrice, type CatalogItemType } from '@/features/catalog/businessCatalogApi'
 import {
@@ -9,12 +8,13 @@ import {
 import { useCategoryCatalog } from '@/features/categories/useCategoryCatalog'
 import { useLocationCatalog } from '@/features/locations/useLocationCatalog'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
+import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
 import { router } from '@/routes/router'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 const GRADIENTS = [
   'linear-gradient(135deg,#2e3b52,#46587a)',
@@ -31,10 +31,9 @@ type TypeFilter = 'all' | CatalogItemType
 
 export default function CatalogDiscoveryPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [showFilters, setShowFilters] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedItem, setSelectedItem] = useState<DiscoveryCatalogItem | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const perPage = 24
 
@@ -218,13 +217,17 @@ export default function CatalogDiscoveryPage() {
   }, [feedQuery.fetchNextPage, feedQuery.hasNextPage, feedQuery.isFetchingNextPage])
 
   const openItem = (item: DiscoveryCatalogItem) => {
-    setSelectedItem(item)
-    setDetailOpen(true)
-  }
-
-  const closeDetail = () => {
-    setDetailOpen(false)
-    setSelectedItem(null)
+    navigate(catalogItemDetailPath(item.id), {
+      state: {
+        from: '/catalog',
+        item,
+        businessInfoId: item.businessInfoId,
+        businessName: item.businessName,
+        vendorUserUuid: item.vendorUserUuid,
+        messagesPath: '/messages',
+        showMessageBusiness: true,
+      },
+    })
   }
 
   const filtersSectionProps = {
@@ -469,20 +472,6 @@ export default function CatalogDiscoveryPage() {
           </div>
         </div>
       </div>
-
-      {selectedItem ? (
-        <CatalogItemDetailSheet
-          open={detailOpen}
-          item={selectedItem}
-          businessInfoId={selectedItem.businessInfoId}
-          businessName={selectedItem.businessName}
-          vendorUserUuid={selectedItem.vendorUserUuid}
-          fromPath="/catalog"
-          showMessageBusiness
-          messagesPath="/messages"
-          onClose={closeDetail}
-        />
-      ) : null}
     </div>
   )
 }

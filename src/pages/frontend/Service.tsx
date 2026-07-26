@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchPublicBusinessById,
@@ -10,6 +10,7 @@ import type { SocialAccount } from "@/features/business/socialAccounts";
 import { fetchBusinessReviews } from "@/features/reviews/publicReviewApi";
 import { resolveBusinessIdFromSlug } from "@/lib/encryptId";
 import { businessProfilePath } from "@/lib/businessProfile";
+import { catalogItemDetailPath } from "@/lib/catalogItemDetail";
 
 import { BusinessPublicPageView } from "@/components/business/BusinessPublicPageView";
 import { BusinessOwnerEditView } from "@/components/profile/BusinessOwnerEditView";
@@ -113,6 +114,8 @@ export default function Service() {
   const [ownerPageMode, setOwnerPageMode] = useState<OwnerPageMode>("edit");
   const reviewsRef = useRef<HTMLElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { pathname } = location;
   const routeState = (location.state as ServiceLocationState | null) ?? null;
   const { slug } = useParams<{ slug: string }>();
@@ -121,6 +124,20 @@ export default function Service() {
 
   const businessId = slug ? resolveBusinessIdFromSlug(slug) : null;
   const stateData = routeState?.business ?? null;
+
+  // Legacy deep link: /businesses/:slug?catalog=1 → /catalog/items/1
+  useEffect(() => {
+    const catalogId = Number(searchParams.get("catalog") ?? "");
+    if (!Number.isFinite(catalogId) || catalogId <= 0) return;
+    navigate(catalogItemDetailPath(catalogId), {
+      replace: true,
+      state: {
+        from: pathname,
+        businessInfoId: businessId ?? undefined,
+        businessName: stateData?.name,
+      },
+    });
+  }, [searchParams, navigate, pathname, businessId, stateData?.name]);
 
   const refreshBusinessProfile = () => {
     if (businessId !== null) {

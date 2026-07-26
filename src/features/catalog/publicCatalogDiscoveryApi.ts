@@ -83,6 +83,17 @@ function parseDiscoveryList(raw: unknown): DiscoveryCatalogItem[] {
     .filter((item): item is DiscoveryCatalogItem => item !== null)
 }
 
+export async function fetchCatalogDiscoveryItem(itemId: number): Promise<DiscoveryCatalogItem> {
+  const res = await request.get(`/catalog/items/${itemId}`)
+  const root = asRecord(res.data)
+  const data = asRecord(root?.data)
+  const item = parseDiscoveryCatalogItem(data?.item)
+  if (!item) {
+    throw new Error('Catalog item not found')
+  }
+  return item
+}
+
 export async function fetchHomeCatalogItems(limit = 8): Promise<DiscoveryCatalogItem[]> {
   const res = await request.get('/catalog/home', { params: { limit } })
   const root = asRecord(res.data)
