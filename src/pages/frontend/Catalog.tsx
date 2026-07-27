@@ -1,5 +1,4 @@
 import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
-import { CatalogFloatingCartFab } from '@/components/business/CatalogFloatingCartFab'
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import FiltersSection from '@/components/sections/filters/FiltersSection'
 import { formatCatalogPrice, type CatalogItemType } from '@/features/catalog/businessCatalogApi'
@@ -486,7 +485,6 @@ export default function CatalogDiscoveryPage() {
           </div>
         </div>
       </div>
-      <CatalogFloatingCartFab />
     </div>
   )
 }

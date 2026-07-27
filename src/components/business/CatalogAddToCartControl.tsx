@@ -32,7 +32,7 @@ export function CatalogAddToCartControl({
           onAdd()
         }}
         className={cn(
-          'grid place-items-center rounded-full bg-ink text-white shadow-md transition-transform hover:scale-105 active:scale-95',
+          'grid place-items-center rounded-full bg-white backdrop-blur-md text-black shadow-md transition-transform hover:scale-105 active:scale-95',
           buttonSize,
           className,
         )}

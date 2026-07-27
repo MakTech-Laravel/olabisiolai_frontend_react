@@ -81,7 +81,7 @@ export default function BusinessCatalogBrowsePage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="container mx-auto max-w-6xl px-4 py-6 lg:py-8">
         <BusinessCatalogSection
           items={business.catalogItems}
           catalogLocked={false}
@@ -92,6 +92,7 @@ export default function BusinessCatalogBrowsePage() {
           showMessageBusiness
           messagesPath="/messages"
           previewLimit={null}
+          className="[&_h2]:lg:text-3xl"
         />
       </div>
     </div>

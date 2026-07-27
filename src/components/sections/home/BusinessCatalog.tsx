@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
-import { CatalogFloatingCartFab } from '@/components/business/CatalogFloatingCartFab'
 import { formatCatalogPrice } from '@/features/catalog/businessCatalogApi'
 import {
   fetchHomeCatalogItems,
@@ -173,7 +172,6 @@ export default function BusinessCatalog() {
           </Link>
         </div>
       </div>
-      <CatalogFloatingCartFab />
     </section>
   )
 }

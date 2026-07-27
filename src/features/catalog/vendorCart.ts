@@ -85,17 +85,21 @@ function clampQty(qty: number): number {
   return Math.min(CATALOG_CART_MAX_QTY, Math.floor(qty))
 }
 
+function exactCartPriceDisplay(item: BusinessCatalogItem): string {
+  if (item.priceKobo !== null && item.priceKobo >= 0) {
+    return formatNairaFromKobo(item.priceKobo)
+  }
+  return formatCatalogPrice(item)
+}
+
 function lineFromItem(item: BusinessCatalogItem, qty: number): VendorCartLine {
   return {
     catalogItemId: item.id,
     qty: clampQty(qty),
     name: item.name,
     imageUrl: item.imageUrl,
-    unitPriceKobo:
-      item.priceKobo !== null && item.priceKobo >= 0 && !item.priceFrom
-        ? item.priceKobo
-        : null,
-    priceDisplay: formatCatalogPrice(item),
+    unitPriceKobo: item.priceKobo !== null && item.priceKobo >= 0 ? item.priceKobo : null,
+    priceDisplay: exactCartPriceDisplay(item),
     priceFrom: item.priceFrom,
   }
 }
@@ -118,10 +122,10 @@ export function addItemToVendorCart(
       name: item.name,
       imageUrl: item.imageUrl,
       unitPriceKobo:
-        item.priceKobo !== null && item.priceKobo >= 0 && !item.priceFrom
+        item.priceKobo !== null && item.priceKobo >= 0
           ? item.priceKobo
           : nextItems[index].unitPriceKobo,
-      priceDisplay: formatCatalogPrice(item),
+      priceDisplay: exactCartPriceDisplay(item),
       priceFrom: item.priceFrom,
     }
   } else {
@@ -181,12 +185,12 @@ export function vendorCartItemCount(cart: VendorCart | null | undefined): number
   return cart.items.reduce((sum, line) => sum + line.qty, 0)
 }
 
-/** Sum of unitPriceKobo * qty when every line has a fixed unit price; otherwise null. */
+/** Sum of unitPriceKobo * qty when every line has a numeric unit price; otherwise null. */
 export function vendorCartEstimatedTotalKobo(cart: VendorCart | null | undefined): number | null {
   if (!cart?.items.length) return 0
   let total = 0
   for (const line of cart.items) {
-    if (line.unitPriceKobo === null || line.unitPriceKobo < 0 || line.priceFrom) {
+    if (line.unitPriceKobo === null || line.unitPriceKobo < 0) {
       return null
     }
     total += line.unitPriceKobo * line.qty

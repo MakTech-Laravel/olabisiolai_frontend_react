@@ -94,11 +94,10 @@ export async function fetchCatalogDiscoveryItem(itemId: number): Promise<Discove
   return item
 }
 
+/** Homepage strip — same feed as `/catalog` with a smaller page size. */
 export async function fetchHomeCatalogItems(limit = 8): Promise<DiscoveryCatalogItem[]> {
-  const res = await request.get('/catalog/home', { params: { limit } })
-  const root = asRecord(res.data)
-  const data = asRecord(root?.data)
-  return parseDiscoveryList(data?.items)
+  const feed = await fetchCatalogDiscoveryFeed({ page: 1, per_page: limit })
+  return feed.items
 }
 
 export async function fetchCatalogDiscoveryFeed(params: {

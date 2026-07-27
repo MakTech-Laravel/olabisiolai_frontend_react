@@ -23,6 +23,26 @@ function invalidateCartQueries(queryClient: ReturnType<typeof useQueryClient>, b
   }
 }
 
+function writeCartCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  next: BuyerCart,
+) {
+  queryClient.setQueryData(buyerCartBusinessQueryKey(next.businessInfoId), next)
+  queryClient.setQueryData(buyerCartQueryKey, (previous: BuyerCart[] | undefined) => {
+    const list = previous ?? []
+    const index = list.findIndex((entry) => entry.businessInfoId === next.businessInfoId)
+    if (next.itemCount === 0) {
+      return list.filter((entry) => entry.businessInfoId !== next.businessInfoId)
+    }
+    if (index >= 0) {
+      const copy = [...list]
+      copy[index] = next
+      return copy
+    }
+    return [next, ...list]
+  })
+}
+
 /** All open carts for the signed-in buyer (catalog FAB + /cart hub). */
 export function useBuyerCarts() {
   const { isAuthenticated, isSessionLoading, isUserLoading } = useAuth()
@@ -67,7 +87,7 @@ export function useBuyerCatalogCart(businessInfoId: number | null | undefined) {
     async (catalogItemId: number, quantity = 1) => {
       try {
         const next = await addBuyerCartItem(catalogItemId, quantity)
-        queryClient.setQueryData(buyerCartBusinessQueryKey(next.businessInfoId), next)
+        writeCartCaches(queryClient, next)
         invalidateCartQueries(queryClient, next.businessInfoId)
         return next
       } catch (error) {
@@ -90,7 +110,7 @@ export function useBuyerCatalogCart(businessInfoId: number | null | undefined) {
           quantity < 1
             ? await removeBuyerCartItem(line.id)
             : await updateBuyerCartItemQuantity(line.id, quantity)
-        queryClient.setQueryData(buyerCartBusinessQueryKey(next.businessInfoId), next)
+        writeCartCaches(queryClient, next)
         invalidateCartQueries(queryClient, next.businessInfoId)
         return next
       } catch (error) {
@@ -108,7 +128,7 @@ export function useBuyerCatalogCart(businessInfoId: number | null | undefined) {
           quantity < 1
             ? await removeBuyerCartItem(cartItemId)
             : await updateBuyerCartItemQuantity(cartItemId, quantity)
-        queryClient.setQueryData(buyerCartBusinessQueryKey(next.businessInfoId), next)
+        writeCartCaches(queryClient, next)
         invalidateCartQueries(queryClient, next.businessInfoId)
         return next
       } catch (error) {
@@ -125,8 +145,12 @@ export function useBuyerCatalogCart(businessInfoId: number | null | undefined) {
       return sendBuyerCart({ cartId: cart.id })
     },
     onSuccess: (result) => {
-      queryClient.setQueryData(buyerCartBusinessQueryKey(result.cart.businessInfoId), null)
-      invalidateCartQueries(queryClient, result.cart.businessInfoId)
+      const sentBusinessId = result.cart.businessInfoId
+      queryClient.setQueryData(buyerCartBusinessQueryKey(sentBusinessId), null)
+      queryClient.setQueryData(buyerCartQueryKey, (previous: BuyerCart[] | undefined) =>
+        (previous ?? []).filter((entry) => entry.businessInfoId !== sentBusinessId),
+      )
+      invalidateCartQueries(queryClient, sentBusinessId)
     },
   })
 

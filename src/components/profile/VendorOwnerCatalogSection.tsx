@@ -179,8 +179,8 @@ export function VendorOwnerCatalogSection({
 
     const priceDigits = sanitizeCatalogPriceDigits(editor.priceLabel)
     const priceKobo = nairaDigitsToKobo(priceDigits)
-    if (editor.priceLabel.trim() && priceKobo === null) {
-      showError('Enter a valid numeric price (naira only).')
+    if (!priceDigits || priceKobo === null) {
+      showError('Enter an exact price in naira (numbers only).')
       return
     }
 
@@ -298,6 +298,7 @@ export function VendorOwnerCatalogSection({
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="off"
+            maxLength={12}
             value={editor.priceLabel}
             onChange={(event) =>
               setEditor((current) => ({
@@ -307,7 +308,9 @@ export function VendorOwnerCatalogSection({
             }
             placeholder="e.g. 250000"
           />
-          <p className="mt-1 text-xs text-stat-muted">Numbers only — whole naira amount.</p>
+          <p className="mt-1 text-xs text-stat-muted">
+            Numbers only (single value). Range/text like 20000-40000 is not allowed.
+          </p>
         </div>
 
         <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">

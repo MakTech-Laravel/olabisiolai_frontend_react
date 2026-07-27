@@ -9,6 +9,7 @@ type VendorCatalogCartBarProps = {
   className?: string
 }
 
+/** Mobile sticky cart summary — desktop uses the global floating cart FAB. */
 export function VendorCatalogCartBar({
   itemCount,
   estimatedTotalDisplay,
@@ -20,7 +21,7 @@ export function VendorCatalogCartBar({
   return (
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-border-light bg-white/95 px-4 py-3 backdrop-blur-md',
+        'fixed inset-x-0 bottom-0 z-40 border-t border-border-light bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden',
         'pb-[max(0.75rem,env(safe-area-inset-bottom,0))]',
         className,
       )}
@@ -35,7 +36,7 @@ export function VendorCatalogCartBar({
         <button
           type="button"
           onClick={onReview}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#273449]"
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#273449] active:scale-[0.98]"
         >
           <ShoppingBag className="size-4" aria-hidden />
           Review / Send
