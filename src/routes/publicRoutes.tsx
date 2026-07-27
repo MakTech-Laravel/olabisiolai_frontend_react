@@ -33,6 +33,7 @@ const PricingYourServicesRight = lazy(() => import("@/pages/frontend/BusinessTip
 const Filters = lazy(() => import("@/pages/frontend/Filters"));
 const Catalog = lazy(() => import("@/pages/frontend/Catalog"));
 const CatalogItemDetail = lazy(() => import("@/pages/frontend/CatalogItemDetail"));
+const BusinessCatalogBrowse = lazy(() => import("@/pages/frontend/BusinessCatalogBrowse"));
 const Service = lazy(() => import("@/pages/frontend/Service"));
 const DirectMessage = lazy(() => import("@/pages/frontend/DirectMessage"));
 const GiveReview = lazy(() => import("@/pages/frontend/GiveReview"));
@@ -56,6 +57,7 @@ export const publicRoutes: RouteObject = {
     { path: "/trade", element: <Navigate to="/vendor/choose-your-plan" replace /> },
     { path: "/service", element: suspensePage(Service) },
     { path: "/businesses/:slug", element: suspensePage(Service) },
+    { path: "/businesses/:slug/catalog", element: suspensePage(BusinessCatalogBrowse) },
     { path: "/businesses/:slug/reviews", element: suspensePage(BusinessReviews) },
     { path: "/messages", element: suspensePage(DirectMessage) },
     { path: "/reviews", element: suspensePage(GiveReview) },

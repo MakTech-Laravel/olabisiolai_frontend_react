@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, MessageCircle, Store } f
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
+import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
 import {
   buildCatalogMessagePayload,
   prepareCatalogMessageWithImage,
@@ -12,6 +13,7 @@ import { formatCatalogPrice, type BusinessCatalogItem } from '@/features/catalog
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import { seedNewConversationInCache } from '@/features/messaging/conversationCache'
 import { startDirectConversationWithVendor } from '@/features/messaging/startDirectConversation'
+import { useBuyerCatalogCart } from '@/hooks/useBuyerCatalogCart'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { businessProfilePath } from '@/lib/businessProfile'
 import { directMessageTo } from '@/lib/directMessage'
@@ -27,6 +29,8 @@ export type CatalogItemDetailContentProps = {
   vendorUserUuid?: string | null
   fromPath: string
   showMessageBusiness?: boolean
+  /** Premium catalog cart controls (hidden when false / locked). */
+  enableCatalogCart?: boolean
   messagesPath?: '/messages' | '/user/messages'
   onBack: () => void
   className?: string
@@ -39,6 +43,7 @@ export function CatalogItemDetailContent({
   vendorUserUuid,
   fromPath,
   showMessageBusiness = true,
+  enableCatalogCart = false,
   messagesPath = '/messages',
   onBack,
   className,
@@ -50,6 +55,9 @@ export function CatalogItemDetailContent({
   const [photoIndex, setPhotoIndex] = useState(0)
   const swipeStartX = useRef<number | null>(null)
   const swipeStartY = useRef<number | null>(null)
+
+  const cart = useBuyerCatalogCart(enableCatalogCart ? businessInfoId : null)
+  const cartQty = cart.qtyFor(item.id)
 
   const photos = useMemo(() => {
     const urls = item.imageUrls?.length
@@ -166,6 +174,28 @@ export function CatalogItemDetailContent({
       }
     })()
   }
+
+  const cartControls = enableCatalogCart ? (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border-light bg-white px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">Add to cart</p>
+        <p className="text-xs text-stat-muted">Send several items in one message</p>
+      </div>
+      <CatalogAddToCartControl
+        qty={cartQty}
+        size="md"
+        onAdd={() => {
+          if (!isAuthReady) return
+          if (!isAuthenticated) {
+            requireAuthNavigate(fromPath)
+            return
+          }
+          void cart.addItem(item.id)
+        }}
+        onSetQty={(qty) => void cart.setQty(item.id, qty)}
+      />
+    </div>
+  ) : null
 
   const messageButton = showMessageBusiness ? (
     <button
@@ -289,6 +319,15 @@ export function CatalogItemDetailContent({
         ) : null}
       </div>
 
+      {cartControls}
+      {enableCatalogCart && cart.itemCount > 0 ? (
+        <Link
+          to={`/cart?business=${businessInfoId}`}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-chat-accent/30 bg-[#e8f5ee] px-4 py-3 text-sm font-semibold text-chat-accent"
+        >
+          View cart · {cart.itemCount} item{cart.itemCount === 1 ? '' : 's'} · {cart.estimatedTotalDisplay}
+        </Link>
+      ) : null}
       {messageButton}
 
       <Link
@@ -317,7 +356,6 @@ export function CatalogItemDetailContent({
 
   return (
     <div className={cn('bg-auth-bg text-ink', className)}>
-      {/* Mobile top bar */}
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border-light bg-white/95 px-3 py-3 backdrop-blur-md lg:hidden">
         <button
           type="button"
@@ -334,10 +372,9 @@ export function CatalogItemDetailContent({
         <div className="size-10" aria-hidden />
       </header>
 
-      {/* Mobile: stacked · Desktop: gallery left / details right */}
       <div
         className={cn(
-          'lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:p-6 xl:gap-10 xl:p-8 mb-8 lg:mb-0',
+          'mb-8 lg:mb-0 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:p-6 xl:gap-10 xl:p-8',
           showMessageBusiness,
         )}
       >
@@ -345,10 +382,26 @@ export function CatalogItemDetailContent({
         <div className="px-4 pt-5 sm:px-6 lg:px-0 lg:pt-0">{details}</div>
       </div>
 
-      {/* Mobile sticky CTA */}
       {showMessageBusiness ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-light bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom,0))]">
-          <div className="mx-auto w-full max-w-lg">{messageButton}</div>
+          <div className="mx-auto flex w-full max-w-lg items-center gap-2">
+            {enableCatalogCart ? (
+              <CatalogAddToCartControl
+                qty={cartQty}
+                size="md"
+                onAdd={() => {
+                  if (!isAuthReady) return
+                  if (!isAuthenticated) {
+                    requireAuthNavigate(fromPath)
+                    return
+                  }
+                  void cart.addItem(item.id)
+                }}
+                onSetQty={(qty) => void cart.setQty(item.id, qty)}
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">{messageButton}</div>
+          </div>
         </div>
       ) : null}
     </div>

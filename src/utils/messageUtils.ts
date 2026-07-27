@@ -3,6 +3,7 @@ import type { Attachment } from '@/types/attachment'
 import type { Message, MessageType } from '@/types/message'
 import type { MessagingUser } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
+import { cartEnquiryPreviewText } from '@/features/catalog/cartMessageContext'
 import { catalogEnquiryPreviewText } from '@/features/catalog/catalogMessageContext'
 import { resolveMediaUrl } from '@/lib/mediaUrl'
 import { formatReadAt } from '@/utils/formatters'
@@ -40,6 +41,8 @@ export function getMessagePreviewText(message: {
 }): string {
   const catalogPreview = catalogEnquiryPreviewText(message.body)
   if (catalogPreview) return catalogPreview
+  const cartPreview = cartEnquiryPreviewText(message.body)
+  if (cartPreview) return cartPreview
   if (message.body?.trim()) return message.body.trim()
   const attachments = message.attachments ?? []
   if (attachments.length > 0) {

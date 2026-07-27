@@ -3,13 +3,13 @@ import { Loader2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
-import {
-  formatCatalogPrice,
-} from '@/features/catalog/businessCatalogApi'
+import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
+import { formatCatalogPrice } from '@/features/catalog/businessCatalogApi'
 import {
   fetchHomeCatalogItems,
   type DiscoveryCatalogItem,
 } from '@/features/catalog/publicCatalogDiscoveryApi'
+import { useDiscoveryCartActions } from '@/hooks/useDiscoveryCartActions'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
@@ -27,6 +27,7 @@ const HOME_LIMIT = 8
 
 export default function BusinessCatalog() {
   const navigate = useNavigate()
+  const cartActions = useDiscoveryCartActions('/')
 
   const { data: items = [], isPending, isError, refetch } = useQuery({
     queryKey: ['catalog', 'home', HOME_LIMIT],
@@ -45,19 +46,20 @@ export default function BusinessCatalog() {
         vendorUserUuid: item.vendorUserUuid,
         messagesPath: '/messages',
         showMessageBusiness: true,
+        enableCatalogCart: item.isPremium,
       },
     })
   }
 
   return (
     <section className="">
-      <div className="bg-card container px-4 mx-auto py-12 lg:py-24">
+      <div className="container mx-auto bg-card px-4 py-12 lg:py-24">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="lg:text-3xl text-2xl font-inter font-bold text-text-primary">
+            <h2 className="font-inter text-2xl font-bold text-text-primary lg:text-3xl">
               Popular Services & Products
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-text-secondary font-inter">
+            <p className="mt-2 max-w-2xl font-inter text-sm text-text-secondary">
               A curated pick of premium catalog items. Explore the full discovery feed in Catalog.
             </p>
           </div>
@@ -74,23 +76,23 @@ export default function BusinessCatalog() {
               <button
                 type="button"
                 onClick={() => void refetch()}
-                className="mt-3 text-primary font-medium underline-offset-2 hover:underline"
+                className="mt-3 font-medium text-primary underline-offset-2 hover:underline"
               >
                 Try again
               </button>
             </div>
           ) : items.length === 0 ? (
-            <p className="py-12 text-center text-sm text-text-secondary font-inter">
+            <p className="py-12 text-center font-inter text-sm text-text-secondary">
               Premium catalog highlights will appear here soon.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {items.map((item, index) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => openItem(item)}
-                  className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-transform transition-shadow duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
+                  className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
                 >
                   <div
                     className="relative"
@@ -99,7 +101,12 @@ export default function BusinessCatalog() {
                     }}
                   >
                     {item.imageUrl ? (
-                      <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" fit="cover" />
+                      <BusinessCatalogImage
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="rounded-none"
+                        fit="cover"
+                      />
                     ) : (
                       <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />
                     )}
@@ -116,15 +123,26 @@ export default function BusinessCatalog() {
                         Trending
                       </span>
                     ) : null}
+                    {item.isPremium ? (
+                      <div className="absolute bottom-2 right-2 z-10">
+                        <CatalogAddToCartControl
+                          qty={cartActions.qtyFor(item.id)}
+                          onAdd={() => void cartActions.addItem(item.id)}
+                          onSetQty={(qty) => void cartActions.setQty(item.id, qty)}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-1 flex-col px-3 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-stat-muted line-clamp-1">
+                    <p className="line-clamp-1 text-[11px] font-medium uppercase tracking-wide text-stat-muted">
                       {item.businessName}
                       {item.categoryName ? ` · ${item.categoryName}` : ''}
                     </p>
-                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.name}</h3>
+                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-ink">
+                      {item.name}
+                    </h3>
                     {item.description ? (
-                      <p className="mt-1 flex-1 text-xs leading-relaxed text-stat-muted line-clamp-2">
+                      <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-stat-muted">
                         {item.description}
                       </p>
                     ) : null}
@@ -133,7 +151,7 @@ export default function BusinessCatalog() {
                         {formatCatalogPrice(item)}
                       </p>
                       {item.cityName || item.locationLabel ? (
-                        <p className="text-[11px] text-stat-muted line-clamp-1">
+                        <p className="line-clamp-1 text-[11px] text-stat-muted">
                           {item.cityName || item.locationLabel}
                         </p>
                       ) : null}

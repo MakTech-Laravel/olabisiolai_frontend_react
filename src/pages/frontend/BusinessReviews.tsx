@@ -136,7 +136,7 @@ export default function BusinessReviews() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-3xl px-4 py-6">
+      <main className="container mx-auto px-4 py-6">
         <section className="rounded-2xl bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start gap-6">
             <div>

@@ -1,14 +1,17 @@
 import { Outlet, useLocation } from 'react-router-dom'
 
+import { CatalogFloatingCartFab } from '@/components/business/CatalogFloatingCartFab'
 import { FrontendFooter } from '@/components/partials/frontend/FrontendFooter'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 
-const FOOTERLESS_PATHS = new Set(['/filters'])
+const FOOTERLESS_PATHS = new Set(['/filters', '/cart'])
 
 export function FrontendLayout() {
   const { pathname } = useLocation()
   const hideFooter =
-    FOOTERLESS_PATHS.has(pathname) || pathname.startsWith('/catalog/items/')
+    FOOTERLESS_PATHS.has(pathname) ||
+    pathname.startsWith('/catalog/items/') ||
+    pathname.startsWith('/cart')
 
   return (
     <div className="min-h-dvh bg-background">
@@ -17,7 +20,7 @@ export function FrontendLayout() {
         <Outlet />
       </main>
       {!hideFooter ? <FrontendFooter /> : null}
+      <CatalogFloatingCartFab />
     </div>
   )
 }
-

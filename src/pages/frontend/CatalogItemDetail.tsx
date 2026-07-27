@@ -19,6 +19,7 @@ type LocationState = {
   vendorUserUuid?: string | null
   messagesPath?: '/messages' | '/user/messages'
   showMessageBusiness?: boolean
+  enableCatalogCart?: boolean
 }
 
 export default function CatalogItemDetailPage() {
@@ -47,20 +48,31 @@ export default function CatalogItemDetailPage() {
         businessInfoId: itemQuery.data.businessInfoId,
         businessName: itemQuery.data.businessName,
         vendorUserUuid: itemQuery.data.vendorUserUuid,
+        enableCatalogCart: itemQuery.data.isPremium,
       }
     }
 
     if (state.item && state.businessInfoId) {
+      const fromDiscovery =
+        'isPremium' in state.item ? Boolean(state.item.isPremium) : state.enableCatalogCart === true
       return {
         item: state.item,
         businessInfoId: state.businessInfoId,
         businessName: state.businessName || 'Business',
         vendorUserUuid: state.vendorUserUuid ?? null,
+        enableCatalogCart: state.enableCatalogCart ?? fromDiscovery,
       }
     }
 
     return null
-  }, [itemQuery.data, state.item, state.businessInfoId, state.businessName, state.vendorUserUuid])
+  }, [
+    itemQuery.data,
+    state.item,
+    state.businessInfoId,
+    state.businessName,
+    state.vendorUserUuid,
+    state.enableCatalogCart,
+  ])
 
   // Prefer native document scroll on mobile (smoother than nested overflow containers).
   useEffect(() => {
@@ -146,6 +158,7 @@ export default function CatalogItemDetailPage() {
             vendorUserUuid={resolved.vendorUserUuid}
             fromPath={fromPath}
             showMessageBusiness={showMessageBusiness}
+            enableCatalogCart={resolved.enableCatalogCart && showMessageBusiness}
             messagesPath={messagesPath}
             onBack={onBack}
           />

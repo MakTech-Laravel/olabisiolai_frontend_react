@@ -5,6 +5,11 @@ export function businessProfilePath(businessId: number): string {
   return `/businesses/${encryptId(businessId)}`
 }
 
+/** Full vendor catalog browse page (See all). */
+export function businessCatalogBrowsePath(businessId: number): string {
+  return `${businessProfilePath(businessId)}/catalog`
+}
+
 export type BusinessProfileNavState = {
   from?: string
   business?: {

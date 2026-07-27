@@ -13,3 +13,10 @@ export const TYPING_IDLE_STOP_MS = 5000
 export const SEARCH_DEBOUNCE_MS = 400
 export const READ_MARK_DEBOUNCE_MS = 500
 export const TYPING_INDICATOR_CLEAR_MS = 8000
+
+/** Business profile catalog preview count before "See all". */
+export const CATALOG_BUSINESS_PAGE_PREVIEW = 10
+/** Max catalog items a premium vendor may create. */
+export const CATALOG_MAX_ITEMS_PER_BUSINESS = 50
+/** Max quantity per cart line item. */
+export const CATALOG_CART_MAX_QTY = 99
