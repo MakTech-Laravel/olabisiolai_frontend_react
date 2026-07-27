@@ -5,6 +5,7 @@ import {
   formatCatalogPrice,
   type BusinessCatalogItem,
 } from '@/features/catalog/businessCatalogApi'
+import { formatCartEstimatedTotalDisplay } from '@/features/catalog/cartPricing'
 
 export type VendorCartLine = {
   catalogItemId: number
@@ -85,7 +86,15 @@ function clampQty(qty: number): number {
   return Math.min(CATALOG_CART_MAX_QTY, Math.floor(qty))
 }
 
+function exactUnitPriceKobo(item: BusinessCatalogItem): number | null {
+  // "From" prices are estimates — cart must not treat them as exact totals.
+  if (item.priceFrom) return null
+  if (item.priceKobo !== null && item.priceKobo >= 0) return item.priceKobo
+  return null
+}
+
 function exactCartPriceDisplay(item: BusinessCatalogItem): string {
+  if (item.priceFrom) return ''
   if (item.priceKobo !== null && item.priceKobo >= 0) {
     return formatNairaFromKobo(item.priceKobo)
   }
@@ -98,7 +107,7 @@ function lineFromItem(item: BusinessCatalogItem, qty: number): VendorCartLine {
     qty: clampQty(qty),
     name: item.name,
     imageUrl: item.imageUrl,
-    unitPriceKobo: item.priceKobo !== null && item.priceKobo >= 0 ? item.priceKobo : null,
+    unitPriceKobo: exactUnitPriceKobo(item),
     priceDisplay: exactCartPriceDisplay(item),
     priceFrom: item.priceFrom,
   }
@@ -121,10 +130,7 @@ export function addItemToVendorCart(
       qty: clampQty(nextItems[index].qty + qtyDelta),
       name: item.name,
       imageUrl: item.imageUrl,
-      unitPriceKobo:
-        item.priceKobo !== null && item.priceKobo >= 0
-          ? item.priceKobo
-          : nextItems[index].unitPriceKobo,
+      unitPriceKobo: exactUnitPriceKobo(item),
       priceDisplay: exactCartPriceDisplay(item),
       priceFrom: item.priceFrom,
     }
@@ -207,9 +213,7 @@ export function formatNairaFromKobo(priceKobo: number): string {
 }
 
 export function formatVendorCartEstimatedTotal(cart: VendorCart | null | undefined): string {
-  const total = vendorCartEstimatedTotalKobo(cart)
-  if (total === null) return 'Price on request'
-  return formatNairaFromKobo(total)
+  return formatCartEstimatedTotalDisplay(vendorCartEstimatedTotalKobo(cart), formatNairaFromKobo)
 }
 
 export function getVendorCartLineQty(

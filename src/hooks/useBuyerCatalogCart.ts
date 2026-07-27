@@ -13,6 +13,7 @@ import {
   updateBuyerCartItemQuantity,
   type BuyerCart,
 } from '@/features/catalog/buyerCartApi'
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { showError } from '@/lib/sweetAlert'
 
@@ -157,7 +158,7 @@ export function useBuyerCatalogCart(businessInfoId: number | null | undefined) {
   return {
     cart,
     itemCount: cart?.itemCount ?? 0,
-    estimatedTotalDisplay: cart?.estimatedTotalDisplay ?? 'Price on request',
+    estimatedTotalDisplay: cart?.estimatedTotalDisplay ?? BUSINESS_PROVIDES_TOTAL_PRICE,
     isLoading: query.isLoading,
     qtyFor: (catalogItemId: number) =>
       cart?.items.find((line) => line.catalogItemId === catalogItemId)?.quantity ?? 0,

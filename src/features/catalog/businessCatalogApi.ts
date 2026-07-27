@@ -97,22 +97,28 @@ function formatNairaFromKobo(priceKobo: number): string {
   }).format(priceKobo / 100)
 }
 
-/** Digits-only naira amount for the catalog price field (no currency symbols). */
+/** Digits-only naira amount for exact catalog prices (no currency symbols). */
 export function sanitizeCatalogPriceDigits(raw: string): string {
   return raw.replace(/\D/g, '').slice(0, 12)
 }
 
-/** Prefill editor from stored kobo or a numeric-looking label. */
+/** True when the price field is a single numeric naira amount (not a range/label). */
+export function isExactNairaPriceInput(raw: string): boolean {
+  const trimmed = raw.trim()
+  if (!trimmed) return false
+  // Ranges / words like "from 1500 - 2000" are free-text labels, not exact kobo.
+  if (/[^\d\s₦,.]/.test(trimmed)) return false
+  return Boolean(sanitizeCatalogPriceDigits(trimmed))
+}
+
+/** Prefill editor from stored kobo or a free-text / range label. */
 export function catalogPriceEditorValue(
   item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel'>,
 ): string {
   if (item.priceKobo !== null && item.priceKobo >= 0) {
     return String(Math.round(item.priceKobo / 100))
   }
-  const digits = sanitizeCatalogPriceDigits(item.priceLabel ?? '')
-  if (!digits) return ''
-  const asNumber = Number(digits)
-  return Number.isFinite(asNumber) ? String(asNumber) : digits
+  return (item.priceLabel ?? '').trim()
 }
 
 export function nairaDigitsToKobo(digits: string): number | null {
@@ -168,8 +174,9 @@ export type CatalogItemInput = {
   type: CatalogItemType
   name: string
   description?: string
-  /** Whole-naira amount as digits; converted to `price_kobo` on save. */
+  /** Whole-naira amount as digits, or free-text / range for `price_label`. */
   priceLabel?: string
+  /** Exact amount in kobo; null for range/text or price-on-request. */
   priceKobo?: number | null
   priceFrom?: boolean
   images?: File[]
@@ -185,21 +192,29 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
   formData.append('name', input.name.trim())
   if (input.description?.trim()) formData.append('description', input.description.trim())
 
-  const priceKobo =
-    input.priceKobo !== undefined
-      ? input.priceKobo
-      : input.priceLabel !== undefined
-        ? nairaDigitsToKobo(input.priceLabel)
-        : undefined
+  const rawLabel = (input.priceLabel ?? '').trim()
+  let priceKobo: number | null | undefined = input.priceKobo
+  let priceLabel = ''
+
+  if (priceKobo === undefined && input.priceLabel !== undefined) {
+    if (!rawLabel) {
+      priceKobo = null
+      priceLabel = ''
+    } else if (isExactNairaPriceInput(rawLabel)) {
+      priceKobo = nairaDigitsToKobo(rawLabel)
+      priceLabel = ''
+    } else {
+      // Range / free-text (e.g. "from 1500 - 2000") — cart will not show an exact total.
+      priceKobo = null
+      priceLabel = rawLabel.slice(0, 64)
+    }
+  } else if (priceKobo !== undefined) {
+    priceLabel = rawLabel && !isExactNairaPriceInput(rawLabel) ? rawLabel.slice(0, 64) : ''
+  }
 
   if (priceKobo !== undefined) {
-    if (priceKobo === null) {
-      formData.append('price_kobo', '')
-    } else {
-      formData.append('price_kobo', String(priceKobo))
-    }
-    // Clear free-text labels so cards always show a numeric price.
-    formData.append('price_label', '')
+    formData.append('price_kobo', priceKobo === null ? '' : String(priceKobo))
+    formData.append('price_label', priceLabel)
   }
 
   formData.append('price_from', input.priceFrom ? '1' : '0')

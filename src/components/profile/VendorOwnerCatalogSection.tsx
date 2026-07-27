@@ -18,8 +18,8 @@ import {
   deleteCatalogItem,
   fetchVendorCatalog,
   formatCatalogPrice,
+  isExactNairaPriceInput,
   nairaDigitsToKobo,
-  sanitizeCatalogPriceDigits,
   updateCatalogItem,
   type BusinessCatalogItem,
   type CatalogItemInput,
@@ -177,11 +177,21 @@ export function VendorOwnerCatalogSection({
       return
     }
 
-    const priceDigits = sanitizeCatalogPriceDigits(editor.priceLabel)
-    const priceKobo = nairaDigitsToKobo(priceDigits)
-    if (!priceDigits || priceKobo === null) {
-      showError('Enter an exact price in naira (numbers only).')
-      return
+    const rawPrice = editor.priceLabel.trim()
+    let priceKobo: number | null = null
+    let priceLabel = ''
+
+    if (rawPrice) {
+      if (isExactNairaPriceInput(rawPrice)) {
+        priceKobo = nairaDigitsToKobo(rawPrice)
+        if (priceKobo === null) {
+          showError('Enter a valid price in naira, or a range like from 1500 - 2000.')
+          return
+        }
+      } else {
+        // Free-text / range — stored as price_label; cart will not show an exact total.
+        priceLabel = rawPrice.slice(0, 64)
+      }
     }
 
     const input: CatalogItemInput = {
@@ -189,6 +199,7 @@ export function VendorOwnerCatalogSection({
       name: resolvedName,
       description,
       priceKobo,
+      priceLabel,
       priceFrom: editor.priceFrom,
       images: editor.images,
       keepImagePaths: editor.item ? editor.keepImagePaths : undefined,
@@ -295,21 +306,19 @@ export function VendorOwnerCatalogSection({
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">Price (₦)</label>
           <Input
             type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
             autoComplete="off"
-            maxLength={12}
+            maxLength={64}
             value={editor.priceLabel}
             onChange={(event) =>
               setEditor((current) => ({
                 ...current,
-                priceLabel: sanitizeCatalogPriceDigits(event.target.value),
+                priceLabel: event.target.value.slice(0, 64),
               }))
             }
-            placeholder="e.g. 250000"
+            placeholder="e.g. 250000 or from 1500 - 2000"
           />
           <p className="mt-1 text-xs text-stat-muted">
-            Numbers only (single value). Range/text like 20000-40000 is not allowed.
+            Exact amount, or a range/text like from 1500 - 2000 (cart will not show an exact total).
           </p>
         </div>
 

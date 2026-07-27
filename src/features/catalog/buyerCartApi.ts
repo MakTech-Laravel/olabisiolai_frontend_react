@@ -1,4 +1,5 @@
 import { request } from '@/api/request'
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 
 export type BuyerCartLine = {
   id: number
@@ -87,10 +88,10 @@ export function parseBuyerCart(raw: unknown): BuyerCart | null {
         name: asString(line.name).trim() || 'Item',
         quantity: asNumber(line.quantity) ?? 1,
         unitPriceKobo: asNumber(line.unit_price_kobo),
-        priceDisplay: asString(line.price_display, 'Price on request'),
+        priceDisplay: asString(line.price_display),
         priceFrom: asBoolean(line.price_from),
         lineTotalKobo: asNumber(line.line_total_kobo),
-        lineTotalDisplay: asString(line.line_total_display, asString(line.price_display, 'Price on request')),
+        lineTotalDisplay: asString(line.line_total_display),
         imageUrl: asString(line.image_url).trim() || null,
       }
     })
@@ -106,7 +107,10 @@ export function parseBuyerCart(raw: unknown): BuyerCart | null {
     vendorUserUuid: asString(cart.vendor_user_uuid).trim() || null,
     itemCount: asNumber(cart.item_count) ?? items.reduce((sum, line) => sum + line.quantity, 0),
     estimatedTotalKobo: asNumber(cart.estimated_total_kobo),
-    estimatedTotalDisplay: asString(cart.estimated_total_display, 'Price on request'),
+    estimatedTotalDisplay: asString(
+      cart.estimated_total_display,
+      BUSINESS_PROVIDES_TOTAL_PRICE,
+    ),
     sentAt: asString(cart.sent_at).trim() || null,
     conversationUuid: asString(cart.conversation_uuid).trim() || null,
     messageUuid: asString(cart.message_uuid).trim() || null,

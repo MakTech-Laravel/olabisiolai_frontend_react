@@ -1,6 +1,7 @@
 import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
 import { useEffect } from 'react'
 
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 import type { VendorCart } from '@/features/catalog/vendorCart'
 import { cn } from '@/lib/utils'
 
@@ -91,8 +92,14 @@ export function VendorCartReviewSheet({
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{line.name}</p>
-                  <p className="mt-0.5 text-xs text-stat-muted">{line.priceDisplay}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="truncate text-sm font-semibold text-ink">{line.name}</p>
+                    {!line.priceFrom && line.unitPriceKobo !== null && line.priceDisplay ? (
+                      <p className="shrink-0 text-sm font-semibold tabular-nums text-ink">
+                        {line.priceDisplay}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-border-light bg-auth-bg p-0.5">
                     <button
                       type="button"
@@ -123,9 +130,18 @@ export function VendorCartReviewSheet({
         </div>
 
         <div className="border-t border-border-light px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0))]">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="text-sm text-stat-muted">Estimated total</span>
-            <span className="font-heading text-base font-bold text-ink">{estimatedTotalDisplay}</span>
+          <div className="mb-3">
+            {estimatedTotalDisplay === BUSINESS_PROVIDES_TOTAL_PRICE ||
+            cart.items.some((line) => line.priceFrom || line.unitPriceKobo === null) ? (
+              <p className="font-heading text-base font-bold text-ink">
+                {BUSINESS_PROVIDES_TOTAL_PRICE}
+              </p>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-stat-muted">Estimated total</span>
+                <span className="font-heading text-base font-bold text-ink">{estimatedTotalDisplay}</span>
+              </div>
+            )}
           </div>
           <button
             type="button"

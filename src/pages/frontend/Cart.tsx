@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 import { useBuyerCarts, useBuyerCatalogCart } from '@/hooks/useBuyerCatalogCart'
 import { directMessageTo } from '@/lib/directMessage'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
@@ -12,14 +13,6 @@ import { cn } from '@/lib/utils'
 
 const CONSENT =
   'By continuing, you agree to share your cart, profile name and phone number with the business so it can confirm your order and total price, including any tax, fees and discounts.'
-
-function formatNairaFromKobo(priceKobo: number): string {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    maximumFractionDigits: 0,
-  }).format(priceKobo / 100)
-}
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -159,18 +152,10 @@ export default function CartPage() {
     )
   }
 
-  const requestOnlyItemCount = cart.items.reduce(
-    (sum, line) => sum + (line.lineTotalKobo === null ? line.quantity : 0),
-    0,
+  /** Any "from" / estimate line → business confirms total (no estimated amount in footer). */
+  const businessProvidesTotal = cart.items.some(
+    (line) => line.priceFrom || line.lineTotalKobo === null,
   )
-  const knownEstimatedTotalKobo = cart.items.reduce(
-    (sum, line) => sum + (line.lineTotalKobo ?? 0),
-    0,
-  )
-  const estimatedTotalLabel =
-    requestOnlyItemCount > 0
-      ? formatNairaFromKobo(knownEstimatedTotalKobo)
-      : cart.estimatedTotalDisplay
 
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-auth-bg lg:bg-[#f4f6f8] lg:py-8">
@@ -233,71 +218,76 @@ export default function CartPage() {
         ) : null}
 
         <ul className="min-h-0 flex-1 divide-y divide-border-light overflow-y-auto">
-          {cart.items.map((line) => (
-            <li
-              key={line.id}
-              className="flex gap-3 px-4 py-3.5 transition-colors hover:bg-[#fafbfc] lg:px-5"
-            >
-              {line.imageUrl ? (
-                <img
-                  src={line.imageUrl}
-                  alt=""
-                  className="size-14 shrink-0 rounded-lg object-cover lg:size-16"
-                />
-              ) : (
-                <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-muted text-stat-muted lg:size-16">
-                  <ShoppingBag className="size-5" aria-hidden />
+          {cart.items.map((line) => {
+            const showExactPrice = !line.priceFrom && line.lineTotalKobo !== null
+
+            return (
+              <li
+                key={line.id}
+                className="flex gap-3 px-4 py-3.5 transition-colors hover:bg-[#fafbfc] lg:px-5"
+              >
+                {line.imageUrl ? (
+                  <img
+                    src={line.imageUrl}
+                    alt=""
+                    className="size-14 shrink-0 rounded-lg object-cover lg:size-16"
+                  />
+                ) : (
+                  <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-muted text-stat-muted lg:size-16">
+                    <ShoppingBag className="size-5" aria-hidden />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-2 text-sm font-semibold text-ink lg:text-[15px]">
+                      {line.name}
+                    </p>
+                    {showExactPrice ? (
+                      <p className="shrink-0 text-sm font-semibold tabular-nums text-ink">
+                        {line.lineTotalDisplay}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 inline-flex items-center gap-0.5 rounded-md bg-[#f0f2f5]">
+                    <button
+                      type="button"
+                      aria-label="Decrease quantity"
+                      disabled={sending}
+                      onClick={() => void cartApi.setQtyByCartItemId(line.id, line.quantity - 1)}
+                      className="grid size-8 place-items-center text-ink transition-colors hover:bg-white disabled:opacity-50"
+                    >
+                      <Minus className="size-3.5" aria-hidden />
+                    </button>
+                    <span className="min-w-6 text-center text-sm font-semibold tabular-nums">
+                      {line.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Increase quantity"
+                      disabled={sending}
+                      onClick={() => void cartApi.setQtyByCartItemId(line.id, line.quantity + 1)}
+                      className="grid size-8 place-items-center text-ink transition-colors hover:bg-white disabled:opacity-50"
+                    >
+                      <Plus className="size-3.5" aria-hidden />
+                    </button>
+                  </div>
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="line-clamp-2 text-sm font-semibold text-ink lg:text-[15px]">
-                    {line.name}
-                  </p>
-                  <p className="shrink-0 text-sm font-semibold tabular-nums text-ink">
-                    {line.lineTotalDisplay}
-                  </p>
-                </div>
-                <div className="mt-2 inline-flex items-center gap-0.5 rounded-md bg-[#f0f2f5]">
-                  <button
-                    type="button"
-                    aria-label="Decrease quantity"
-                    disabled={sending}
-                    onClick={() => void cartApi.setQtyByCartItemId(line.id, line.quantity - 1)}
-                    className="grid size-8 place-items-center text-ink transition-colors hover:bg-white disabled:opacity-50"
-                  >
-                    <Minus className="size-3.5" aria-hidden />
-                  </button>
-                  <span className="min-w-6 text-center text-sm font-semibold tabular-nums">
-                    {line.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Increase quantity"
-                    disabled={sending}
-                    onClick={() => void cartApi.setQtyByCartItemId(line.id, line.quantity + 1)}
-                    className="grid size-8 place-items-center text-ink transition-colors hover:bg-white disabled:opacity-50"
-                  >
-                    <Plus className="size-3.5" aria-hidden />
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
 
         <div className="sticky bottom-0 border-t border-border-light bg-white px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0))] lg:px-5 lg:py-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-stat-muted">Estimated total</span>
-            <span className="text-base font-bold tabular-nums text-ink">
-              {estimatedTotalLabel}
-            </span>
-          </div>
-          {requestOnlyItemCount > 0 ? (
-            <p className="mt-1 text-xs text-stat-muted">
-              Request on {requestOnlyItemCount} item{requestOnlyItemCount === 1 ? '' : 's'}
-            </p>
-          ) : null}
+          {businessProvidesTotal ? (
+            <p className="text-base font-bold text-ink">{BUSINESS_PROVIDES_TOTAL_PRICE}</p>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-stat-muted">Estimated total</span>
+              <span className="text-base font-bold tabular-nums text-ink">
+                {cart.estimatedTotalDisplay}
+              </span>
+            </div>
+          )}
           <p className="mt-3 text-[11px] leading-relaxed text-stat-muted lg:text-xs">{CONSENT}</p>
           <button
             type="button"

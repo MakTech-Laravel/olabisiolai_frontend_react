@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { SentCartSummarySheet } from '@/components/chat/SentCartSummarySheet'
 import { fetchSentBuyerCart } from '@/features/catalog/buyerCartApi'
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 import {
   buildCartMessagePayloadFromBuyerCart,
   type CartMessagePayload,
@@ -84,7 +85,9 @@ export function CatalogCartCard({ cart, isOwn, className }: CatalogCartCardProps
                 isOwn ? 'text-white/75' : 'text-stat-muted',
               )}
             >
-              {cart.estimatedTotalDisplay} (estimated total)
+              {cart.estimatedTotalDisplay === BUSINESS_PROVIDES_TOTAL_PRICE
+                ? BUSINESS_PROVIDES_TOTAL_PRICE
+                : `${cart.estimatedTotalDisplay} (estimated total)`}
             </p>
           </div>
         </div>

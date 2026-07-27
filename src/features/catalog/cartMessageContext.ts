@@ -1,4 +1,5 @@
 import type { BuyerCart } from '@/features/catalog/buyerCartApi'
+import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
 
 const CART_MARKER_OPEN = '[GIDIRA_CART]'
 const CART_MARKER_CLOSE = '[/GIDIRA_CART]'
@@ -70,7 +71,7 @@ export function normalizeCartMessagePayload(raw: unknown): CartMessagePayload | 
       cartItemId: asNumber(line.cartItemId ?? line.cart_item_id) ?? undefined,
       name: asString(line.name).trim() || 'Item',
       qty: asNumber(line.qty ?? line.quantity) ?? 1,
-      priceDisplay: asString(line.priceDisplay ?? line.price_display, 'Price on request'),
+      priceDisplay: asString(line.priceDisplay ?? line.price_display),
       lineTotalDisplay:
         asString(line.lineTotalDisplay ?? line.line_total_display).trim() || undefined,
       imageUrl: asString(line.imageUrl ?? line.image_url).trim() || null,
@@ -91,7 +92,7 @@ export function normalizeCartMessagePayload(raw: unknown): CartMessagePayload | 
     sentAt: asString(cart.sentAt ?? cart.sent_at, new Date().toISOString()),
     estimatedTotalDisplay: asString(
       cart.estimatedTotalDisplay ?? cart.estimated_total_display,
-      'Price on request',
+      BUSINESS_PROVIDES_TOTAL_PRICE,
     ),
     itemCount,
     items,
