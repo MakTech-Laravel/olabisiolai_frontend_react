@@ -107,10 +107,13 @@ export function SentCartSummarySheet({ open, cart, onClose }: SentCartSummaryShe
                   <p className="truncate text-sm font-medium text-[#e9edef]">{item.name}</p>
                   <p className="mt-0.5 text-xs text-[#8696a0]">
                     Qty {item.qty}
-                    {item.lineTotalDisplay
-                      ? ` · ${item.lineTotalDisplay}`
-                      : ''}
+                    {item.lineTotalDisplay ? ` · ${item.lineTotalDisplay}` : ''}
                   </p>
+                  {item.hasDiscount && item.originalLineTotalDisplay ? (
+                    <p className="text-[11px] text-[#8696a0] line-through">
+                      {item.originalLineTotalDisplay}
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}

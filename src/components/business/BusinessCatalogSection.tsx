@@ -6,10 +6,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
 import { VendorCatalogCartBar } from '@/components/business/VendorCatalogCartBar'
+import { CatalogPriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
 import { CATALOG_BUSINESS_PAGE_PREVIEW } from '@/constants/config'
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import {
-  formatCatalogPrice,
   type BusinessCatalogItem,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
@@ -336,9 +336,11 @@ export function BusinessCatalogSection({
                   ) : (
                     <span className="flex-1" aria-hidden />
                   )}
-                  <p className="mt-2 line-clamp-1 font-heading text-[15px] font-bold text-ink">
-                    {formatCatalogPrice(item)}
-                  </p>
+                  <CatalogPriceDisplay
+                    item={item}
+                    className="mt-2 font-heading text-[15px] text-ink"
+                    saleClassName="font-heading text-[15px] font-bold"
+                  />
                 </div>
               </button>
             )

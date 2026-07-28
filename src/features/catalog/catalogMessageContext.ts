@@ -3,6 +3,7 @@ import { resolveMediaUrl } from '@/lib/mediaUrl'
 
 import {
   formatCatalogPrice,
+  formatNairaFromKobo,
   type BusinessCatalogItem,
   type CatalogItemType,
 } from './businessCatalogApi'
@@ -57,6 +58,8 @@ export type CatalogMessagePayload = {
     name: string
     description: string | null
     priceDisplay: string
+    originalPriceDisplay?: string | null
+    hasDiscount?: boolean
     imageUrl: string | null
   }
 }
@@ -86,6 +89,11 @@ export function buildCatalogMessagePayload(
       name: item.name,
       description: item.description,
       priceDisplay: formatCatalogPrice(item),
+      originalPriceDisplay:
+        item.hasDiscount && item.originalPriceKobo !== null
+          ? formatNairaFromKobo(item.originalPriceKobo)
+          : null,
+      hasDiscount: item.hasDiscount,
       imageUrl: item.imageUrl,
     },
   }

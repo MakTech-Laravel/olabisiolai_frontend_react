@@ -68,6 +68,16 @@ export function CatalogEnquiryCard({ catalog, isOwn, className }: CatalogEnquiry
           >
             {item.priceDisplay}
           </p>
+          {item.hasDiscount && item.originalPriceDisplay ? (
+            <p
+              className={cn(
+                'text-[11px] line-through',
+                isOwn ? 'text-white/55' : 'text-stat-muted',
+              )}
+            >
+              {item.originalPriceDisplay}
+            </p>
+          ) : null}
         </div>
       </div>
       <Link

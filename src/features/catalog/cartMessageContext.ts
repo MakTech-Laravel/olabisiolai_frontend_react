@@ -1,5 +1,6 @@
 import type { BuyerCart } from '@/features/catalog/buyerCartApi'
 import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
+import { formatNairaFromKobo } from '@/features/catalog/businessCatalogApi'
 
 const CART_MARKER_OPEN = '[GIDIRA_CART]'
 const CART_MARKER_CLOSE = '[/GIDIRA_CART]'
@@ -11,6 +12,8 @@ export type CartMessageItem = {
   qty: number
   priceDisplay: string
   lineTotalDisplay?: string
+  originalLineTotalDisplay?: string
+  hasDiscount?: boolean
   imageUrl: string | null
 }
 
@@ -66,14 +69,29 @@ export function normalizeCartMessagePayload(raw: unknown): CartMessagePayload | 
     if (!line) continue
     const id = asNumber(line.id ?? line.catalog_item_id)
     if (id === null) continue
+    const qty = asNumber(line.qty ?? line.quantity) ?? 1
+    const originalUnit = asNumber(
+      line.originalUnitPriceKobo ?? line.original_unit_price_kobo,
+    )
+    const hasDiscount = Boolean(line.hasDiscount ?? line.has_discount)
+    let originalLineTotalDisplay =
+      asString(
+        line.originalLineTotalDisplay ?? line.original_line_total_display,
+      ).trim() || undefined
+    if (!originalLineTotalDisplay && hasDiscount && originalUnit !== null && originalUnit > 0) {
+      originalLineTotalDisplay = formatNairaFromKobo(originalUnit * qty)
+    }
+
     items.push({
       id,
       cartItemId: asNumber(line.cartItemId ?? line.cart_item_id) ?? undefined,
       name: asString(line.name).trim() || 'Item',
-      qty: asNumber(line.qty ?? line.quantity) ?? 1,
+      qty,
       priceDisplay: asString(line.priceDisplay ?? line.price_display),
       lineTotalDisplay:
         asString(line.lineTotalDisplay ?? line.line_total_display).trim() || undefined,
+      originalLineTotalDisplay,
+      hasDiscount,
       imageUrl: asString(line.imageUrl ?? line.image_url).trim() || null,
     })
   }

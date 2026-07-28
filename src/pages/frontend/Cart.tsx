@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import { BUSINESS_PROVIDES_TOTAL_PRICE } from '@/features/catalog/cartPricing'
+import { CartLinePriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
 import { useBuyerCarts, useBuyerCatalogCart } from '@/hooks/useBuyerCatalogCart'
 import { directMessageTo } from '@/lib/directMessage'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
@@ -243,9 +244,13 @@ export default function CartPage() {
                       {line.name}
                     </p>
                     {showExactPrice ? (
-                      <p className="shrink-0 text-sm font-semibold tabular-nums text-ink">
-                        {line.lineTotalDisplay}
-                      </p>
+                      <CartLinePriceDisplay
+                        className="shrink-0 text-sm"
+                        saleDisplay={line.lineTotalDisplay}
+                        originalUnitPriceKobo={line.originalUnitPriceKobo}
+                        quantity={line.quantity}
+                        hasDiscount={line.hasDiscount}
+                      />
                     ) : null}
                   </div>
                   <div className="mt-2 inline-flex items-center gap-0.5 rounded-md bg-[#f0f2f5]">

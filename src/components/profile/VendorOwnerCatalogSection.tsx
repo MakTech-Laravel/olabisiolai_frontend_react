@@ -14,17 +14,19 @@ import {
   CATALOG_DESCRIPTION_MAX_LENGTH,
   CATALOG_NAME_MAX_LENGTH,
   catalogPriceEditorValue,
+  computeSalePriceKobo,
   createCatalogItem,
   deleteCatalogItem,
   fetchVendorCatalog,
-  formatCatalogPrice,
   isExactNairaPriceInput,
   nairaDigitsToKobo,
   updateCatalogItem,
   type BusinessCatalogItem,
+  type CatalogDiscountType,
   type CatalogItemInput,
   type CatalogItemType,
 } from '@/features/catalog/businessCatalogApi'
+import { CatalogPriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
 import { CATALOG_IMAGE_ASPECT_CLASS, CATALOG_IMAGE_UPLOAD_HINT } from '@/lib/businessImageLayout'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
@@ -55,6 +57,8 @@ type EditorState = {
   description: string
   priceLabel: string
   priceFrom: boolean
+  discountType: CatalogDiscountType | null
+  discountValue: string
   images: File[]
   keepImagePaths: string[]
   removeImage: boolean
@@ -67,6 +71,8 @@ const emptyEditor = (): EditorState => ({
   description: '',
   priceLabel: '',
   priceFrom: false,
+  discountType: null,
+  discountValue: '',
   images: [],
   keepImagePaths: [],
   removeImage: false,
@@ -140,6 +146,13 @@ export function VendorOwnerCatalogSection({
       description: item.description ?? '',
       priceLabel: catalogPriceEditorValue(item),
       priceFrom: item.priceFrom,
+      discountType: item.hasDiscount ? item.discountType : null,
+      discountValue:
+        item.hasDiscount && item.discountValue !== null
+          ? item.discountType === 'flat'
+            ? String(Math.round(item.discountValue / 100))
+            : String(item.discountValue)
+          : '',
       images: [],
       keepImagePaths: [...item.imagePaths],
       removeImage: false,
@@ -194,6 +207,43 @@ export function VendorOwnerCatalogSection({
       }
     }
 
+    let discountType: CatalogDiscountType | null = editor.discountType
+    let discountValue: number | null = null
+
+    if (discountType && !editor.priceFrom && priceKobo !== null) {
+      const rawDiscount = editor.discountValue.trim()
+      if (!rawDiscount) {
+        showError(
+          discountType === 'percent'
+            ? 'Enter a discount percentage.'
+            : 'Enter a flat discount amount in naira.',
+        )
+        return
+      }
+
+      if (discountType === 'percent') {
+        const percent = Number(rawDiscount)
+        if (!Number.isFinite(percent) || percent < 1 || percent > 100) {
+          showError('Percentage discount must be between 1 and 100.')
+          return
+        }
+        discountValue = Math.round(percent)
+      } else {
+        discountValue = nairaDigitsToKobo(rawDiscount)
+        if (discountValue === null || discountValue < 1) {
+          showError('Enter a valid flat discount in naira.')
+          return
+        }
+        if (discountValue > priceKobo) {
+          showError('Flat discount cannot exceed the list price.')
+          return
+        }
+      }
+    } else {
+      discountType = null
+      discountValue = null
+    }
+
     const input: CatalogItemInput = {
       type: editor.type,
       name: resolvedName,
@@ -201,6 +251,8 @@ export function VendorOwnerCatalogSection({
       priceKobo,
       priceLabel,
       priceFrom: editor.priceFrom,
+      discountType,
+      discountValue,
       images: editor.images,
       keepImagePaths: editor.item ? editor.keepImagePaths : undefined,
       removeImage: editor.removeImage,
@@ -326,11 +378,112 @@ export function VendorOwnerCatalogSection({
           <input
             type="checkbox"
             checked={editor.priceFrom}
-            onChange={(event) => setEditor((current) => ({ ...current, priceFrom: event.target.checked }))}
+            onChange={(event) =>
+              setEditor((current) => ({
+                ...current,
+                priceFrom: event.target.checked,
+                ...(event.target.checked
+                  ? { discountType: null, discountValue: '' }
+                  : {}),
+              }))
+            }
             className="size-4 rounded border-border-light text-chat-accent"
           />
           Show as &quot;from&quot; price
         </label>
+
+        {!editor.priceFrom && isExactNairaPriceInput(editor.priceLabel) ? (
+          <div className="space-y-3 rounded-xl border border-border-light bg-[#f8fafc] p-3">
+            <p className="text-sm font-medium text-body-secondary">Discount (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: null, label: 'None' },
+                  { key: 'percent' as const, label: '%' },
+                  { key: 'flat' as const, label: 'Flat ₦' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-pressed={editor.discountType === option.key}
+                  onClick={() =>
+                    setEditor((current) => ({
+                      ...current,
+                      discountType: option.key,
+                      discountValue: option.key === current.discountType ? current.discountValue : '',
+                    }))
+                  }
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                    editor.discountType === option.key
+                      ? 'bg-chat-accent text-white'
+                      : 'bg-white text-ink ring-1 ring-border-light',
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {editor.discountType ? (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-body-secondary">
+                  {editor.discountType === 'percent' ? 'Percentage' : 'Amount (₦)'}
+                </label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={editor.discountValue}
+                  onChange={(event) =>
+                    setEditor((current) => ({
+                      ...current,
+                      discountValue:
+                        current.discountType === 'percent'
+                          ? event.target.value.replace(/\D/g, '').slice(0, 3)
+                          : event.target.value.replace(/\D/g, '').slice(0, 12),
+                    }))
+                  }
+                  placeholder={editor.discountType === 'percent' ? 'e.g. 20' : 'e.g. 5000'}
+                />
+              </div>
+            ) : null}
+
+            {(() => {
+              const listKobo = nairaDigitsToKobo(editor.priceLabel)
+              if (!listKobo || !editor.discountType || !editor.discountValue.trim()) return null
+              const discountValue =
+                editor.discountType === 'percent'
+                  ? Number(editor.discountValue)
+                  : nairaDigitsToKobo(editor.discountValue)
+              if (discountValue === null || !Number.isFinite(discountValue) || discountValue < 1) {
+                return null
+              }
+              const saleKobo = computeSalePriceKobo(
+                listKobo,
+                editor.discountType,
+                Math.round(discountValue),
+              )
+              if (saleKobo === null || saleKobo >= listKobo) return null
+              return (
+                <div className="pt-1">
+                  <p className="mb-1 text-xs text-stat-muted">Customer will see</p>
+                  <CatalogPriceDisplay
+                    item={{
+                      priceKobo: saleKobo,
+                      originalPriceKobo: listKobo,
+                      priceLabel: null,
+                      priceFrom: false,
+                      hasDiscount: true,
+                    }}
+                    saleClassName="text-[15px]"
+                  />
+                </div>
+              )
+            })()}
+          </div>
+        ) : null}
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-body-secondary">
@@ -519,9 +672,11 @@ export function VendorOwnerCatalogSection({
                   ) : (
                     <span className="flex-1" aria-hidden />
                   )}
-                  <p className="mt-2 line-clamp-1 font-heading text-[15px] font-bold text-ink">
-                    {formatCatalogPrice(item)}
-                  </p>
+                  <CatalogPriceDisplay
+                    item={item}
+                    className="mt-2 font-heading text-[15px] text-ink"
+                    saleClassName="font-heading text-[15px] font-bold"
+                  />
                 </div>
               </article>
             ))}

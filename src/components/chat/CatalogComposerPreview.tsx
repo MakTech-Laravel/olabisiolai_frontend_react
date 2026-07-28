@@ -58,6 +58,11 @@ export function CatalogComposerPreview({
               <span className="truncate">{item.name}</span>
             </p>
             <p className="mt-0.5 text-xs font-medium text-stat-muted">{item.priceDisplay}</p>
+            {item.hasDiscount && item.originalPriceDisplay ? (
+              <p className="text-[11px] text-stat-muted line-through">
+                {item.originalPriceDisplay}
+              </p>
+            ) : null}
           </div>
 
           <div className="relative shrink-0">

@@ -7,8 +7,10 @@ export type BuyerCartLine = {
   name: string
   quantity: number
   unitPriceKobo: number | null
+  originalUnitPriceKobo: number | null
   priceDisplay: string
   priceFrom: boolean
+  hasDiscount: boolean
   lineTotalKobo: number | null
   lineTotalDisplay: string
   imageUrl: string | null
@@ -88,8 +90,10 @@ export function parseBuyerCart(raw: unknown): BuyerCart | null {
         name: asString(line.name).trim() || 'Item',
         quantity: asNumber(line.quantity) ?? 1,
         unitPriceKobo: asNumber(line.unit_price_kobo),
+        originalUnitPriceKobo: asNumber(line.original_unit_price_kobo),
         priceDisplay: asString(line.price_display),
         priceFrom: asBoolean(line.price_from),
+        hasDiscount: asBoolean(line.has_discount),
         lineTotalKobo: asNumber(line.line_total_kobo),
         lineTotalDisplay: asString(line.line_total_display),
         imageUrl: asString(line.image_url).trim() || null,

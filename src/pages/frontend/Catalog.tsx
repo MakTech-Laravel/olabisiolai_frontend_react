@@ -1,7 +1,8 @@
 import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
 import { BusinessCatalogImage } from '@/components/business/BusinessCatalogImage'
 import FiltersSection from '@/components/sections/filters/FiltersSection'
-import { formatCatalogPrice, type CatalogItemType } from '@/features/catalog/businessCatalogApi'
+import { CatalogPriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
+import { type CatalogItemType } from '@/features/catalog/businessCatalogApi'
 import {
   fetchCatalogDiscoveryFeed,
   type DiscoveryCatalogItem,
@@ -463,9 +464,11 @@ export default function CatalogDiscoveryPage() {
                       </p>
                     ) : null}
                     <div className="mt-2 flex items-end justify-between gap-2">
-                      <p className="line-clamp-1 font-heading text-[15px] font-bold text-ink">
-                        {formatCatalogPrice(item)}
-                      </p>
+                      <CatalogPriceDisplay
+                        item={item}
+                        className="font-heading text-[15px] text-ink"
+                        saleClassName="font-heading text-[15px] font-bold"
+                      />
                       {item.cityName || item.locationLabel ? (
                         <p className="line-clamp-1 text-[11px] text-stat-muted">
                           {item.cityName || item.locationLabel}

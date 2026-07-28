@@ -10,6 +10,7 @@ import {
   stashCatalogMessageDraft,
 } from '@/features/catalog/catalogMessageContext'
 import { formatCatalogPrice, type BusinessCatalogItem } from '@/features/catalog/businessCatalogApi'
+import { CatalogPriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
 import { seedNewConversationInCache } from '@/features/messaging/conversationCache'
 import { startDirectConversationWithVendor } from '@/features/messaging/startDirectConversation'
@@ -92,6 +93,13 @@ export function CatalogItemDetailContent({
   }, [hasMultiplePhotos, photos.length])
 
   const priceLabel = formatCatalogPrice(item)
+  const showDualPrice =
+    item.hasDiscount &&
+    item.originalPriceKobo !== null &&
+    item.priceKobo !== null &&
+    item.originalPriceKobo > item.priceKobo &&
+    !item.priceFrom
+
 
   const goPrev = () => {
     if (!hasMultiplePhotos) return
@@ -311,7 +319,16 @@ export function CatalogItemDetailContent({
         <h2 className="font-heading text-2xl font-bold leading-snug tracking-tight text-ink sm:text-3xl">
           {item.name}
         </h2>
-        <p className="mt-2 font-heading text-xl font-bold text-ink sm:text-2xl">{priceLabel}</p>
+        {showDualPrice ? (
+          <CatalogPriceDisplay
+            item={item}
+            className="mt-2"
+            saleClassName="font-heading text-xl font-bold sm:text-2xl"
+            originalClassName="text-base"
+          />
+        ) : (
+          <p className="mt-2 font-heading text-xl font-bold text-ink sm:text-2xl">{priceLabel}</p>
+        )}
         {item.description ? (
           <p className="mt-3 text-[15px] leading-relaxed text-body-secondary sm:mt-4 sm:text-base">
             {item.description}

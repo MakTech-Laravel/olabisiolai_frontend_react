@@ -7,14 +7,22 @@ export const CATALOG_NAME_MAX_LENGTH = 120
 export const CATALOG_DESCRIPTION_MAX_LENGTH = 500
 export const CATALOG_PRICE_LABEL_MAX_LENGTH = 64
 
+export type CatalogDiscountType = 'percent' | 'flat'
+
 export type BusinessCatalogItem = {
   id: number
   type: CatalogItemType
   name: string
   description: string | null
+  /** Payable / sale amount in kobo (list price when no discount). */
   priceKobo: number | null
+  /** List price in kobo when discounted (strikethrough). */
+  originalPriceKobo: number | null
   priceLabel: string | null
   priceFrom: boolean
+  discountType: CatalogDiscountType | null
+  discountValue: number | null
+  hasDiscount: boolean
   imageUrl: string | null
   imageUrls: string[]
   imagePaths: string[]
@@ -75,8 +83,17 @@ export function parseCatalogItem(raw: unknown): BusinessCatalogItem | null {
     name: asString(item.name).trim(),
     description: asString(item.description).trim() || null,
     priceKobo: asNumber(item.price_kobo),
+    originalPriceKobo: asNumber(item.original_price_kobo),
     priceLabel: asString(item.price_label).trim() || null,
     priceFrom: asBoolean(item.price_from),
+    discountType:
+      asString(item.discount_type).toLowerCase() === 'flat'
+        ? 'flat'
+        : asString(item.discount_type).toLowerCase() === 'percent'
+          ? 'percent'
+          : null,
+    discountValue: asNumber(item.discount_value),
+    hasDiscount: asBoolean(item.has_discount),
     imageUrl,
     imageUrls,
     imagePaths: parseStringList(item.image_paths),
@@ -89,7 +106,7 @@ export function parseCatalogItems(raw: unknown): BusinessCatalogItem[] {
   return raw.map(parseCatalogItem).filter((item): item is BusinessCatalogItem => item !== null)
 }
 
-function formatNairaFromKobo(priceKobo: number): string {
+export function formatNairaFromKobo(priceKobo: number): string {
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
@@ -111,12 +128,16 @@ export function isExactNairaPriceInput(raw: string): boolean {
   return Boolean(sanitizeCatalogPriceDigits(trimmed))
 }
 
-/** Prefill editor from stored kobo or a free-text / range label. */
+/** Prefill editor from list price (original when discounted) or free-text label. */
 export function catalogPriceEditorValue(
-  item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel'>,
+  item: Pick<BusinessCatalogItem, 'priceKobo' | 'originalPriceKobo' | 'priceLabel' | 'hasDiscount'>,
 ): string {
-  if (item.priceKobo !== null && item.priceKobo >= 0) {
-    return String(Math.round(item.priceKobo / 100))
+  const listKobo =
+    item.hasDiscount && item.originalPriceKobo !== null && item.originalPriceKobo >= 0
+      ? item.originalPriceKobo
+      : item.priceKobo
+  if (listKobo !== null && listKobo >= 0) {
+    return String(Math.round(listKobo / 100))
   }
   return (item.priceLabel ?? '').trim()
 }
@@ -129,7 +150,24 @@ export function nairaDigitsToKobo(digits: string): number | null {
   return Math.round(naira * 100)
 }
 
-export function formatCatalogPrice(item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel' | 'priceFrom'>): string {
+/** Client-side preview of sale kobo from list + discount (matches backend CatalogPricing). */
+export function computeSalePriceKobo(
+  listKobo: number,
+  type: CatalogDiscountType,
+  value: number,
+): number | null {
+  if (listKobo < 0 || value < 1) return null
+  if (type === 'percent') {
+    if (value > 100) return null
+    return Math.round((listKobo * (100 - value)) / 100)
+  }
+  if (value > listKobo) return null
+  return Math.max(0, listKobo - value)
+}
+
+export function formatCatalogPrice(
+  item: Pick<BusinessCatalogItem, 'priceKobo' | 'priceLabel' | 'priceFrom'>,
+): string {
   if (item.priceKobo !== null && item.priceKobo >= 0) {
     const naira = formatNairaFromKobo(item.priceKobo)
     return item.priceFrom ? `from ${naira}` : naira
@@ -176,9 +214,11 @@ export type CatalogItemInput = {
   description?: string
   /** Whole-naira amount as digits, or free-text / range for `price_label`. */
   priceLabel?: string
-  /** Exact amount in kobo; null for range/text or price-on-request. */
+  /** Exact list/base amount in kobo; null for range/text or price-on-request. */
   priceKobo?: number | null
   priceFrom?: boolean
+  discountType?: CatalogDiscountType | null
+  discountValue?: number | null
   images?: File[]
   /** @deprecated use `images` */
   image?: File | null
@@ -218,6 +258,16 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
   }
 
   formData.append('price_from', input.priceFrom ? '1' : '0')
+
+  if (input.discountType !== undefined) {
+    formData.append('discount_type', input.discountType ?? '')
+  }
+  if (input.discountValue !== undefined) {
+    formData.append(
+      'discount_value',
+      input.discountValue === null ? '' : String(input.discountValue),
+    )
+  }
 
   const files = [
     ...(input.images ?? []),
