@@ -84,6 +84,7 @@ export function buildUpdatePayload(
   const locationId = resolvePositiveId(patch.location_id, profile.locationId)
 
   const payload: UpdateVendorBusinessPayload = {
+    business_id: profile.id,
     ...(categoryId ? { category_id: categoryId } : {}),
     ...(locationId ? { location_id: locationId } : {}),
     subcategory: patch.subcategory ?? subcategory,

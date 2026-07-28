@@ -47,6 +47,7 @@ export type CreateVendorBusinessResponse = {
   success: boolean;
   message: string;
   data: {
+    business?: { id?: number };
     requires_subscription_payment?: boolean;
     subscription?: { requires_payment?: boolean };
   };
@@ -119,7 +120,8 @@ export function businessCreateRequiresPayment(response: CreateVendorBusinessResp
 }
 
 export type UpdateVendorBusinessPayload = {
-   category_id?: string;
+  business_id?: string | number;
+  category_id?: string;
   subcategory?: string;
   location_id?: string;
   business_name: string;
@@ -143,8 +145,8 @@ export type UpdateVendorBusinessPayload = {
   business_hours?: BusinessHourEntry[];
 };
 
-function appendPositiveId(formData: FormData, key: string, value: string | undefined): void {
-  if (typeof value !== "string" || !value.trim()) {
+function appendPositiveId(formData: FormData, key: string, value: string | number | undefined): void {
+  if (value === undefined || value === null) {
     return;
   }
 
@@ -165,6 +167,11 @@ function buildUpdateVendorBusinessJsonBody(
     services,
     phone: payload.phone.trim(),
   };
+
+  const businessId = Number(payload.business_id);
+  if (Number.isFinite(businessId) && businessId > 0) {
+    body.business_id = businessId;
+  }
 
   const categoryId = Number(payload.category_id);
   if (Number.isFinite(categoryId) && categoryId > 0) {
@@ -213,6 +220,7 @@ function appendUpdateVendorBusinessFormData(
   formData: FormData,
   payload: UpdateVendorBusinessPayload,
 ): void {
+  appendPositiveId(formData, "business_id", payload.business_id);
   formData.append("subcategory", payload.subcategory?.trim() ?? "");
   appendPositiveId(formData, "category_id", payload.category_id);
   appendPositiveId(formData, "location_id", payload.location_id);
@@ -312,14 +320,16 @@ export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload)
   // Production PHP/nginx often fail to parse multipart when method-spoofed to PUT.
   // JSON PUT works reliably for profile edits without new images.
   if (!hasFileUploads) {
-    const res = await request.put<VendorBusinessUpdateEnvelope>("/vendor/business/update", buildUpdateVendorBusinessJsonBody(payload));
+    const res = await request.put<VendorBusinessUpdateEnvelope>(
+      "/vendor/business/update",
+      buildUpdateVendorBusinessJsonBody(payload),
+    );
     assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
     return res.data;
   }
 
   const formData = new FormData();
   appendUpdateVendorBusinessFormData(formData, payload);
-  // Use native POST route (no _method=PUT) so PHP parses multipart fields and files.
   const res = await request.post<VendorBusinessUpdateEnvelope>("/vendor/business/update", formData);
   assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
   return res.data;

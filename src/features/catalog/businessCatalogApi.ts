@@ -244,7 +244,6 @@ function appendCatalogFormData(formData: FormData, input: CatalogItemInput, busi
       priceKobo = nairaDigitsToKobo(rawLabel)
       priceLabel = ''
     } else {
-      // Range / free-text (e.g. "from 1500 - 2000") — cart will not show an exact total.
       priceKobo = null
       priceLabel = rawLabel.slice(0, 64)
     }
