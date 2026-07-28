@@ -17,6 +17,7 @@ import {
   mapApiDocStatus,
   nestDocumentsByParent,
   REQUIRED_VERIFICATION_DOCUMENTS,
+  ALL_VERIFICATION_DOCUMENTS,
   type DocumentUiStatus,
   type NestedDocFile,
   type RequiredDocSpec,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 type DocRow = RequiredDocSpec & {
   status: DocumentUiStatus;
   files: VerificationFileRow[];
+  optional?: boolean;
 };
 
 function flattenFiles(files: VerificationFileRow[]): VerificationFileRow[] {
@@ -150,13 +152,17 @@ export function RequiredDocuments({ className }: { className?: string }) {
   }, [load]);
 
   const rows = useMemo(
-    () => buildRows(REQUIRED_VERIFICATION_DOCUMENTS, statusPayload?.documents ?? []),
+    () => buildRows(ALL_VERIFICATION_DOCUMENTS, statusPayload?.documents ?? []),
     [statusPayload?.documents],
   );
 
   const actionRequiredCount = useMemo(() => {
     let count = 0;
     for (const row of rows) {
+      if (row.optional) {
+        count += flattenFiles(row.files).filter((f) => f.status === "flagged").length;
+        continue;
+      }
       if (row.status === "missing") {
         count += 1;
         continue;
@@ -164,6 +170,13 @@ export function RequiredDocuments({ className }: { className?: string }) {
       count += flattenFiles(row.files).filter((f) => f.status === "flagged").length;
     }
     return count;
+  }, [rows]);
+
+  const requiredComplete = useMemo(() => {
+    return REQUIRED_VERIFICATION_DOCUMENTS.every((spec) => {
+      const row = rows.find((r) => r.documentType === spec.documentType);
+      return row != null && row.status !== "missing" && row.status !== "flagged";
+    });
   }, [rows]);
 
   const canInlineUpload =
@@ -283,9 +296,13 @@ export function RequiredDocuments({ className }: { className?: string }) {
             <p className="rounded-full bg-[#FFD12766] px-3 py-1 text-base font-semibold sm:text-xl">
               {actionRequiredCount} ACTION REQUIRED
             </p>
-          ) : (
+          ) : requiredComplete ? (
             <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">
-              All documents submitted
+              Required documents submitted
+            </span>
+          ) : (
+            <span className="rounded-full bg-muted px-3 py-1 text-sm font-semibold text-muted-foreground">
+              Upload required documents
             </span>
           )}
         </div>
@@ -303,7 +320,14 @@ export function RequiredDocuments({ className }: { className?: string }) {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-inter text-sm font-medium sm:text-base">{doc.title}</h3>
+                    <h3 className="font-inter text-sm font-medium sm:text-base">
+                      {doc.title}
+                      {doc.optional ? (
+                        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Optional
+                        </span>
+                      ) : null}
+                    </h3>
                     <p className="mt-1 text-xs text-muted-foreground">{doc.description}</p>
                     {doc.files.length > 0 ? (
                       <VerificationFileRows
@@ -332,7 +356,13 @@ export function RequiredDocuments({ className }: { className?: string }) {
                   </div>
 
                   <div className="mt-2 flex flex-col items-start gap-2 sm:mt-0 sm:flex-row sm:items-center">
-                    {getStatusBadge(doc.status)}
+                    {doc.optional && doc.status === "missing" ? (
+                      <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+                        OPTIONAL
+                      </span>
+                    ) : (
+                      getStatusBadge(doc.status)
+                    )}
 
                     {showCategoryUpload ? (
                       <button

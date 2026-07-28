@@ -83,7 +83,7 @@ export default function VendorBoostReviewPayPage() {
   const isVerification = sessionStorage.getItem("paymentSource") === "verification";
   const boostSelection = readBoostCheckoutSelection();
   const isBoostCheckout = !isVerification && boostSelection !== null;
-  const packageId = (sessionStorage.getItem(PLAN_STORAGE_KEY) as PlanId | null) ?? "individual";
+  const packageId = (sessionStorage.getItem(PLAN_STORAGE_KEY) as PlanId | null) ?? "business";
   const selectedPlan = plans.find((p) => p.id === packageId) ?? plans[0];
 
   const { data: packagesData } = useQuery({

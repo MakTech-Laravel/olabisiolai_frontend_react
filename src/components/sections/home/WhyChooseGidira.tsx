@@ -7,7 +7,7 @@ export default function WhyChooseGidira() {
       bgColor: "bg-primary/10",
       title: "Verified Businesses",
       description:
-        "Every listed business goes through ID, CAC, and trust verification checks.",
+        "Every listed business goes through ID, address, and trust verification checks.",
     },
     {
       icon: <Star size={24} className="text-destructive" />,

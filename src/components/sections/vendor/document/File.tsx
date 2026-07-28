@@ -112,20 +112,28 @@ export default function File({ uploadedFiles, onFilesChange }: FileProps) {
       <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-3">
         {[
           {
-            title: "Business Registration",
-            hint: "Trade license CAC incorporation document. PDF, JPG",
-          },
-          {
             title: "Identity Proof",
             hint: "Government-issued ID, Passport or Driver's License",
+            optional: false,
           },
           {
             title: "Address Proof",
             hint: "Utility bill or bank statement issued within 3 months",
+            optional: false,
           },
-        ].map(({ title, hint }) => (
+          {
+            title: "Business Registration",
+            hint: "Optional CAC / trade license. PDF, JPG",
+            optional: true,
+          },
+        ].map(({ title, hint, optional }) => (
           <div key={title}>
-            <p className="mb-2 text-xl font-medium text-gray-600">{title}</p>
+            <p className="mb-2 text-xl font-medium text-gray-600">
+              {title}
+              {optional ? (
+                <span className="ml-2 text-sm font-normal text-gray-400">(optional)</span>
+              ) : null}
+            </p>
             <div className="relative flex min-h-[150px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-blue-50/40 p-8 transition-colors hover:border-blue-400">
               <input
                 type="file"

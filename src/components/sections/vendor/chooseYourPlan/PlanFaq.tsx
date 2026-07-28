@@ -13,7 +13,7 @@ const faqItems: { q: string; a: string }[] = [
   },
   {
     q: "How long does verification take?",
-    a: "Verification is a separate one-time fee (Individual, Business Name, or LTD). After payment, upload documents and our team reviews them. The verified badge appears only after approval—not from Premium subscription.",
+    a: "Verification is a separate one-time fee (Business Name or LTD). After payment, upload documents and our team reviews them. The verified badge appears only after approval—not from Premium subscription.",
   },
 ];
 

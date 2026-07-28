@@ -3,7 +3,7 @@ import { ArrowRight, FileText, Lock, ShieldCheck, Store } from "lucide-react";
 
 import type { VerificationPackage } from "@/features/verification/vendorVerificationApi";
 
-export type PlanId = "individual" | "business" | "ltd";
+export type PlanId = "business" | "ltd";
 
 export type Plan = {
     id: PlanId;
@@ -21,27 +21,14 @@ export type Plan = {
 };
 
 export const plans: Plan[] = [
-    // {
-    //     id: "individual",
-    //     title: "Individual",
-    //     amount: 2500,
-    //     description:
-    //         "Best for solo entrepreneurs and independent contractors. Requires government ID and personal biometric verification.",
-    //     afterPurchaseNote:
-    //         "After payment you will upload your ID and business documents. Track each file on your status page — see what is approved, rejected, or still under review, and re-upload if admin requests changes.",
-    //     perks: ["Trusted badge"],
-    //     icon: CircleUserRound,
-    //     surface: "tint",
-    //     perkStyle: "badge",
-    // },
     {
         id: "business",
         title: "Business Name",
         amount: 5000,
         description:
-            "For registered sole proprietorships. Includes CAC document validation and business account linkage.",
+            "For registered and unregistered sole proprietors. Includes identity verification, proof of address and optional CAC.",
         afterPurchaseNote:
-            "After payment, submit your CAC certificate, identity proof, and address proof. Your document status page shows admin decisions on every file so you always know what to fix.",
+            "After payment, submit identity proof and address proof. CAC / business registration is optional. Your document status page shows admin decisions on every file so you always know what to fix.",
         perks: ["Vendor priority", "Storefront personalization"],
         icon: Store,
         surface: "white",

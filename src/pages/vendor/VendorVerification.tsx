@@ -21,10 +21,10 @@ export default function VendorVerification() {
   const location = useLocation();
   const [selectedId, setSelectedId] = useState<PlanId>(() => {
     const stored = sessionStorage.getItem(PLAN_STORAGE_KEY);
-    if (stored === "individual" || stored === "business" || stored === "ltd") {
+    if (stored === "business" || stored === "ltd") {
       return stored;
     }
-    return "individual";
+    return "business";
   });
 
   const { data: verificationStatus } = useQuery({
@@ -40,7 +40,7 @@ export default function VendorVerification() {
 
   useEffect(() => {
     const purchasedId = verificationStatus?.purchased_package?.id;
-    if (purchasedId === "individual" || purchasedId === "business" || purchasedId === "ltd") {
+    if (purchasedId === "business" || purchasedId === "ltd") {
       setSelectedId(purchasedId);
     }
   }, [verificationStatus?.purchased_package?.id]);

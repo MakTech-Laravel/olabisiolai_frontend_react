@@ -11,15 +11,11 @@ export type RequiredDocSpec = {
   title: string;
   description: string;
   icon: LucideIcon;
+  optional?: boolean;
 };
 
+/** Identity + address are required. CAC / business registration is optional. */
 export const REQUIRED_VERIFICATION_DOCUMENTS: RequiredDocSpec[] = [
-  {
-    documentType: "business_registration",
-    title: "Business Registration",
-    description: "Certificate of business registration or incorporation",
-    icon: FileText,
-  },
   {
     documentType: "identity_proof",
     title: "Identity Proof",
@@ -32,6 +28,21 @@ export const REQUIRED_VERIFICATION_DOCUMENTS: RequiredDocSpec[] = [
     description: "Recent utility bill or bank statement",
     icon: Home,
   },
+];
+
+export const OPTIONAL_VERIFICATION_DOCUMENTS: RequiredDocSpec[] = [
+  {
+    documentType: "business_registration",
+    title: "Business Registration",
+    description: "Optional CAC certificate or business registration document",
+    icon: FileText,
+    optional: true,
+  },
+];
+
+export const ALL_VERIFICATION_DOCUMENTS: RequiredDocSpec[] = [
+  ...REQUIRED_VERIFICATION_DOCUMENTS,
+  ...OPTIONAL_VERIFICATION_DOCUMENTS,
 ];
 
 export const DOC_TITLE_TO_TYPE: Record<string, RequiredDocType> = {
@@ -57,7 +68,7 @@ export function needsDocumentAction(status: DocumentUiStatus): boolean {
 }
 
 export function documentTypeLabel(documentType: string): string {
-  const spec = REQUIRED_VERIFICATION_DOCUMENTS.find((d) => d.documentType === documentType);
+  const spec = ALL_VERIFICATION_DOCUMENTS.find((d) => d.documentType === documentType);
   if (spec) return spec.title;
   return documentType.replace(/_/g, " ");
 }
@@ -102,7 +113,7 @@ export function groupDocumentsByType<
     map.set(doc.document_type, list);
   }
 
-  const orderedTypes = REQUIRED_VERIFICATION_DOCUMENTS.map((d) => d.documentType);
+  const orderedTypes = ALL_VERIFICATION_DOCUMENTS.map((d) => d.documentType);
   const groups: Array<{ documentType: string; label: string; items: NestedDocFile<T>[] }> = [];
 
   for (const documentType of orderedTypes) {
@@ -159,9 +170,13 @@ export function getApproveAllBlockReason<
     return `Missing required documents: ${missing.map(documentTypeLabel).join(", ")}.`;
   }
 
-  const rejected = latest.filter((doc) => doc.status === "rejected");
-  if (rejected.length > 0) {
-    return `Rejected documents must be re-uploaded before approval (${rejected.map((doc) => documentTypeLabel(doc.document_type)).join(", ")}).`;
+  const rejectedRequired = latest.filter(
+    (doc) =>
+      doc.status === "rejected" &&
+      requiredTypes.includes(doc.document_type as RequiredDocType),
+  );
+  if (rejectedRequired.length > 0) {
+    return `Rejected documents must be re-uploaded before approval (${rejectedRequired.map((doc) => documentTypeLabel(doc.document_type)).join(", ")}).`;
   }
 
   return null;
