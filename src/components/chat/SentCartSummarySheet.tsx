@@ -104,16 +104,28 @@ export function SentCartSummarySheet({ open, cart, onClose }: SentCartSummaryShe
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#e9edef]">{item.name}</p>
-                  <p className="mt-0.5 text-xs text-[#8696a0]">
-                    Qty {item.qty}
-                    {item.lineTotalDisplay ? ` · ${item.lineTotalDisplay}` : ''}
-                  </p>
-                  {item.hasDiscount && item.originalLineTotalDisplay ? (
-                    <p className="text-[11px] text-[#8696a0] line-through">
-                      {item.originalLineTotalDisplay}
-                    </p>
-                  ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#e9edef]">{item.name}</p>
+                      <p className="mt-0.5 text-xs text-[#8696a0]">Qty {item.qty}</p>
+                    </div>
+                    {item.lineTotalDisplay ? (
+                      item.hasDiscount && item.originalLineTotalDisplay ? (
+                        <span className="inline-flex shrink-0 flex-col items-end gap-0.5 text-right">
+                          <span className="text-sm font-semibold tabular-nums text-[#e9edef]">
+                            {item.lineTotalDisplay}
+                          </span>
+                          <span className="text-[11px] tabular-nums text-[#8696a0] line-through">
+                            {item.originalLineTotalDisplay}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-[#e9edef]">
+                          {item.lineTotalDisplay}
+                        </span>
+                      )
+                    ) : null}
+                  </div>
                 </div>
               </li>
             ))}

@@ -126,15 +126,28 @@ export function buildCartMessagePayloadFromBuyerCart(cart: BuyerCart): CartMessa
     sentAt: cart.sentAt ?? new Date().toISOString(),
     estimatedTotalDisplay: cart.estimatedTotalDisplay,
     itemCount: cart.itemCount,
-    items: cart.items.map((line) => ({
-      id: line.catalogItemId,
-      cartItemId: line.id,
-      name: line.name,
-      qty: line.quantity,
-      priceDisplay: line.priceDisplay,
-      lineTotalDisplay: line.lineTotalDisplay,
-      imageUrl: line.imageUrl,
-    })),
+    items: cart.items.map((line) => {
+      const hasDiscount =
+        line.hasDiscount &&
+        line.originalUnitPriceKobo !== null &&
+        line.originalUnitPriceKobo > 0 &&
+        line.unitPriceKobo !== null &&
+        line.originalUnitPriceKobo > line.unitPriceKobo
+
+      return {
+        id: line.catalogItemId,
+        cartItemId: line.id,
+        name: line.name,
+        qty: line.quantity,
+        priceDisplay: line.priceDisplay,
+        lineTotalDisplay: line.lineTotalDisplay || undefined,
+        hasDiscount,
+        originalLineTotalDisplay: hasDiscount
+          ? formatNairaFromKobo(line.originalUnitPriceKobo! * line.quantity)
+          : undefined,
+        imageUrl: line.imageUrl,
+      }
+    }),
   }
 }
 

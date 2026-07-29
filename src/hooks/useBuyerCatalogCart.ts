@@ -55,7 +55,11 @@ export function useBuyerCarts() {
     staleTime: 15_000,
   })
 
-  const carts = query.data ?? []
+  // Hide businesses with zero catalog items; they reappear on next add-to-cart.
+  const carts = useMemo(
+    () => (query.data ?? []).filter((cart) => cart.itemCount > 0),
+    [query.data],
+  )
   const totalItemCount = useMemo(
     () => carts.reduce((sum, cart) => sum + cart.itemCount, 0),
     [carts],

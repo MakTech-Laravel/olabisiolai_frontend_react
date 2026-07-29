@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Minus, Plus, ShoppingBag } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useRequireAuthNavigate } from '@/features/auth/useRequireAuthNavigate'
@@ -53,6 +53,24 @@ export default function CartPage() {
       { replace: true },
     )
   }
+
+  // Zero-item businesses are filtered out of `carts`; switch away if the URL still points at one.
+  useEffect(() => {
+    if (cartsLoading) return
+    if (carts.length === 0) return
+    if (selectedBusinessId && carts.some((entry) => entry.businessInfoId === selectedBusinessId)) {
+      return
+    }
+    const nextId = carts[0].businessInfoId
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('business', String(nextId))
+        return next
+      },
+      { replace: true },
+    )
+  }, [carts, cartsLoading, selectedBusinessId, setSearchParams])
 
   /** Add more → global discovery catalog (filters), not the separate business browse page. */
   const addMorePath = '/catalog'
@@ -135,20 +153,10 @@ export default function CartPage() {
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-md flex-col items-center justify-center gap-4 px-4 py-16 text-center">
         <ShoppingBag className="size-10 text-stat-muted" aria-hidden />
-        <p className="text-sm text-body-secondary">This business cart is empty.</p>
-        {carts.length > 1 ? (
-          <button
-            type="button"
-            onClick={() => selectBusiness(carts[0].businessInfoId)}
-            className="text-sm font-semibold text-chat-accent hover:underline"
-          >
-            View other carts
-          </button>
-        ) : (
-          <Link to="/catalog" className="text-sm font-semibold text-chat-accent hover:underline">
-            Browse catalog
-          </Link>
-        )}
+        <p className="text-sm text-body-secondary">Your cart is empty.</p>
+        <Link to="/catalog" className="text-sm font-semibold text-chat-accent hover:underline">
+          Browse catalog
+        </Link>
       </div>
     )
   }
