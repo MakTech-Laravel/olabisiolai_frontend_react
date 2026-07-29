@@ -122,7 +122,10 @@ export default function Register() {
         params.set("plan", vendorPlan);
       }
 
-      navigate(`/otp-verification?${params.toString()}`, { replace: true });
+      navigate(`/otp-verification?${params.toString()}`, {
+        replace: true,
+        state: { email: trimmedEmail, phone: trimmedPhone },
+      });
     } catch (err) {
       const errors = getAuthFieldErrors(err);
       setFieldErrors(errors);

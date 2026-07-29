@@ -82,7 +82,13 @@ export default function LoginPhone() {
             email: loginResult.email ?? contact.email,
             phone: loginResult.phone ?? contact.phone,
           }),
-          { replace: true },
+          {
+            replace: true,
+            state: {
+              email: loginResult.email ?? contact.email,
+              phone: loginResult.phone ?? contact.phone,
+            },
+          },
         );
         return;
       }

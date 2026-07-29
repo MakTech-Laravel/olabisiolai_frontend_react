@@ -86,7 +86,7 @@ function formatRemaining(ms: number) {
 export default function OTPVerification() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { setToken, setUser, refreshSession, resetAuthState, authStrategy } = useAuth();
 
   const [otp, setOtp] = React.useState<string[]>(() => createEmptyOtpDigits(OTP_LENGTH));
@@ -99,10 +99,59 @@ export default function OTPVerification() {
   const inputRefs = React.useRef<Array<HTMLInputElement | null>>([]);
 
   const purpose = searchParams.get("purpose");
-  const email = searchParams.get("email")?.trim() ?? "";
-  const phone = searchParams.get("phone")?.trim() ?? "";
-  const channel = (searchParams.get("channel") as VerificationChannel | null) ?? (phone ? "phone" : "email");
   const role: AuthRole = resolveAuthRole(searchParams.get("role"));
+
+  /** Prefer URL, then location.state, then stored session/user — survives refresh / truncated query. */
+  const { email, phone, channel } = React.useMemo(() => {
+    const queryEmail = searchParams.get("email")?.trim() ?? "";
+    const queryPhone = searchParams.get("phone")?.trim() ?? "";
+    const state = (location.state as { email?: string; phone?: string } | null) ?? null;
+    const stateEmail = typeof state?.email === "string" ? state.email.trim() : "";
+    const statePhone = typeof state?.phone === "string" ? state.phone.trim() : "";
+
+    let fallbackEmail = "";
+    let fallbackPhone = "";
+    if (purpose === "register") {
+      const stored = getStoredAuthUser();
+      fallbackEmail = stored?.email?.trim() ?? "";
+      fallbackPhone = (stored?.phone ?? "").trim();
+    } else if (purpose === "new_device") {
+      const session = getDeviceVerificationSession();
+      fallbackEmail = session?.email?.trim() ?? "";
+      fallbackPhone = session?.phone?.trim() ?? "";
+    } else if (purpose === "reset") {
+      const session = getPasswordResetSession();
+      fallbackEmail = session?.email?.trim() ?? "";
+      fallbackPhone = session?.phone?.trim() ?? "";
+    }
+
+    const resolvedEmail = queryEmail || stateEmail || fallbackEmail;
+    const resolvedPhone = queryPhone || statePhone || fallbackPhone;
+
+    const queryChannel = searchParams.get("channel");
+    const parsedChannel: VerificationChannel | null =
+      queryChannel === "email" || queryChannel === "phone" || queryChannel === "both"
+        ? queryChannel
+        : null;
+
+    // Registration always verifies both contacts when both exist.
+    const resolvedChannel: VerificationChannel =
+      purpose === "register" && resolvedEmail && resolvedPhone
+        ? "both"
+        : parsedChannel ??
+          (resolvedEmail && resolvedPhone
+            ? "both"
+            : resolvedPhone
+              ? "phone"
+              : "email");
+
+    return {
+      email: resolvedEmail,
+      phone: resolvedPhone,
+      channel: resolvedChannel,
+    };
+  }, [searchParams, location.state, purpose]);
+
   const vendorPlan = React.useMemo((): VendorPlanChoice | null => {
     const fromQuery = parseVendorPlan(searchParams.get("plan"));
     if (fromQuery) {
@@ -116,6 +165,35 @@ export default function OTPVerification() {
       saveVendorPlan(vendorPlan);
     }
   }, [vendorPlan]);
+
+  // Persist recovered contacts into the URL so a refresh keeps them.
+  React.useEffect(() => {
+    if (!purpose) return;
+
+    const queryEmail = searchParams.get("email")?.trim() ?? "";
+    const queryPhone = searchParams.get("phone")?.trim() ?? "";
+    const queryChannel = searchParams.get("channel");
+
+    const needsEmail = Boolean(email) && !queryEmail;
+    const needsPhone = Boolean(phone) && !queryPhone;
+    const needsChannel =
+      Boolean(channel) &&
+      (queryChannel !== channel) &&
+      (purpose === "register" || !queryChannel);
+
+    if (!needsEmail && !needsPhone && !needsChannel) return;
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (needsEmail) next.set("email", email);
+        if (needsPhone) next.set("phone", phone);
+        if (needsChannel) next.set("channel", channel);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [purpose, email, phone, channel, searchParams, setSearchParams]);
 
   const identifier =
     purpose === "register" && email && phone
@@ -476,6 +554,8 @@ export default function OTPVerification() {
             ? "A new verification code has been sent to your phone."
             : "A new verification code has been sent to your email.",
         );
+      } else if (purpose === "register" && channel === "both") {
+        setResendMessage("A new OTP has been sent to your email and phone.");
       } else if (channel === "phone" || purpose === "login") {
         setResendMessage("A new OTP has been sent to your phone.");
       } else {
