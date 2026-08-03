@@ -20,12 +20,18 @@ export async function adminUpdateSeoPage(payload: {
   metaTitle: string
   metaDescription: string
   metaKeywords: string
+  canonicalUrl: string
+  noindex: boolean
+  ogImage: string
 }): Promise<SeoPageDto> {
   const res = await request.post("/admin/seo-pages/update", {
     id: payload.id,
     meta_title: payload.metaTitle.trim() || null,
     meta_description: payload.metaDescription.trim() || null,
     meta_keywords: payload.metaKeywords.trim() || null,
+    canonical_url: payload.canonicalUrl.trim() || null,
+    noindex: payload.noindex,
+    og_image: payload.ogImage.trim() || null,
   })
   const inner = laravelInnerData(res.data) ?? {}
   const page = parseSeoPageDto(inner.page)

@@ -29,6 +29,9 @@ export default function SeoPages() {
   const [metaTitle, setMetaTitle] = useState("")
   const [metaDescription, setMetaDescription] = useState("")
   const [metaKeywords, setMetaKeywords] = useState("")
+  const [canonicalUrl, setCanonicalUrl] = useState("")
+  const [noindex, setNoindex] = useState(false)
+  const [ogImage, setOgImage] = useState("")
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300)
@@ -57,6 +60,9 @@ export default function SeoPages() {
         metaTitle,
         metaDescription,
         metaKeywords,
+        canonicalUrl,
+        noindex,
+        ogImage,
       })
     },
     onSuccess: () => {
@@ -81,6 +87,9 @@ export default function SeoPages() {
     setMetaTitle(row.metaTitle ?? "")
     setMetaDescription(row.metaDescription ?? "")
     setMetaKeywords(row.metaKeywords ?? "")
+    setCanonicalUrl(row.canonicalUrl ?? "")
+    setNoindex(row.noindex)
+    setOgImage(row.ogImage ?? "")
   }
 
   const pages = listQuery.data?.pages ?? []
@@ -139,6 +148,7 @@ export default function SeoPages() {
                   <th className="px-4 py-3 font-medium">Page</th>
                   <th className="px-4 py-3 font-medium">Path</th>
                   <th className="px-4 py-3 font-medium">Meta title</th>
+                  <th className="px-4 py-3 font-medium">Index</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -149,6 +159,9 @@ export default function SeoPages() {
                     <td className="px-4 py-3 font-mono text-xs text-body-secondary">{row.path}</td>
                     <td className="max-w-xs truncate px-4 py-3 text-body-secondary">
                       {row.metaTitle || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-body-secondary">
+                      {row.noindex ? "noindex" : "index"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button type="button" variant="outline" size="sm" onClick={() => openEdit(row)}>
@@ -198,7 +211,7 @@ export default function SeoPages() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="seo-edit-title"
-            className="w-full max-w-lg rounded-2xl border border-chat-border-subtle bg-card p-5 shadow-lg"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-chat-border-subtle bg-card p-5 shadow-lg"
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
@@ -250,6 +263,33 @@ export default function SeoPages() {
                   maxLength={500}
                   className="w-full rounded-lg border border-chat-border-subtle bg-background px-3 py-2 text-sm outline-none focus:border-chat-accent"
                 />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-ink-heading">Canonical URL</span>
+                <input
+                  value={canonicalUrl}
+                  onChange={(e) => setCanonicalUrl(e.target.value)}
+                  placeholder="Auto from page URL when blank"
+                  className="w-full rounded-lg border border-chat-border-subtle bg-background px-3 py-2 text-sm outline-none focus:border-chat-accent"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-ink-heading">OG image URL</span>
+                <input
+                  value={ogImage}
+                  onChange={(e) => setOgImage(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full rounded-lg border border-chat-border-subtle bg-background px-3 py-2 text-sm outline-none focus:border-chat-accent"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-ink-heading">
+                <input
+                  type="checkbox"
+                  checked={noindex}
+                  onChange={(e) => setNoindex(e.target.checked)}
+                  className="size-4 rounded border-chat-border-subtle"
+                />
+                noindex (exclude from sitemap; robots noindex,nofollow)
               </label>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>
