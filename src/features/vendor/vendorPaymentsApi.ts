@@ -94,6 +94,8 @@ export async function fetchVendorPayments(params?: {
   purpose?: string;
   /** `YYYY-MM` — filter by paid month, or created month if not paid yet */
   month?: string;
+  /** Limit to payments for a specific business owned by the vendor */
+  business_id?: number;
 }): Promise<VendorPaymentsListData> {
   const res = await request.get<ApiEnvelope<VendorPaymentsListData>>('/vendor/payments', { params });
   return res.data.data;
@@ -127,8 +129,12 @@ export async function deleteVendorPaymentMethod(id: number): Promise<void> {
   await request.delete(`/vendor/payment-methods/${id}`);
 }
 
-/** CSV export; uses same `purpose` / `month` filters as the list. */
-export async function downloadVendorPaymentsCsv(params: { purpose?: string; month?: string }): Promise<void> {
+/** CSV export; uses same `purpose` / `month` / `business_id` filters as the list. */
+export async function downloadVendorPaymentsCsv(params: {
+  purpose?: string;
+  month?: string;
+  business_id?: number;
+}): Promise<void> {
   const { api } = await import('@/api/client');
   const res = await api.get<Blob>('/vendor/payments/export', {
     params,
