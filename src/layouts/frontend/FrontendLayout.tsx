@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { CatalogFloatingCartFab } from '@/components/business/CatalogFloatingCartFab'
 import { FrontendFooter } from '@/components/partials/frontend/FrontendFooter'
 import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
+import { DocumentHead } from '@/components/seo/DocumentHead'
 
 const FOOTERLESS_PATHS = new Set(['/filters', '/cart'])
 
@@ -15,6 +16,7 @@ export function FrontendLayout() {
 
   return (
     <div className="min-h-dvh bg-background">
+      <DocumentHead />
       <FrontendHeader />
       <main className="mx-auto w-full">
         <Outlet />

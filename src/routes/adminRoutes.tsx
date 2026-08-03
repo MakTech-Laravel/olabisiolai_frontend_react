@@ -34,6 +34,7 @@ const AdminBoostRequestDetail = lazy(() => import("@/pages/admin/AdminBoostReque
 const UserManagement = lazy(() => import("@/pages/admin/UserManagement"));
 const AdminAccounts = lazy(() => import("@/pages/admin/AdminAccounts"));
 const CmsEdit = lazy(() => import("@/pages/admin/CmsEdit"));
+const SeoPages = lazy(() => import("@/pages/admin/SeoPages"));
 
 /**
  * User-management URLs mirror `blogging_rasta_laravel` `routes/admin.php`:
@@ -106,6 +107,7 @@ export const adminRoutes: RouteObject = {
     },
     { path: "/admin/cms", element: <Navigate to="/admin/cms/about-us" replace /> },
     { path: "/admin/cms/:slug", element: suspensePage(CmsEdit) },
+    { path: "/admin/seo", element: suspensePage(SeoPages) },
     { path: "/admin/career", element: suspensePage(Career) },
     { path: "/admin/career/add", element: suspensePage(CareerEdit) },
     { path: "/admin/career/edit/:id", element: suspensePage(CareerEdit) },
