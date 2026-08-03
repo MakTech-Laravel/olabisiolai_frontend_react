@@ -50,7 +50,10 @@ FROM nginx:1.27-alpine AS runner
 
 RUN rm /etc/nginx/conf.d/default.conf
 
-COPY nginx.conf /etc/nginx/conf.d/app.conf
+# Template → /etc/nginx/conf.d/app.conf via image entrypoint envsubst.
+# Set SPA_SHELL_API_ORIGIN in Coolify (no trailing slash), e.g. https://api.gidira.tech
+ENV SPA_SHELL_API_ORIGIN=https://api.gidira.tech
+COPY nginx.conf /etc/nginx/templates/app.conf.template
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
