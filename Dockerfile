@@ -52,7 +52,10 @@ RUN rm /etc/nginx/conf.d/default.conf
 
 # Template → /etc/nginx/conf.d/app.conf via image entrypoint envsubst.
 # Set SPA_SHELL_API_ORIGIN in Coolify (no trailing slash), e.g. https://api.gidira.tech
+# NGINX_ENVSUBST_FILTER is required: without it Coolify env vars can clobber nginx
+# $host / $uri / $scheme, and $$ escaping produces invalid config (crash loop).
 ENV SPA_SHELL_API_ORIGIN=https://api.gidira.tech
+ENV NGINX_ENVSUBST_FILTER=SPA_SHELL_API_ORIGIN
 COPY nginx.conf /etc/nginx/templates/app.conf.template
 
 COPY --from=builder /app/dist /usr/share/nginx/html
