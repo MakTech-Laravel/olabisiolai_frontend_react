@@ -3,7 +3,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 ARG VITE_ENVIRONMENT_MODE
 ARG VITE_API_BASE_URL
@@ -36,7 +36,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts && \
     pnpm rebuild lightningcss @tailwindcss/oxide
 
 COPY . .
-RUN pnpm run build
+RUN npm run build
 
 # ─── Stage 2: Node SSR server ────────────────────────────────────────────────
 FROM node:22-alpine AS runner
@@ -45,10 +45,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-# Laravel origin for robots.txt / sitemap.xml proxy (no trailing slash)
-ENV SPA_SHELL_API_ORIGIN=https://api.gidira.tech
+# Laravel origin for robots.txt / sitemap.xml / SEO proxy (no trailing slash).
+# Set per Coolify environment (runtime env overrides this ARG default):
+#   Demo:       SPA_SHELL_API_ORIGIN=https://api.gidira.cloud
+#   Production: SPA_SHELL_API_ORIGIN=https://api.gidira.tech
+ARG SPA_SHELL_API_ORIGIN=
+ENV SPA_SHELL_API_ORIGIN=$SPA_SHELL_API_ORIGIN
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts

@@ -32,11 +32,29 @@ try {
 
 const isProd = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT || 3000)
-const apiOrigin = (
-  process.env.SPA_SHELL_API_ORIGIN ||
-  process.env.VITE_SPA_SHELL_API_ORIGIN ||
-  'https://api.gidira.tech'
-).replace(/\/+$/, '')
+
+/** Laravel origin for robots/sitemap/SEO — prefer SPA_SHELL_API_ORIGIN, else derive from VITE_API_BASE_URL. */
+function resolveApiOrigin() {
+  const explicit = (
+    process.env.SPA_SHELL_API_ORIGIN ||
+    process.env.VITE_SPA_SHELL_API_ORIGIN ||
+    ''
+  ).trim()
+  if (explicit) return explicit.replace(/\/+$/, '')
+
+  const apiBase = (process.env.VITE_API_BASE_URL || '').trim()
+  if (apiBase) {
+    try {
+      return new URL(apiBase).origin
+    } catch {
+      // fall through
+    }
+  }
+
+  return 'https://api.gidira.tech'
+}
+
+const apiOrigin = resolveApiOrigin()
 
 /**
  * @param {string} html
