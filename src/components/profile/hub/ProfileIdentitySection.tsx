@@ -44,6 +44,12 @@ export function ProfileHubHeader({ avatarUrl }: ProfileHubHeaderProps) {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
+              <Link to="/user/settings/account" className="flex items-center gap-2">
+                <Pencil className="size-4" aria-hidden />
+                Edit profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/" className="flex items-center gap-2">
                 <Home className="size-4" aria-hidden />
                 Home
@@ -147,16 +153,6 @@ export function ProfileIdentitySection({
             </Link>
           </div>
         </div>
-      </div>
-
-      <div className="mt-4">
-        <Link
-          to="/user/settings/account"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-auth-bg px-3.5 py-3 text-[14.5px] font-semibold text-ink transition-transform active:scale-[0.985]"
-        >
-          <Pencil className="size-[17px] text-body-secondary" strokeWidth={2} aria-hidden />
-          Edit profile
-        </Link>
       </div>
 
       {photoError ? (

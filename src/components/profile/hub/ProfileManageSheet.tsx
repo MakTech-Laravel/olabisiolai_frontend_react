@@ -330,11 +330,11 @@ export function ProfileManageSheet({ business, open, onClose, onBusinessDeleted 
                 <ManageToolRow
                   iconClass="bg-[#EAF2FD] text-chat-accent"
                   icon={<BadgeCheck className="size-5" strokeWidth={2} />}
-                  title={isBusinessVerified(business.verificationStatus) ? 'Verification' : 'Verify business'}
+                  title="Gidira Verified"
                   subtitle={
                     isBusinessVerified(business.verificationStatus)
-                      ? 'Reviewed by our team'
-                      : 'Get the blue check'
+                      ? 'Verified by Gidira'
+                      : 'Get the Gidira Verified badge'
                   }
                   to={`/vendor/verification?business_id=${business.id}`}
                   onNavigate={onClose}
