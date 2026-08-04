@@ -12,7 +12,9 @@ export async function getConversations(params: {
   archived?: boolean
   inbox?: 'personal'
   business_info_id?: number
+  q?: string
 }): Promise<{ conversations: Conversation[]; meta: ApiResponse<Conversation[]>['meta'] }> {
+  const q = params.q?.trim()
   const res = await api.get<ApiResponse<Record<string, unknown>[]>>(messagingPath('/conversations'), {
     params: {
       page: params.page ?? 1,
@@ -22,6 +24,7 @@ export async function getConversations(params: {
       ...(params.business_info_id != null && params.business_info_id > 0
         ? { business_info_id: params.business_info_id }
         : {}),
+      ...(q ? { q } : {}),
     },
   })
   const { data, meta } = unwrapApi(res.data)
@@ -78,11 +81,8 @@ export async function createConversation(
 }
 
 export async function searchConversations(query: string): Promise<Conversation[]> {
-  const res = await api.get<ApiResponse<Record<string, unknown>[]>>(messagingPath('/conversations/search'), {
-    params: { q: query },
-  })
-  const { data } = unwrapApi(res.data)
-  return Array.isArray(data) ? data.map((r) => normalizeConversation(r)) : []
+  const { conversations } = await getConversations({ q: query, page: 1 })
+  return conversations
 }
 
 export type MessageRecipient = {
