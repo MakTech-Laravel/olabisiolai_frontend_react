@@ -8,6 +8,7 @@ import {
   LocateFixed,
   LogIn,
   LogOut,
+  Pencil,
   Search,
   User,
   X,
@@ -133,6 +134,12 @@ function HeaderToolbar({
           <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/user/settings/account" className="flex items-center gap-2">
+                <Pencil className="size-4" aria-hidden />
+                Edit profile
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to={profilePath} className="flex items-center gap-2">
                 <User className="size-4" aria-hidden />
