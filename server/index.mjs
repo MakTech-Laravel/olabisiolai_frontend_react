@@ -239,8 +239,8 @@ async function createServer() {
     }
   })
 
-  app.listen(port, () => {
-    console.log(`[ssr] listening on http://localhost:${port} (${isProd ? 'prod' : 'dev'})`)
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`[ssr] listening on http://0.0.0.0:${port} (${isProd ? 'prod' : 'dev'})`)
   })
 }
 
