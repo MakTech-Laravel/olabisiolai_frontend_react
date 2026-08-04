@@ -46,10 +46,9 @@ function isAuthRefreshRequest(config: InternalAxiosRequestConfig): boolean {
 }
 
 function redirectToLogin() {
-  const next = encodeURIComponent(
-    window.location.pathname + window.location.search,
-  )
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+  if (typeof window === 'undefined') return
+  const next = encodeURIComponent(window.location.pathname + window.location.search)
+  if (window.location.pathname.startsWith('/admin')) {
     window.location.assign(`/admin/login?next=${next}`)
     return
   }

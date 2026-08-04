@@ -1,10 +1,10 @@
-import { useEffect } from "react"
-import { useLocation } from "react-router-dom"
+import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 
-import { useResolvedSeo } from "@/features/seo/useSeoMeta"
+import { useResolvedSeo } from '@/features/seo/useSeoMeta'
 
-const DEFAULT_TITLE = "Gidira"
-const JSON_LD_ATTR = "data-gidira-jsonld"
+const DEFAULT_TITLE = 'Gidira'
+const JSON_LD_ATTR = 'data-gidira-jsonld'
 
 function upsertMetaName(name: string, content: string | null | undefined) {
   const selector = `meta[name="${name}"]`
@@ -14,11 +14,11 @@ function upsertMetaName(name: string, content: string | null | undefined) {
     return
   }
   if (!el) {
-    el = document.createElement("meta")
-    el.setAttribute("name", name)
+    el = document.createElement('meta')
+    el.setAttribute('name', name)
     document.head.appendChild(el)
   }
-  el.setAttribute("content", content.trim())
+  el.setAttribute('content', content.trim())
 }
 
 function upsertOg(property: string, content: string | null | undefined) {
@@ -29,11 +29,11 @@ function upsertOg(property: string, content: string | null | undefined) {
     return
   }
   if (!el) {
-    el = document.createElement("meta")
-    el.setAttribute("property", property)
+    el = document.createElement('meta')
+    el.setAttribute('property', property)
     document.head.appendChild(el)
   }
-  el.setAttribute("content", content.trim())
+  el.setAttribute('content', content.trim())
 }
 
 function upsertCanonical(href: string | null | undefined) {
@@ -43,19 +43,19 @@ function upsertCanonical(href: string | null | undefined) {
     return
   }
   if (!el) {
-    el = document.createElement("link")
-    el.setAttribute("rel", "canonical")
+    el = document.createElement('link')
+    el.setAttribute('rel', 'canonical')
     document.head.appendChild(el)
   }
-  el.setAttribute("href", href.trim())
+  el.setAttribute('href', href.trim())
 }
 
 function upsertJsonLd(blocks: unknown[]) {
   document.head.querySelectorAll(`script[${JSON_LD_ATTR}]`).forEach((n) => n.remove())
   for (const block of blocks) {
-    const script = document.createElement("script")
-    script.type = "application/ld+json"
-    script.setAttribute(JSON_LD_ATTR, "1")
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.setAttribute(JSON_LD_ATTR, '1')
     script.textContent = JSON.stringify(block)
     document.head.appendChild(script)
   }
@@ -63,49 +63,52 @@ function upsertJsonLd(blocks: unknown[]) {
 
 /**
  * Applies resolved SEO from GET /seo-pages/resolve for the current SPA path.
+ * Skips wiping server-injected meta on the first paint after SSR hydrate.
  */
 export function DocumentHead() {
   const { pathname } = useLocation()
-  const { data } = useResolvedSeo(pathname)
+  const { data, isFetched } = useResolvedSeo(pathname)
+  const hasAppliedRef = useRef(false)
 
   useEffect(() => {
+    // Wait until resolve finishes so we don't flash default title over SSR head.
+    if (!isFetched) return
+
     if (!data) {
-      document.title = DEFAULT_TITLE
+      if (hasAppliedRef.current) {
+        document.title = DEFAULT_TITLE
+      }
       return
     }
 
+    hasAppliedRef.current = true
     document.title = data.title?.trim() || DEFAULT_TITLE
 
-    upsertMetaName("description", data.description)
-    upsertMetaName("keywords", data.keywords)
-    upsertMetaName("robots", data.robots)
+    upsertMetaName('description', data.description)
+    upsertMetaName('keywords', data.keywords)
+    upsertMetaName('robots', data.robots)
     upsertCanonical(data.canonical)
 
     const ogKeys = new Set([
       ...Object.keys(data.og),
-      "title",
-      "description",
-      "type",
-      "url",
-      "site_name",
-      "image",
+      'title',
+      'description',
+      'type',
+      'url',
+      'site_name',
+      'image',
     ])
     for (const key of ogKeys) {
       upsertOg(`og:${key}`, data.og[key] ?? null)
     }
 
-    const twKeys = new Set([...Object.keys(data.twitter), "card", "title", "description", "image"])
+    const twKeys = new Set([...Object.keys(data.twitter), 'card', 'title', 'description', 'image'])
     for (const key of twKeys) {
       upsertMetaName(`twitter:${key}`, data.twitter[key] ?? null)
     }
 
     upsertJsonLd(data.jsonLd)
-
-    return () => {
-      document.title = DEFAULT_TITLE
-      document.head.querySelectorAll(`script[${JSON_LD_ATTR}]`).forEach((n) => n.remove())
-    }
-  }, [data])
+  }, [data, isFetched])
 
   return null
 }

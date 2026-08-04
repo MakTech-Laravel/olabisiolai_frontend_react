@@ -1,7 +1,7 @@
 import { RouterProvider } from 'react-router-dom'
 
 import { useFavicon } from '@/hooks/useFavicon'
-import { router } from '@/routes/router'
+import { createAppRouter } from '@/routes/router'
 
 export function AppBootstrap() {
   useFavicon({
@@ -9,6 +9,5 @@ export function AppBootstrap() {
     responsePath: (import.meta.env.VITE_FAVICON_RESPONSE_PATH as string | undefined) ?? 'data.favicon',
     ttlMs: Number(import.meta.env.VITE_FAVICON_CACHE_TTL_MS || 0) || undefined,
   })
-  return <RouterProvider router={router} />
+  return <RouterProvider router={createAppRouter()} />
 }
-

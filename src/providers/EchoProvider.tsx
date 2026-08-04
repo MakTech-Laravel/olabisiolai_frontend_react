@@ -47,7 +47,7 @@ let warnedMissingReverbEnv = false
 
 export function EchoProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, accessToken } = useAuth()
-  const enabled = messagingEnv.isReverbConfigured()
+  const enabled = typeof window !== 'undefined' && messagingEnv.isReverbConfigured()
   const [echo, setEcho] = React.useState<ReverbEcho | null>(null)
   const [status, setStatus] = React.useState<ConnectionStatus>(
     enabled ? 'connecting' : 'disabled',

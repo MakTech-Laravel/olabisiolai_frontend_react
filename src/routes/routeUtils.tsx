@@ -32,10 +32,12 @@ export function ScrollToTopLayout() {
   const showBottomNav = shouldShowAppBottomNav(pathname);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname]);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
     document.body.classList.toggle("app-bottom-nav-active", showBottomNav);
     return () => {
       document.body.classList.remove("app-bottom-nav-active");

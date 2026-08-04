@@ -13,7 +13,6 @@ import { useDiscoveryCartActions } from '@/hooks/useDiscoveryCartActions'
 import { CATALOG_IMAGE_ASPECT_CLASS } from '@/lib/businessImageLayout'
 import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { cn } from '@/lib/utils'
-import { router } from '@/routes/router'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -196,10 +195,10 @@ export default function CatalogDiscoveryPage() {
       setSearchInput('')
       void queryClient.cancelQueries({ queryKey: ['catalog', 'feed'] })
       void queryClient.removeQueries({ queryKey: ['catalog', 'feed'] })
-      void router.navigate(CATALOG_BASE_PATH, { replace: true })
+      void navigate(CATALOG_BASE_PATH, { replace: true })
       setSearchParams('', { replace: true })
     },
-    [queryClient, setSearchParams],
+    [navigate, queryClient, setSearchParams],
   )
 
   useEffect(() => {

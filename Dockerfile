@@ -3,10 +3,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# pnpm is not bundled in node:22-alpine — enable via corepack
 RUN corepack enable
 
-# Declare build-time env vars (Coolify passes these from Environment Variables)
 ARG VITE_ENVIRONMENT_MODE
 ARG VITE_API_BASE_URL
 ARG VITE_AUTH_STRATEGY
@@ -15,13 +13,11 @@ ARG VITE_AUTH_ME_PATH
 ARG VITE_AUTH_LOGOUT_PATH
 ARG VITE_SITE_URL
 
-# Reverb configuration
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
 ARG VITE_REVERB_PORT
 ARG VITE_REVERB_SCHEME
 
-# Make them available to Vite at build time
 ENV VITE_ENVIRONMENT_MODE=$VITE_ENVIRONMENT_MODE
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_AUTH_STRATEGY=$VITE_AUTH_STRATEGY
@@ -30,39 +26,39 @@ ENV VITE_AUTH_ME_PATH=$VITE_AUTH_ME_PATH
 ENV VITE_AUTH_LOGOUT_PATH=$VITE_AUTH_LOGOUT_PATH
 ENV VITE_SITE_URL=$VITE_SITE_URL
 
-# Reverb configuration
 ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
 ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
 ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
 
-# Install dependencies (lockfile required for reproducible installs)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts && \
     pnpm rebuild lightningcss @tailwindcss/oxide
 
-# Copy source and build
 COPY . .
 RUN pnpm run build
 
-# ─── Stage 2: Serve ──────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine AS runner
+# ─── Stage 2: Node SSR server ────────────────────────────────────────────────
+FROM node:22-alpine AS runner
 
-RUN rm /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Template → /etc/nginx/conf.d/app.conf via image entrypoint envsubst.
-# Set SPA_SHELL_API_ORIGIN in Coolify (no trailing slash), e.g. https://api.gidira.tech
-# NGINX_ENVSUBST_FILTER is required: without it Coolify env vars can clobber nginx
-# $host / $uri / $scheme, and $$ escaping produces invalid config (crash loop).
+ENV NODE_ENV=production
+ENV PORT=3000
+# Laravel origin for robots.txt / sitemap.xml proxy (no trailing slash)
 ENV SPA_SHELL_API_ORIGIN=https://api.gidira.tech
-ENV NGINX_ENVSUBST_FILTER=SPA_SHELL_API_ORIGIN
-COPY nginx.conf /etc/nginx/templates/app.conf.template
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+RUN corepack enable
 
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-EXPOSE 80
+COPY --from=builder /app/dist ./dist
+COPY server ./server
 
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
+
+CMD ["node", "server/index.mjs"]

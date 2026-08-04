@@ -184,15 +184,6 @@ export default function Service() {
   const isPremium = business?.isPremium ?? false;
   const description = displayDescription || business?.description || stateData?.description || "";
 
-  useEffect(() => {
-    if (name) {
-      document.title = `${name} | Gidira`;
-    }
-    return () => {
-      document.title = "Gidira";
-    };
-  }, [name]);
-
   const rating = business?.rating ?? stateData?.rating ?? 0;
   const reviewCount = business?.reviews ?? stateData?.reviews ?? 0;
   const locationText = business?.location ?? stateData?.location ?? "";
