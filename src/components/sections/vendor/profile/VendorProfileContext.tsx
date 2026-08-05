@@ -15,6 +15,11 @@ import {
   type VendorBusinessProfile,
 } from "@/features/business/vendorBusinessProfileApi";
 import { updateVendorBusiness } from "@/features/business/vendorBusinessApi";
+import {
+  businessImageRejectMessage,
+  filterBusinessImages,
+} from "@/lib/businessImageUpload";
+import { showError } from "@/lib/sweetAlert";
 import { validateBusinessHours } from "@/features/business/businessHours";
 import { normalizeSocialAccount, validateSocialAccounts } from "@/features/business/socialAccounts";
 import { parseVendorBusinessApiFailure } from "@/features/business/vendorBusinessFormErrors";
@@ -157,31 +162,53 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   }, []);
 
-  const setLogoFile = useCallback((file: File | null) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      if (prev.logoPreview.startsWith("blob:")) {
-        URL.revokeObjectURL(prev.logoPreview);
-      }
-      const logoPreview = file ? URL.createObjectURL(file) : query.data?.logoUrl ?? "";
-      return { ...prev, logoFile: file, logoPreview };
-    });
-  }, [query.data?.logoUrl]);
-
   const addCoverFiles = useCallback((files: File[]) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const room = maxCoverPhotos - totalCoverCount(prev);
-      if (room <= 0) return prev;
-      const accepted = files.slice(0, room);
-      const previews = accepted.map((f) => URL.createObjectURL(f));
-      return {
-        ...prev,
-        newCoverFiles: [...prev.newCoverFiles, ...accepted],
-        newCoverPreviews: [...prev.newCoverPreviews, ...previews],
-      };
-    });
+    void (async () => {
+      const filtered = await filterBusinessImages(files);
+      const rejectMessage = businessImageRejectMessage(filtered);
+      if (rejectMessage) {
+        showError(rejectMessage);
+      }
+      if (filtered.accepted.length === 0) return;
+
+      setDraft((prev) => {
+        if (!prev) return prev;
+        const room = maxCoverPhotos - totalCoverCount(prev);
+        if (room <= 0) return prev;
+        const accepted = filtered.accepted.slice(0, room);
+        const previews = accepted.map((f) => URL.createObjectURL(f));
+        return {
+          ...prev,
+          newCoverFiles: [...prev.newCoverFiles, ...accepted],
+          newCoverPreviews: [...prev.newCoverPreviews, ...previews],
+        };
+      });
+    })();
   }, [maxCoverPhotos]);
+
+  const setLogoFile = useCallback((file: File | null) => {
+    void (async () => {
+      let nextFile = file;
+      if (file) {
+        const filtered = await filterBusinessImages([file]);
+        const rejectMessage = businessImageRejectMessage(filtered);
+        if (rejectMessage || filtered.accepted.length === 0) {
+          showError(rejectMessage ?? "Only JPG, PNG, or WebP images are allowed.");
+          return;
+        }
+        nextFile = filtered.accepted[0];
+      }
+
+      setDraft((prev) => {
+        if (!prev) return prev;
+        if (prev.logoPreview.startsWith("blob:")) {
+          URL.revokeObjectURL(prev.logoPreview);
+        }
+        const logoPreview = nextFile ? URL.createObjectURL(nextFile) : query.data?.logoUrl ?? "";
+        return { ...prev, logoFile: nextFile, logoPreview, logoMissing: false };
+      });
+    })();
+  }, [query.data?.logoUrl]);
 
   const removeExistingCover = useCallback((index: number) => {
     setDraft((prev) => {
@@ -190,6 +217,7 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         ...prev,
         existingCoverPaths: prev.existingCoverPaths.filter((_, i) => i !== index),
         existingCoverUrls: prev.existingCoverUrls.filter((_, i) => i !== index),
+        existingCoverMissing: prev.existingCoverMissing.filter((_, i) => i !== index),
       };
     });
   }, []);

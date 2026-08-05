@@ -17,14 +17,25 @@ export type VendorProfileDraft = {
   socialAccounts: SocialAccount[];
   logoFile: File | null;
   logoPreview: string;
+  logoMissing: boolean;
   existingCoverPaths: string[];
   existingCoverUrls: string[];
+  existingCoverMissing: boolean[];
   newCoverFiles: File[];
   newCoverPreviews: string[];
   businessHours: BusinessHourEntry[];
 };
 
 export function profileToDraft(profile: VendorBusinessProfile): VendorProfileDraft {
+  const covers =
+    profile.coverPhotos?.length > 0
+      ? profile.coverPhotos
+      : profile.coverPhotoPaths.map((path, index) => ({
+          path,
+          url: profile.coverPhotoUrls[index] ?? "",
+          missing: !profile.coverPhotoUrls[index],
+        }));
+
   return {
     businessName: profile.businessName,
     categoryId: profile.categoryId > 0 ? String(profile.categoryId) : "",
@@ -39,8 +50,10 @@ export function profileToDraft(profile: VendorBusinessProfile): VendorProfileDra
     socialAccounts: profile.socialAccounts.map((account) => ({ ...account })),
     logoFile: null,
     logoPreview: profile.logoUrl,
-    existingCoverPaths: [...profile.coverPhotoPaths],
-    existingCoverUrls: [...profile.coverPhotoUrls],
+    logoMissing: profile.logoMissing,
+    existingCoverPaths: covers.map((cover) => cover.path),
+    existingCoverUrls: covers.map((cover) => cover.url),
+    existingCoverMissing: covers.map((cover) => cover.missing),
     newCoverFiles: [],
     newCoverPreviews: [],
     businessHours: cloneBusinessHours(profile.businessHours),

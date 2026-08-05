@@ -1,8 +1,9 @@
-import { useRef } from "react";
-import { Plus, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImageOff, Plus, X } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { BUSINESS_IMAGE_ACCEPT } from "@/lib/businessImageUpload";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 import { totalCoverCount } from "@/features/business/vendorProfileDraft";
 import { FREE_PHOTO_LIMIT } from "@/constants/planLimits";
@@ -16,17 +17,35 @@ type BusinessGallerySectionProps = {
 function GalleryThumb({
   src,
   alt,
+  missing = false,
   onRemove,
   showRemove,
 }: {
   src: string;
   alt: string;
+  missing?: boolean;
   onRemove?: () => void;
   showRemove?: boolean;
 }) {
+  const [broken, setBroken] = useState(false);
+  const showMissing = missing || broken || !src;
+
   return (
     <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border-light bg-muted shadow-sm">
-      <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+      {showMissing ? (
+        <div className="flex size-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">
+          <ImageOff className="size-4 text-amber-700" aria-hidden />
+          <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-800">Missing</span>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      )}
       {showRemove && onRemove ? (
         <button
           type="button"
@@ -49,7 +68,7 @@ function AddSlot({ onPick, disabled }: { onPick: (files: FileList | null) => voi
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={BUSINESS_IMAGE_ACCEPT}
         multiple
         className="hidden"
         tabIndex={-1}
@@ -91,14 +110,30 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
   if (!profile) return null;
 
   const isPremium = variant === "premium";
-  const displayUrls = isEditing && draft
-    ? [...draft.existingCoverUrls, ...draft.newCoverPreviews]
-    : profile.coverPhotoUrls;
+  const existingItems =
+    isEditing && draft
+      ? draft.existingCoverPaths.map((path, index) => ({
+          key: `existing-${path}-${index}`,
+          src: draft.existingCoverUrls[index] ?? "",
+          missing: draft.existingCoverMissing[index] === true,
+        }))
+      : profile.coverPhotos?.length
+        ? profile.coverPhotos.map((photo, index) => ({
+            key: `profile-${photo.path}-${index}`,
+            src: photo.url,
+            missing: photo.missing,
+          }))
+        : profile.coverPhotoUrls.map((src, index) => ({
+            key: `url-${src}-${index}`,
+            src,
+            missing: false,
+          }));
 
-  const total = isEditing && draft ? totalCoverCount(draft) : displayUrls.length;
+  const total = isEditing && draft ? totalCoverCount(draft) : existingItems.length;
   const coverLimit = maxCoverPhotos ?? DEFAULT_MAX_COVER;
   const canAddMore = isEditing && total < coverLimit;
-  const hasPhotos = displayUrls.length > 0;
+  const hasPhotos = existingItems.length > 0 || (isEditing && (draft?.newCoverPreviews.length ?? 0) > 0);
+  const missingCount = existingItems.filter((item) => item.missing).length;
 
   const handlePick = (files: FileList | null) => {
     if (!files?.length) return;
@@ -111,7 +146,7 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
         <div className="flex items-center justify-between border-b border-border-light px-6 py-5">
           <h2 className="text-lg font-bold text-foreground font-manrope">Business Gallery</h2>
           <div className="font-inter text-sm font-bold text-chat-accent">
-            {displayUrls.length} photo{displayUrls.length === 1 ? "" : "s"}
+            {total} photo{total === 1 ? "" : "s"}
           </div>
         </div>
       ) : (
@@ -126,34 +161,37 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
             {total}/{coverLimit} photos on your {isPremium ? "Premium" : "Free"} plan
           </p>
         ) : null}
+        {missingCount > 0 ? (
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {missingCount} gallery photo{missingCount === 1 ? " is" : "s are"} missing from storage.
+            {isEditing ? " Remove them or re-upload replacements, then save." : " Edit the gallery to remove or re-upload."}
+          </p>
+        ) : null}
         {!hasPhotos && !isEditing ? (
           <p className="text-sm text-muted-foreground">No cover photos uploaded yet.</p>
         ) : (
           <div className="flex flex-wrap items-start gap-4">
-            {isEditing && draft
-              ? draft.existingCoverUrls.map((src, index) => (
-                <GalleryThumb
-                  key={`existing-${src}-${index}`}
-                  src={src}
-                  alt={`Cover ${index + 1}`}
-                  showRemove
-                  onRemove={() => removeExistingCover(index)}
-                />
-              ))
-              : displayUrls.map((src, index) => (
-                <GalleryThumb key={`${src}-${index}`} src={src} alt={`Cover ${index + 1}`} />
-              ))}
+            {existingItems.map((item, index) => (
+              <GalleryThumb
+                key={item.key}
+                src={item.src}
+                alt={`Cover ${index + 1}`}
+                missing={item.missing}
+                showRemove={Boolean(isEditing)}
+                onRemove={isEditing ? () => removeExistingCover(index) : undefined}
+              />
+            ))}
 
             {isEditing && draft
               ? draft.newCoverPreviews.map((src, index) => (
-                <GalleryThumb
-                  key={`new-${src}-${index}`}
-                  src={src}
-                  alt={`New cover ${index + 1}`}
-                  showRemove
-                  onRemove={() => removeNewCover(index)}
-                />
-              ))
+                  <GalleryThumb
+                    key={`new-${src}-${index}`}
+                    src={src}
+                    alt={`New cover ${index + 1}`}
+                    showRemove
+                    onRemove={() => removeNewCover(index)}
+                  />
+                ))
               : null}
 
             {isEditing && canAddMore ? <AddSlot onPick={handlePick} /> : null}

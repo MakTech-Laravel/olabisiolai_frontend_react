@@ -17,6 +17,11 @@ import {
   BUSINESS_LOGO_UPLOAD_HINT,
 } from "@/lib/businessImageLayout";
 import {
+  BUSINESS_IMAGE_ACCEPT,
+  businessImageRejectMessage,
+  filterBusinessImages,
+} from "@/lib/businessImageUpload";
+import {
   businessCreateRequiresPayment,
   createVendorBusiness,
   isPremiumPlanSelected,
@@ -770,34 +775,41 @@ export default function ChoosePlanForm() {
         <CardContent className="p-6">
           <DashedUpload
             id="logo-upload"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT}
             helper="Click to upload photos or drag and drop"
             subhelper={BUSINESS_LOGO_UPLOAD_HINT}
             onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
+              const input = e.currentTarget;
+              const file = input.files?.[0] ?? null;
               if (!file) {
                 setLogo(null);
                 return;
               }
-              if (!isAcceptedImage(file)) {
-                setFieldErrors((prev) => ({ ...prev, logo: "Logo must be JPG, PNG, or WebP." }));
-                e.currentTarget.value = "";
-                setLogo(null);
-                return;
-              }
-              if (!isWithinSizeLimit(file, 10)) {
-                setFieldErrors((prev) => ({ ...prev, logo: "Logo must be 10MB or smaller." }));
-                e.currentTarget.value = "";
-                setLogo(null);
-                return;
-              }
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next.logo;
-                return next;
-              });
-              setSubmitError(null);
-              setLogo(file);
+              void (async () => {
+                const filtered = await filterBusinessImages([file]);
+                if (filtered.rejectedHeic.length || filtered.rejectedType.length || filtered.rejectedCorrupt.length) {
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    logo: businessImageRejectMessage(filtered) ?? "Logo must be JPG, PNG, or WebP.",
+                  }));
+                  input.value = "";
+                  setLogo(null);
+                  return;
+                }
+                if (filtered.rejectedSize.length || filtered.accepted.length === 0) {
+                  setFieldErrors((prev) => ({ ...prev, logo: "Logo must be 10MB or smaller." }));
+                  input.value = "";
+                  setLogo(null);
+                  return;
+                }
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.logo;
+                  return next;
+                });
+                setSubmitError(null);
+                setLogo(filtered.accepted[0]);
+              })();
             }}
             preview={
               logoPreviewUrl ? (
@@ -846,12 +858,13 @@ export default function ChoosePlanForm() {
         <CardContent className="p-6">
           <DashedUpload
             id="cover-upload"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT}
             helper="Click to upload photos or drag and drop"
             subhelper={`${BUSINESS_COVER_UPLOAD_HINT} Max 5 photos.`}
             multiple
             onChange={(e) => {
-              const files = Array.from(e.target.files ?? []);
+              const input = e.currentTarget;
+              const files = Array.from(input.files ?? []);
               if (files.length > 5) {
                 setFieldErrors((prev) => ({
                   ...prev,
@@ -860,33 +873,26 @@ export default function ChoosePlanForm() {
                 setCoverPhotos(files.slice(0, 5));
                 return;
               }
-              const hasBadType = files.some((file) => !isAcceptedImage(file));
-              if (hasBadType) {
-                setFieldErrors((prev) => ({
-                  ...prev,
-                  cover_photos: "Cover photos must be JPG, PNG, or WebP.",
-                }));
-                e.currentTarget.value = "";
-                setCoverPhotos([]);
-                return;
-              }
-              const hasBigFile = files.some((file) => !isWithinSizeLimit(file, 10));
-              if (hasBigFile) {
-                setFieldErrors((prev) => ({
-                  ...prev,
-                  cover_photos: "Each cover photo must be 10MB or smaller.",
-                }));
-                e.currentTarget.value = "";
-                setCoverPhotos([]);
-                return;
-              }
-              setFieldErrors((prev) => {
-                const next = { ...prev };
-                delete next.cover_photos;
-                return next;
-              });
-              setSubmitError(null);
-              setCoverPhotos(files);
+              void (async () => {
+                const filtered = await filterBusinessImages(files);
+                const rejectMessage = businessImageRejectMessage(filtered);
+                if (rejectMessage) {
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    cover_photos: rejectMessage,
+                  }));
+                  input.value = "";
+                  setCoverPhotos([]);
+                  return;
+                }
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next.cover_photos;
+                  return next;
+                });
+                setSubmitError(null);
+                setCoverPhotos(filtered.accepted);
+              })();
             }}
             preview={
               coverPhotos.length > 0 ? (
@@ -1089,12 +1095,4 @@ function getMessageFromUnknown(error: unknown): string {
   }
   if (error instanceof Error && error.message.trim()) return error.message;
   return "Could not create business profile.";
-}
-
-function isAcceptedImage(file: File): boolean {
-  return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
-}
-
-function isWithinSizeLimit(file: File, maxMb: number): boolean {
-  return file.size <= maxMb * 1024 * 1024;
 }

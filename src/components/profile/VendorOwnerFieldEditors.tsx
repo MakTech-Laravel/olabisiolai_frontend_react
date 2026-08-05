@@ -27,6 +27,11 @@ import {
 } from '@/features/locations/vendorLocationOptions'
 import { buildUpdatePayload } from '@/features/profile/vendorOwnerEdit'
 import {
+  BUSINESS_IMAGE_ACCEPT,
+  businessImageRejectMessage,
+  filterBusinessImages,
+} from '@/lib/businessImageUpload'
+import {
   BUSINESS_COVER_RECOMMENDED_SIZE,
   BUSINESS_COVER_ASPECT_LABEL,
   BUSINESS_LOGO_UPLOAD_HINT,
@@ -710,15 +715,32 @@ export function VendorOwnerHoursEditButton({
 function GalleryThumb({
   src,
   alt,
+  missing = false,
   onRemove,
 }: {
   src: string
   alt: string
+  missing?: boolean
   onRemove?: () => void
 }) {
+  const [broken, setBroken] = useState(false)
+  const showMissing = missing || broken || !src
+
   return (
     <div className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border-light bg-muted shadow-sm">
-      <img src={src} alt={alt} className="size-full object-cover" loading="lazy" />
+      {showMissing ? (
+        <div className="flex size-full flex-col items-center justify-center gap-1 bg-amber-50 px-1 text-center">
+          <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-800">Missing</span>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="size-full object-cover"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      )}
       {onRemove ? (
         <button
           type="button"
@@ -743,13 +765,23 @@ export function VendorOwnerGalleryEditButton({
   const inputRef = useRef<HTMLInputElement>(null)
   const [keepPaths, setKeepPaths] = useState<string[]>([])
   const [existingUrls, setExistingUrls] = useState<string[]>([])
+  const [existingMissing, setExistingMissing] = useState<boolean[]>([])
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [newPreviews, setNewPreviews] = useState<string[]>([])
 
   useEffect(() => {
     if (profile && open) {
-      setKeepPaths(profile.coverPhotoPaths)
-      setExistingUrls(profile.coverPhotoUrls)
+      const covers =
+        profile.coverPhotos?.length > 0
+          ? profile.coverPhotos
+          : profile.coverPhotoPaths.map((path, index) => ({
+              path,
+              url: profile.coverPhotoUrls[index] ?? '',
+              missing: !profile.coverPhotoUrls[index],
+            }))
+      setKeepPaths(covers.map((cover) => cover.path))
+      setExistingUrls(covers.map((cover) => cover.url))
+      setExistingMissing(covers.map((cover) => cover.missing))
       setNewFiles([])
       setNewPreviews([])
     }
@@ -759,24 +791,34 @@ export function VendorOwnerGalleryEditButton({
     return () => {
       newPreviews.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [newPreviews])
+    // Only revoke on unmount — revoking on every newPreviews change breaks earlier thumbs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional unmount-only cleanup
+  }, [])
 
   const totalCount = keepPaths.length + newFiles.length
   const canAddMore = totalCount < photoLimit
+  const missingCount = existingMissing.filter(Boolean).length
 
-  function handlePick(files: FileList | null) {
+  async function handlePick(files: FileList | null) {
     if (!files?.length || !canAddMore) return
 
     const remaining = photoLimit - totalCount
-    const picked = Array.from(files).slice(0, remaining)
-    const previews = picked.map((file) => URL.createObjectURL(file))
-    setNewFiles((current) => [...current, ...picked])
+    const filtered = await filterBusinessImages(Array.from(files).slice(0, remaining))
+    const rejectMessage = businessImageRejectMessage(filtered)
+    if (rejectMessage) {
+      showError(rejectMessage)
+    }
+    if (filtered.accepted.length === 0) return
+
+    const previews = filtered.accepted.map((file) => URL.createObjectURL(file))
+    setNewFiles((current) => [...current, ...filtered.accepted])
     setNewPreviews((current) => [...current, ...previews])
   }
 
   function removeExisting(index: number) {
     setKeepPaths((current) => current.filter((_, i) => i !== index))
     setExistingUrls((current) => current.filter((_, i) => i !== index))
+    setExistingMissing((current) => current.filter((_, i) => i !== index))
   }
 
   function removeNew(index: number) {
@@ -802,23 +844,33 @@ export function VendorOwnerGalleryEditButton({
             showError('Please keep or upload at least one gallery photo.')
             return
           }
+          const successMessage =
+            newFiles.length > 0
+              ? 'Gallery photos updated.'
+              : 'Gallery photos saved.'
           void saveProfile(
             { keep_cover_paths: keepPaths, cover_photos: newFiles },
-            'Gallery photos updated.',
+            successMessage,
           )
         }}
         saveDisabled={totalCount < 1}
       >
         <p className="mb-3 text-xs font-medium text-muted-foreground">
-          {totalCount}/{photoLimit} photos on your plan. Recommended {BUSINESS_COVER_RECOMMENDED_SIZE} (
-          {BUSINESS_COVER_ASPECT_LABEL}).
+          {totalCount}/{photoLimit} photos on your plan. JPG, PNG, or WebP up to 10MB. Recommended{' '}
+          {BUSINESS_COVER_RECOMMENDED_SIZE} ({BUSINESS_COVER_ASPECT_LABEL}).
         </p>
+        {missingCount > 0 ? (
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {missingCount} photo{missingCount === 1 ? ' is' : 's are'} missing from storage. Remove or re-upload, then save.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-3">
           {existingUrls.map((src, index) => (
             <GalleryThumb
-              key={`existing-${src}-${index}`}
+              key={`existing-${keepPaths[index] ?? src}-${index}`}
               src={src}
               alt={`Cover ${index + 1}`}
+              missing={existingMissing[index] === true}
               onRemove={() => removeExisting(index)}
             />
           ))}
@@ -835,14 +887,14 @@ export function VendorOwnerGalleryEditButton({
               <input
                 ref={inputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={BUSINESS_IMAGE_ACCEPT}
                 multiple
                 className="hidden"
                 tabIndex={-1}
                 aria-hidden
                 disabled={loading}
                 onChange={(event) => {
-                  handlePick(event.target.files)
+                  void handlePick(event.target.files)
                   event.target.value = ''
                 }}
               />
@@ -888,16 +940,23 @@ export function VendorOwnerLogoEditButton({
     }
   }, [previewUrl])
 
-  function handlePick(files: FileList | null) {
+  async function handlePick(files: FileList | null) {
     const file = files?.[0]
     if (!file) return
+
+    const filtered = await filterBusinessImages([file])
+    const rejectMessage = businessImageRejectMessage(filtered)
+    if (rejectMessage || filtered.accepted.length === 0) {
+      showError(rejectMessage ?? 'Only JPG, PNG, or WebP images are allowed.')
+      return
+    }
 
     if (previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl)
     }
 
-    setLogoFile(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    setLogoFile(filtered.accepted[0])
+    setPreviewUrl(URL.createObjectURL(filtered.accepted[0]))
   }
 
   return (
@@ -933,13 +992,13 @@ export function VendorOwnerLogoEditButton({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT}
             className="hidden"
             tabIndex={-1}
             aria-hidden
             disabled={loading}
             onChange={(event) => {
-              handlePick(event.target.files)
+              void handlePick(event.target.files)
               event.target.value = ''
             }}
           />

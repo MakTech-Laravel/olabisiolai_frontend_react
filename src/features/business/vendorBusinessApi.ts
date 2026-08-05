@@ -282,18 +282,27 @@ export function getVendorBusinessUpdateError(error: unknown, fallback: string): 
     const errors = body?.data?.errors;
     if (errors && typeof errors === "object") {
       for (const value of Object.values(errors)) {
-        if (Array.isArray(value) && value[0]) return value[0];
-        if (typeof value === "string" && value.trim()) return value;
+        if (Array.isArray(value) && value[0]) return sanitizeClientErrorMessage(value[0], fallback);
+        if (typeof value === "string" && value.trim()) return sanitizeClientErrorMessage(value, fallback);
       }
     }
-    if (body?.message) return body.message;
+    if (body?.message) return sanitizeClientErrorMessage(body.message, fallback);
   }
 
   if (error instanceof Error && error.message.trim()) {
-    return error.message;
+    return sanitizeClientErrorMessage(error.message, fallback);
   }
 
   return fallback;
+}
+
+function sanitizeClientErrorMessage(message: string, fallback: string): string {
+  const text = message.trim();
+  if (!text) return fallback;
+  if (/fopen|Permission denied|Failed to open stream|Unable to open|\\\\Users\\\\|[A-Za-z]:\\\\|\/vendor\/|SQLSTATE|stack trace/i.test(text)) {
+    return "We could not process the uploaded file. Please try again with a JPG, PNG, or WebP image under 10MB.";
+  }
+  return text;
 }
 
 function assertVendorBusinessUpdateSuccess(body: VendorBusinessUpdateEnvelope | undefined, fallback: string): void {
@@ -302,15 +311,15 @@ function assertVendorBusinessUpdateSuccess(body: VendorBusinessUpdateEnvelope | 
     if (errors && typeof errors === "object") {
       for (const value of Object.values(errors)) {
         if (Array.isArray(value) && value[0]) {
-          throw new Error(value[0]);
+          throw new Error(sanitizeClientErrorMessage(value[0], fallback));
         }
         if (typeof value === "string" && value.trim()) {
-          throw new Error(value);
+          throw new Error(sanitizeClientErrorMessage(value, fallback));
         }
       }
     }
 
-    throw new Error(body.message || fallback);
+    throw new Error(sanitizeClientErrorMessage(body.message || fallback, fallback));
   }
 }
 

@@ -13,6 +13,12 @@ import { resolveMediaUrl, resolveMediaUrls } from "@/lib/mediaUrl";
 
 type RawRecord = Record<string, unknown>;
 
+export type VendorCoverPhoto = {
+  path: string;
+  url: string;
+  missing: boolean;
+};
+
 export type VendorBusinessProfile = {
   id: number;
   businessName: string;
@@ -37,6 +43,8 @@ export type VendorBusinessProfile = {
   website: string;
   socialAccounts: SocialAccount[];
   logoUrl: string;
+  logoMissing: boolean;
+  coverPhotos: VendorCoverPhoto[];
   coverPhotoUrls: string[];
   coverPhotoPaths: string[];
   verificationStatus: string;
@@ -89,6 +97,34 @@ function parseStringArray(value: unknown): string[] {
   return value.map((entry) => asString(entry).trim()).filter(Boolean);
 }
 
+function parseCoverPhotos(item: RawRecord): VendorCoverPhoto[] {
+  const structured = item.cover_photos;
+  if (Array.isArray(structured) && structured.length > 0) {
+    return structured
+      .map((entry) => {
+        const row = asRecord(entry);
+        if (!row) return null;
+        const path = asString(row.path).trim();
+        if (!path) return null;
+        const urlRaw = asString(row.url).trim();
+        const missing = row.missing === true || row.missing === 1 || row.missing === "1" || !urlRaw;
+        return {
+          path,
+          url: urlRaw ? resolveMediaUrl(urlRaw, "") : "",
+          missing,
+        };
+      })
+      .filter((entry): entry is VendorCoverPhoto => entry !== null);
+  }
+
+  const paths = parseStringArray(item.cover_photo_paths);
+  const urls = resolveMediaUrls(parseStringArray(item.cover_photo_urls));
+  return paths.map((path, index) => {
+    const url = urls[index] ?? "";
+    return { path, url, missing: !url };
+  });
+}
+
 export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile | null {
   const item = asRecord(raw);
   if (!item) return null;
@@ -115,6 +151,8 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
 
   const boostRaw = pickString(item, ["boost_status"], "none").toLowerCase();
 
+  const coverPhotos = parseCoverPhotos(item);
+
   return {
     id,
     businessName: pickString(item, ["business_name", "name"], ""),
@@ -138,9 +176,15 @@ export function parseVendorBusinessProfile(raw: unknown): VendorBusinessProfile 
     whatsapp: pickString(item, ["whatsapp"], ""),
     website: pickString(item, ["website"], ""),
     socialAccounts: parseSocialAccounts(item.social_accounts ?? item.socialAccounts),
-    logoUrl: resolveMediaUrl(pickString(item, ["logo_url", "logo"], "")),
-    coverPhotoUrls: resolveMediaUrls(parseStringArray(item.cover_photo_urls)),
-    coverPhotoPaths: parseStringArray(item.cover_photo_paths),
+    logoUrl: resolveMediaUrl(pickString(item, ["logo_url", "logo"], ""), ""),
+    logoMissing:
+      item.logo_missing === true ||
+      item.logo_missing === 1 ||
+      item.logo_missing === "1" ||
+      (!pickString(item, ["logo_url", "logo"], "") && Boolean(pickString(item, ["logo_path"], ""))),
+    coverPhotos,
+    coverPhotoUrls: coverPhotos.filter((photo) => !photo.missing && photo.url).map((photo) => photo.url),
+    coverPhotoPaths: coverPhotos.map((photo) => photo.path),
     verificationStatus: pickString(item, ["verification_status"], "none").toLowerCase(),
     isFlagged: item.is_flagged === true || item.is_flagged === 1 || item.is_flagged === "1",
     businessStatus: pickString(item, ["business_status"], "active").toLowerCase(),

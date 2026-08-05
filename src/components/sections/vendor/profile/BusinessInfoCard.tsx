@@ -14,6 +14,7 @@ import {
   BUSINESS_OVERVIEW_MAX_LENGTH,
   clampBusinessOverview,
 } from "@/constants/businessOverview";
+import { BUSINESS_IMAGE_ACCEPT } from "@/lib/businessImageUpload";
 
 function Label({ children }: { children: string }) {
   return (
@@ -250,7 +251,7 @@ export function BusinessInfoCard() {
           <input
             ref={logoInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT}
             className="hidden"
             tabIndex={-1}
             aria-hidden
