@@ -1,3 +1,9 @@
+import {
+  BUSINESS_COVER_PHOTOS_ERROR,
+  isCoverPhotosValidationKey,
+  isCoverPhotosValidationMessage,
+} from "@/lib/businessImageUpload";
+
 export function getMessageFromUnknown(error: unknown): string {
   if (
     error &&
@@ -67,7 +73,13 @@ function extractLaravelValidationErrors(payload: Record<string, unknown>): Recor
       continue;
     }
     if (key.startsWith("cover_photos.")) {
-      if (!out.cover_photos) out.cover_photos = msg;
+      if (!out.cover_photos) out.cover_photos = BUSINESS_COVER_PHOTOS_ERROR;
+      continue;
+    }
+    if (key === "cover_photos") {
+      out.cover_photos = isCoverPhotosValidationMessage(msg)
+        ? BUSINESS_COVER_PHOTOS_ERROR
+        : msg;
       continue;
     }
     out[key] = msg;
@@ -86,10 +98,16 @@ export function parseVendorBusinessApiFailure(error: unknown): {
 
   const fieldErrors = extractLaravelValidationErrors(data);
   if (Object.keys(fieldErrors).length > 0) {
+    if (fieldErrors.cover_photos) {
+      fieldErrors.cover_photos = BUSINESS_COVER_PHOTOS_ERROR;
+    }
     return { fieldErrors, general: null };
   }
 
   const msg =
     typeof data.message === "string" && data.message.trim() ? data.message.trim() : null;
+  if (msg && (isCoverPhotosValidationMessage(msg) || Object.keys(fieldErrors).some(isCoverPhotosValidationKey))) {
+    return { fieldErrors: { cover_photos: BUSINESS_COVER_PHOTOS_ERROR }, general: BUSINESS_COVER_PHOTOS_ERROR };
+  }
   return { fieldErrors: {}, general: msg ?? getMessageFromUnknown(error) };
 }

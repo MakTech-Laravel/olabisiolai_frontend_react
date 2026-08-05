@@ -10,6 +10,12 @@ import {
   type SocialAccount,
 } from "@/features/business/socialAccounts";
 import { clampBusinessOverview } from "@/constants/businessOverview";
+import {
+  BUSINESS_COVER_PHOTOS_ERROR,
+  filterValidBusinessImageFiles,
+  isCoverPhotosValidationKey,
+  isCoverPhotosValidationMessage,
+} from "@/lib/businessImageUpload";
 
 export type CreateVendorBusinessPayload = {
   subscription_plan?: "free" | "premium";
@@ -92,7 +98,7 @@ export async function createVendorBusiness(
     formData.append("logo", payload.logo);
   }
 
-  (payload.cover_photos ?? []).forEach((photo, index) => {
+  filterValidBusinessImageFiles(payload.cover_photos ?? []).forEach((photo, index) => {
     formData.append(`cover_photos[${index}]`, photo);
   });
 
@@ -255,7 +261,7 @@ function appendUpdateVendorBusinessFormData(
     formData.append("logo", payload.logo);
   }
 
-  (payload.cover_photos ?? []).forEach((photo, index) => {
+  filterValidBusinessImageFiles(payload.cover_photos ?? []).forEach((photo, index) => {
     formData.append(`cover_photos[${index}]`, photo);
   });
 
@@ -281,16 +287,33 @@ export function getVendorBusinessUpdateError(error: unknown, fallback: string): 
     const body = error.response?.data as VendorBusinessUpdateEnvelope | undefined;
     const errors = body?.data?.errors;
     if (errors && typeof errors === "object") {
-      for (const value of Object.values(errors)) {
-        if (Array.isArray(value) && value[0]) return value[0];
-        if (typeof value === "string" && value.trim()) return value;
+      for (const [key, value] of Object.entries(errors)) {
+        if (isCoverPhotosValidationKey(key)) {
+          return BUSINESS_COVER_PHOTOS_ERROR;
+        }
+        if (Array.isArray(value) && value[0]) {
+          return isCoverPhotosValidationMessage(value[0])
+            ? BUSINESS_COVER_PHOTOS_ERROR
+            : value[0];
+        }
+        if (typeof value === "string" && value.trim()) {
+          return isCoverPhotosValidationMessage(value)
+            ? BUSINESS_COVER_PHOTOS_ERROR
+            : value;
+        }
       }
     }
-    if (body?.message) return body.message;
+    if (body?.message) {
+      return isCoverPhotosValidationMessage(body.message)
+        ? BUSINESS_COVER_PHOTOS_ERROR
+        : body.message;
+    }
   }
 
   if (error instanceof Error && error.message.trim()) {
-    return error.message;
+    return isCoverPhotosValidationMessage(error.message)
+      ? BUSINESS_COVER_PHOTOS_ERROR
+      : error.message;
   }
 
   return fallback;
@@ -315,21 +338,26 @@ function assertVendorBusinessUpdateSuccess(body: VendorBusinessUpdateEnvelope | 
 }
 
 export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload): Promise<unknown> {
-  const hasFileUploads = Boolean(payload.logo) || (payload.cover_photos?.length ?? 0) > 0;
+  const coverPhotos = filterValidBusinessImageFiles(payload.cover_photos ?? []);
+  const normalizedPayload: UpdateVendorBusinessPayload = {
+    ...payload,
+    cover_photos: coverPhotos.length > 0 ? coverPhotos : undefined,
+  };
+  const hasFileUploads = Boolean(normalizedPayload.logo) || coverPhotos.length > 0;
 
   // Production PHP/nginx often fail to parse multipart when method-spoofed to PUT.
   // JSON PUT works reliably for profile edits without new images.
   if (!hasFileUploads) {
     const res = await request.put<VendorBusinessUpdateEnvelope>(
       "/vendor/business/update",
-      buildUpdateVendorBusinessJsonBody(payload),
+      buildUpdateVendorBusinessJsonBody(normalizedPayload),
     );
     assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
     return res.data;
   }
 
   const formData = new FormData();
-  appendUpdateVendorBusinessFormData(formData, payload);
+  appendUpdateVendorBusinessFormData(formData, normalizedPayload);
   const res = await request.post<VendorBusinessUpdateEnvelope>("/vendor/business/update", formData);
   assertVendorBusinessUpdateSuccess(res.data, "Could not update business profile.");
   return res.data;

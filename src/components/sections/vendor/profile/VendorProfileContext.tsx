@@ -19,6 +19,10 @@ import { validateBusinessHours } from "@/features/business/businessHours";
 import { normalizeSocialAccount, validateSocialAccounts } from "@/features/business/socialAccounts";
 import { parseVendorBusinessApiFailure } from "@/features/business/vendorBusinessFormErrors";
 import {
+  BUSINESS_COVER_PHOTOS_ERROR,
+  filterValidBusinessImageFiles,
+} from "@/lib/businessImageUpload";
+import {
   profileToDraft,
   totalCoverCount,
   type VendorProfileDraft,
@@ -173,7 +177,10 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       const room = maxCoverPhotos - totalCoverCount(prev);
       if (room <= 0) return prev;
-      const accepted = files.slice(0, room);
+      const accepted = filterValidBusinessImageFiles(files).slice(0, room);
+      if (accepted.length === 0) {
+        return prev;
+      }
       const previews = accepted.map((f) => URL.createObjectURL(f));
       return {
         ...prev,
@@ -253,7 +260,13 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
 
       const profile = query.data;
       const selectedLocation = parsedLocations.find((l) => l.id === draft.locationId);
-      const coverPhotos = draft.newCoverFiles.length > 0 ? draft.newCoverFiles : undefined;
+      const coverPhotos =
+        draft.newCoverFiles.length > 0
+          ? filterValidBusinessImageFiles(draft.newCoverFiles)
+          : undefined;
+      if (draft.newCoverFiles.length > 0 && (!coverPhotos || coverPhotos.length === 0)) {
+        throw new Error(BUSINESS_COVER_PHOTOS_ERROR);
+      }
       const totalCovers = totalCoverCount(draft);
       if (totalCovers < 1) {
         throw new Error("Please keep or add at least one gallery photo.");
