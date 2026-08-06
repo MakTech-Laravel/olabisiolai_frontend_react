@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { BusinessCatalogSection } from '@/components/business/BusinessCatalogSection'
 import { fetchPublicBusinessById } from '@/features/business/publicBusinessApi'
@@ -9,11 +9,12 @@ import { businessProfilePath } from '@/lib/businessProfile'
 
 export default function BusinessCatalogBrowsePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { slug } = useParams<{ slug: string }>()
   const businessId = resolveBusinessIdFromSlug(slug ?? '')
 
   const businessQuery = useQuery({
-    queryKey: ['business', businessId, 'catalog-browse'],
+    queryKey: ['business', businessId],
     queryFn: () => fetchPublicBusinessById(businessId!),
     enabled: businessId != null && businessId > 0,
     staleTime: 60_000,
@@ -64,7 +65,7 @@ export default function BusinessCatalogBrowsePage() {
             type="button"
             aria-label="Back to business"
             onClick={() => {
-              if (window.history.length > 1) {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
                 navigate(-1)
                 return
               }
@@ -88,7 +89,7 @@ export default function BusinessCatalogBrowsePage() {
           businessId={business.id}
           businessName={business.name}
           vendorUserUuid={business.vendorUserUuid}
-          fromPath={window.location.pathname}
+          fromPath={location.pathname}
           showMessageBusiness
           messagesPath="/messages"
           previewLimit={null}

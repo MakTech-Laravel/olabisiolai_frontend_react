@@ -85,7 +85,7 @@ export default function CatalogItemDetailPage() {
   }, [])
 
   const onBack = () => {
-    if (window.history.length > 1) {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
       navigate(-1)
       return
     }

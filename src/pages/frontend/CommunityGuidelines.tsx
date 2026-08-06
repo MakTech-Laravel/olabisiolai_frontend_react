@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 
-import { FrontendHeader } from '@/components/partials/frontend/FrontendHeader'
 import { FrontendFooter } from '@/components/partials/frontend/FrontendFooter'
 
 type PolicyPageProps = {
@@ -12,7 +11,6 @@ type PolicyPageProps = {
 function PolicyPage({ title, intro, sections }: PolicyPageProps) {
   return (
     <div className="min-h-dvh bg-background">
-      <FrontendHeader />
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <Link to="/user/settings" className="text-sm font-medium text-brand hover:underline">
           ← Settings & Activity

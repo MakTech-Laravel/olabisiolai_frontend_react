@@ -8,9 +8,7 @@ import { fetchPublicBusinessesPage, type PublicBusiness } from "@/features/busin
 import { DEFAULT_GEO_SEARCH_RADIUS_KM } from "@/features/maps/geoMapTypes";
 import { ChevronLeft, Loader2, Map as MapIcon, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-
-import { router } from "@/routes/router";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 function parseCoord(raw: string | null): number | null {
   if (raw == null || raw.trim() === "") return null;
@@ -26,6 +24,7 @@ const FILTERS_BASE_PATH = "/filters";
 
 export default function Filters() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -347,10 +346,10 @@ export default function Filters() {
       void queryClient.cancelQueries({ queryKey: ["filters"] });
       void queryClient.removeQueries({ queryKey: ["filters"] });
       // RR v7 + createBrowserRouter: imperative navigate clears ?lat=&lng= on same path.
-      void router.navigate(FILTERS_BASE_PATH, { replace: true });
+      void navigate(FILTERS_BASE_PATH, { replace: true });
       setSearchParams("", { replace: true });
     },
-    [queryClient, setSearchParams],
+    [navigate, queryClient, setSearchParams],
   );
 
   return (

@@ -1,13 +1,50 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url))
+
+/** Browser-only packages → SSR stubs (works for `ssrLoadModule` and `vite build --ssr`). */
+function ssrBrowserShims(): Plugin {
+  const shims: Record<string, string> = {
+    '@paystack/inline-js': path.resolve(rootDir, './src/ssr/shims/paystack.ts'),
+    'flutterwave-react-v3': path.resolve(rootDir, './src/ssr/shims/flutterwave.ts'),
+    '@googlemaps/js-api-loader': path.resolve(rootDir, './src/ssr/shims/googleMaps.ts'),
+    '@googlemaps/markerclusterer': path.resolve(rootDir, './src/ssr/shims/empty.ts'),
+    'laravel-echo': path.resolve(rootDir, './src/ssr/shims/echo.ts'),
+    'pusher-js': path.resolve(rootDir, './src/ssr/shims/empty.ts'),
+    sweetalert2: path.resolve(rootDir, './src/ssr/shims/sweetalert2.ts'),
+  }
+
+  return {
+    name: 'ssr-browser-shims',
+    enforce: 'pre',
+    resolveId(source, _importer, options) {
+      if (!options?.ssr) return null
+      const target = shims[source]
+      return target ?? null
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   build: {
     chunkSizeWarningLimit: 700,
+  },
+  // Keep react-router external on SSR so Node loads one shared context instance.
+  ssr: {
+    noExternal: ['@tanstack/react-query'],
+    external: ['react-router', 'react-router-dom'],
+  },
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
+    alias: {
+      '@': path.resolve(rootDir, './src'),
+    },
   },
   server: {
     /**
@@ -17,6 +54,7 @@ export default defineConfig({
     middlewareMode: false,
   },
   plugins: [
+    ssrBrowserShims(),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
@@ -46,7 +84,6 @@ export default defineConfig({
               return
             }
 
-            // Endpoint: GET /__dev/flutterwave/verify/:transaction_id
             const verifyMatch = req.url.match(/^\/__dev\/flutterwave\/verify\/([^/?#]+)/)
             if (req.method === 'GET' && verifyMatch) {
               const transactionId = decodeURIComponent(verifyMatch[1]!)
@@ -82,9 +119,4 @@ export default defineConfig({
       },
     },
   ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
 })

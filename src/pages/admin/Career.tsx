@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { alert } from "@/lib/sweetAlert";
 import { ChevronLeft, ChevronRight, MapPin, Briefcase } from "lucide-react";
-import { router } from "@/routes/router";
+import { useNavigate } from "react-router-dom";
 
 type JobType = "Full-Time" | "Part-Time" | "Contract" | "Remote";
 
@@ -69,6 +69,7 @@ export default function DesignationsTable() {
   const [rows, setRows] = useState<Designation[]>(DATA);
   const [currentPage, setCurrentPage] = useState(1);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const handleDelete = async (id: number, title: string) => {
     const confirmed = await alert.confirmDelete(title);
@@ -88,7 +89,7 @@ export default function DesignationsTable() {
           {/* <p className="text-sm text-slate-400 mt-0.5">{TOTAL} posts total</p> */}
         </div>
         <button
-          onClick={() => router.navigate("/admin/career/add")}
+          onClick={() => navigate("/admin/career/add")}
           className="group inline-flex hover:cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all duration-150"
         >
           <span className="flex size-4 items-center justify-center rounded-full bg-white/20 text-white font-bold leading-none text-base">+</span>
@@ -144,7 +145,7 @@ export default function DesignationsTable() {
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => router.navigate(`/admin/career/edit/${row.id}`, { state: { designation: row } })}
+                        onClick={() => navigate(`/admin/career/edit/${row.id}`, { state: { designation: row } })}
                         className="rounded-lg hover:cursor-pointer p-2 text-slate-700 transition-all hover:bg-blue-50 hover:text-blue-600 active:scale-95"
                         aria-label={`Edit ${row.title}`}
                       >
@@ -192,7 +193,7 @@ export default function DesignationsTable() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => router.navigate(`/admin/career/edit/${row.id}`, { state: { designation: row } })} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-all">
+                  <button onClick={() => navigate(`/admin/career/edit/${row.id}`, { state: { designation: row } })} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-all">
                     <EditIcon />
                   </button>
                   <button
