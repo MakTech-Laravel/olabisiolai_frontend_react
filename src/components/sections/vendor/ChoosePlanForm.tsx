@@ -17,6 +17,13 @@ import {
   BUSINESS_LOGO_UPLOAD_HINT,
 } from "@/lib/businessImageLayout";
 import {
+  BUSINESS_COVER_PHOTOS_ERROR,
+  BUSINESS_IMAGE_ACCEPT_ATTR,
+  filterValidBusinessImageFiles,
+  isAcceptedBusinessImage,
+  isWithinBusinessImageSizeLimit,
+} from "@/lib/businessImageUpload";
+import {
   businessCreateRequiresPayment,
   createVendorBusiness,
   isPremiumPlanSelected,
@@ -770,7 +777,7 @@ export default function ChoosePlanForm() {
         <CardContent className="p-6">
           <DashedUpload
             id="logo-upload"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT_ATTR}
             helper="Click to upload photos or drag and drop"
             subhelper={BUSINESS_LOGO_UPLOAD_HINT}
             onChange={(e) => {
@@ -779,13 +786,13 @@ export default function ChoosePlanForm() {
                 setLogo(null);
                 return;
               }
-              if (!isAcceptedImage(file)) {
+              if (!isAcceptedBusinessImage(file)) {
                 setFieldErrors((prev) => ({ ...prev, logo: "Logo must be JPG, PNG, or WebP." }));
                 e.currentTarget.value = "";
                 setLogo(null);
                 return;
               }
-              if (!isWithinSizeLimit(file, 10)) {
+              if (!isWithinBusinessImageSizeLimit(file)) {
                 setFieldErrors((prev) => ({ ...prev, logo: "Logo must be 10MB or smaller." }));
                 e.currentTarget.value = "";
                 setLogo(null);
@@ -846,7 +853,7 @@ export default function ChoosePlanForm() {
         <CardContent className="p-6">
           <DashedUpload
             id="cover-upload"
-            accept="image/jpeg,image/png,image/webp"
+            accept={BUSINESS_IMAGE_ACCEPT_ATTR}
             helper="Click to upload photos or drag and drop"
             subhelper={`${BUSINESS_COVER_UPLOAD_HINT} Max 5 photos.`}
             multiple
@@ -857,24 +864,24 @@ export default function ChoosePlanForm() {
                   ...prev,
                   cover_photos: "You can upload up to 5 cover photos.",
                 }));
-                setCoverPhotos(files.slice(0, 5));
+                setCoverPhotos(filterValidBusinessImageFiles(files.slice(0, 5)));
                 return;
               }
-              const hasBadType = files.some((file) => !isAcceptedImage(file));
+              const hasBadType = files.some((file) => !isAcceptedBusinessImage(file));
               if (hasBadType) {
                 setFieldErrors((prev) => ({
                   ...prev,
-                  cover_photos: "Cover photos must be JPG, PNG, or WebP.",
+                  cover_photos: BUSINESS_COVER_PHOTOS_ERROR,
                 }));
                 e.currentTarget.value = "";
                 setCoverPhotos([]);
                 return;
               }
-              const hasBigFile = files.some((file) => !isWithinSizeLimit(file, 10));
+              const hasBigFile = files.some((file) => !isWithinBusinessImageSizeLimit(file));
               if (hasBigFile) {
                 setFieldErrors((prev) => ({
                   ...prev,
-                  cover_photos: "Each cover photo must be 10MB or smaller.",
+                  cover_photos: BUSINESS_COVER_PHOTOS_ERROR,
                 }));
                 e.currentTarget.value = "";
                 setCoverPhotos([]);
@@ -886,7 +893,7 @@ export default function ChoosePlanForm() {
                 return next;
               });
               setSubmitError(null);
-              setCoverPhotos(files);
+              setCoverPhotos(filterValidBusinessImageFiles(files));
             }}
             preview={
               coverPhotos.length > 0 ? (
@@ -1065,7 +1072,11 @@ function extractLaravelValidationErrors(payload: Record<string, unknown>): Recor
       continue;
     }
     if (key.startsWith("cover_photos.")) {
-      if (!out.cover_photos) out.cover_photos = msg;
+      if (!out.cover_photos) out.cover_photos = BUSINESS_COVER_PHOTOS_ERROR;
+      continue;
+    }
+    if (key === "cover_photos") {
+      out.cover_photos = BUSINESS_COVER_PHOTOS_ERROR;
       continue;
     }
     out[key] = msg;
@@ -1089,12 +1100,4 @@ function getMessageFromUnknown(error: unknown): string {
   }
   if (error instanceof Error && error.message.trim()) return error.message;
   return "Could not create business profile.";
-}
-
-function isAcceptedImage(file: File): boolean {
-  return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
-}
-
-function isWithinSizeLimit(file: File, maxMb: number): boolean {
-  return file.size <= maxMb * 1024 * 1024;
 }

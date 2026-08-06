@@ -3,6 +3,8 @@ import { Plus, X } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { BUSINESS_COVER_PHOTOS_ERROR, BUSINESS_IMAGE_ACCEPT_ATTR, filterValidBusinessImageFiles } from "@/lib/businessImageUpload";
+import { showError } from "@/lib/sweetAlert";
 import { useVendorProfileContext } from "@/components/sections/vendor/profile/VendorProfileContext";
 import { totalCoverCount } from "@/features/business/vendorProfileDraft";
 import { FREE_PHOTO_LIMIT } from "@/constants/planLimits";
@@ -49,7 +51,7 @@ function AddSlot({ onPick, disabled }: { onPick: (files: FileList | null) => voi
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={BUSINESS_IMAGE_ACCEPT_ATTR}
         multiple
         className="hidden"
         tabIndex={-1}
@@ -102,7 +104,16 @@ export function BusinessGallerySection({ variant }: BusinessGallerySectionProps)
 
   const handlePick = (files: FileList | null) => {
     if (!files?.length) return;
-    addCoverFiles(Array.from(files));
+    const candidates = Array.from(files);
+    const accepted = filterValidBusinessImageFiles(candidates);
+    if (accepted.length === 0) {
+      showError(BUSINESS_COVER_PHOTOS_ERROR);
+      return;
+    }
+    if (accepted.length < candidates.length) {
+      showError(BUSINESS_COVER_PHOTOS_ERROR);
+    }
+    addCoverFiles(accepted);
   };
 
   return (

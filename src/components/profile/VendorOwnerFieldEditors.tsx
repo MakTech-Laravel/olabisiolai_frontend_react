@@ -32,6 +32,14 @@ import {
   BUSINESS_LOGO_UPLOAD_HINT,
 } from '@/lib/businessImageLayout'
 import {
+  BUSINESS_COVER_PHOTOS_ERROR,
+  BUSINESS_IMAGE_ACCEPT_ATTR,
+  BUSINESS_IMAGE_MAX_MB,
+  filterValidBusinessImageFiles,
+  isAcceptedBusinessImage,
+  isWithinBusinessImageSizeLimit,
+} from '@/lib/businessImageUpload'
+import {
   BUSINESS_OVERVIEW_MAX_LENGTH,
   businessOverviewLengthError,
   clampBusinessOverview,
@@ -768,7 +776,17 @@ export function VendorOwnerGalleryEditButton({
     if (!files?.length || !canAddMore) return
 
     const remaining = photoLimit - totalCount
-    const picked = Array.from(files).slice(0, remaining)
+    const candidates = Array.from(files).slice(0, remaining)
+    const rejected = candidates.some(
+      (file) => !isAcceptedBusinessImage(file) || !isWithinBusinessImageSizeLimit(file),
+    )
+    if (rejected) {
+      showError(BUSINESS_COVER_PHOTOS_ERROR)
+    }
+
+    const picked = filterValidBusinessImageFiles(candidates).slice(0, remaining)
+    if (picked.length === 0) return
+
     const previews = picked.map((file) => URL.createObjectURL(file))
     setNewFiles((current) => [...current, ...picked])
     setNewPreviews((current) => [...current, ...previews])
@@ -802,8 +820,16 @@ export function VendorOwnerGalleryEditButton({
             showError('Please keep or upload at least one gallery photo.')
             return
           }
+          const files = filterValidBusinessImageFiles(newFiles)
+          if (newFiles.length > 0 && files.length === 0) {
+            showError(BUSINESS_COVER_PHOTOS_ERROR)
+            return
+          }
           void saveProfile(
-            { keep_cover_paths: keepPaths, cover_photos: newFiles },
+            {
+              keep_cover_paths: keepPaths,
+              ...(files.length > 0 ? { cover_photos: files } : {}),
+            },
             'Gallery photos updated.',
           )
         }}
@@ -811,7 +837,7 @@ export function VendorOwnerGalleryEditButton({
       >
         <p className="mb-3 text-xs font-medium text-muted-foreground">
           {totalCount}/{photoLimit} photos on your plan. Recommended {BUSINESS_COVER_RECOMMENDED_SIZE} (
-          {BUSINESS_COVER_ASPECT_LABEL}).
+          {BUSINESS_COVER_ASPECT_LABEL}). JPG, PNG, or WebP up to {BUSINESS_IMAGE_MAX_MB}MB.
         </p>
         <div className="flex flex-wrap gap-3">
           {existingUrls.map((src, index) => (
@@ -835,7 +861,7 @@ export function VendorOwnerGalleryEditButton({
               <input
                 ref={inputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={BUSINESS_IMAGE_ACCEPT_ATTR}
                 multiple
                 className="hidden"
                 tabIndex={-1}

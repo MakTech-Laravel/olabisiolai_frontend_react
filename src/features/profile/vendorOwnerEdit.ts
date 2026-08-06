@@ -108,7 +108,9 @@ export function buildUpdatePayload(
 
   if (patch.keep_cover_paths !== undefined || patch.cover_photos !== undefined) {
     payload.keep_cover_paths = patch.keep_cover_paths ?? profile.coverPhotoPaths
-    payload.cover_photos = patch.cover_photos
+    if (patch.cover_photos !== undefined && patch.cover_photos.length > 0) {
+      payload.cover_photos = patch.cover_photos
+    }
   }
 
   if (patch.logo) {

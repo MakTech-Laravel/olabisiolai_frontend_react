@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# pnpm is not bundled in node:22-alpine — enable via corepack
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 ARG VITE_ENVIRONMENT_MODE
