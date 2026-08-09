@@ -45,6 +45,7 @@ function applyOutcomeLabel(type: AdminPaymentListItem["transactionType"]) {
 function manualGrantLabel(type: AdminPaymentListItem["transactionType"]) {
   if (type === "verification") return "Grant verification manually";
   if (type === "boost") return "Grant boost manually";
+  if (type === "wallet_top_up") return "Credit wallet manually";
   return "Grant premium manually";
 }
 
@@ -54,6 +55,9 @@ function manualGrantDescription(type: AdminPaymentListItem["transactionType"]) {
   }
   if (type === "boost") {
     return "Use this when the gateway cannot be verified but you confirmed payment offline. This completes the pending checkout and queues the boost for approval.";
+  }
+  if (type === "wallet_top_up") {
+    return "Use this when the gateway cannot be verified but you confirmed payment offline. This completes the pending top-up and credits the wallet balance.";
   }
   return "Use this when the gateway cannot be verified (e.g. test/live key mismatch) but you confirmed payment offline. This completes the pending checkout and activates premium.";
 }
@@ -129,11 +133,18 @@ export function PaymentDetailsModal({ open, onClose, payment }: PaymentDetailsMo
 
   if (!open || !payment) return null;
 
-  const showApplyGateway = payment.status === "pending";
+  // A wallet top-up can be paid on the gateway yet never credited, so the balance stays owed
+  // even after the payment row is marked completed.
+  const walletNeedsCredit =
+    payment.transactionType === "wallet_top_up" &&
+    (payment.status === "pending" || (detail !== null && !detail.isConsumed));
+
+  const showApplyGateway = payment.status === "pending" || walletNeedsCredit;
 
   const showManualGrant =
-    payment.status === "pending" &&
-    (payment.transactionType === "verification" || payment.transactionType === "boost");
+    (payment.status === "pending" &&
+      (payment.transactionType === "verification" || payment.transactionType === "boost")) ||
+    walletNeedsCredit;
 
   const showManualGrantPremium =
     detail?.businessId &&
