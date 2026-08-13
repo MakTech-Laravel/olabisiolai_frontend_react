@@ -12,7 +12,9 @@
     "types": [
       "vite/client",
       "google.maps",
-      "node"
+      "node",
+      "react",
+      "react-dom"
     ],
     "skipLibCheck": true,
     "baseUrl": ".",

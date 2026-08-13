@@ -7,9 +7,9 @@ export function Hero() {
       <div className="container mx-auto px-4">
         <div className="text-center">
           <ScrollReveal>
-            <h2 className="font-inter lg:text-[56px] text-[32px] font-semibold text-text-primary">
+            <h1 className="font-inter lg:text-[56px] text-[32px] font-semibold text-text-primary">
               What are you looking for today?
-            </h2>
+            </h1>
           </ScrollReveal>
           <ScrollReveal delayMs={90}>
             <p className="mx-auto mt-4 flex max-w-2xl flex-col items-center text-center font-inter text-xl font-normal text-text-secondary">
