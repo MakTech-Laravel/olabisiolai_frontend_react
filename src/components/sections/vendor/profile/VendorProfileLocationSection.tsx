@@ -73,7 +73,7 @@ export function VendorProfileLocationSection() {
 
   const { data: boostCatalog } = useQuery({
     queryKey: ["vendor", "boost", "catalog"],
-    queryFn: fetchVendorBoostCatalog,
+    queryFn: () => fetchVendorBoostCatalog(),
     staleTime: 30_000,
   });
 

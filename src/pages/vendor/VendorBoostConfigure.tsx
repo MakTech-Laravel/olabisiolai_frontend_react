@@ -16,7 +16,7 @@ export default function VendorBoostConfigurePage() {
 
   const { data: catalog } = useQuery({
     queryKey: ["vendor", "boost", "catalog"],
-    queryFn: fetchVendorBoostCatalog,
+    queryFn: () => fetchVendorBoostCatalog(),
     enabled: isPremiumActive,
     staleTime: 30_000,
   });

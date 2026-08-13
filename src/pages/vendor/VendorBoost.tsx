@@ -30,7 +30,7 @@ export default function VendorBoost() {
 
   const { data: catalog, isPending: catalogLoading } = useQuery({
     queryKey: ['vendor', 'boost', 'catalog'],
-    queryFn: fetchVendorBoostCatalog,
+    queryFn: () => fetchVendorBoostCatalog(),
     enabled: isPremium,
     staleTime: 30_000,
   })

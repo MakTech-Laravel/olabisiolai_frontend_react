@@ -14,7 +14,7 @@ const tierBorder: Record<string, string> = {
 export function ActiveBoostsCard() {
   const { data: catalog, isPending } = useQuery({
     queryKey: ["vendor", "boost", "catalog"],
-    queryFn: fetchVendorBoostCatalog,
+    queryFn: () => fetchVendorBoostCatalog(),
     staleTime: 30_000,
   });
 
