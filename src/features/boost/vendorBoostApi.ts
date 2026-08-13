@@ -46,7 +46,7 @@ export type VendorBoostCatalog = {
   boostLocations?: ParsedLocationOption[];
 };
 
-export async function fetchVendorBoostCatalog(): Promise<VendorBoostCatalog> {
+export async function fetchVendorBoostCatalog(businessId?: number): Promise<VendorBoostCatalog> {
   const res = await request.get<
     ApiEnvelope<{
       location: unknown;
@@ -65,7 +65,9 @@ export async function fetchVendorBoostCatalog(): Promise<VendorBoostCatalog> {
       };
       campaigns: BoostCampaignRow[];
     }>
-  >("/vendor/boost/catalog");
+  >("/vendor/boost/catalog", {
+    params: businessId && businessId > 0 ? { business_id: businessId } : undefined,
+  });
 
   const data = res.data.data;
   const dynamic = data.dynamic;
