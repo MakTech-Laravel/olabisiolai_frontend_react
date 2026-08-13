@@ -1,4 +1,6 @@
 import type { StoredNotification } from '@/api/notifications'
+import { cartEnquiryPreviewText } from '@/features/catalog/cartMessageContext'
+import { catalogEnquiryPreviewText } from '@/features/catalog/catalogMessageContext'
 import type { RealtimeNotificationTone, RealtimeNotificationType } from '@/types/realtimeNotification'
 
 export type NotificationDisplay = {
@@ -17,11 +19,29 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** Turn stored cart/catalog marker payloads into short readable previews. */
+export function humanizeNotificationMessage(raw: string | null | undefined): string {
+  const text = String(raw ?? '').trim()
+  if (!text) return ''
+
+  const catalogPreview = catalogEnquiryPreviewText(text)
+  if (catalogPreview) return catalogPreview
+
+  const cartPreview = cartEnquiryPreviewText(text)
+  if (cartPreview) return cartPreview
+
+  if (text.includes('[GIDIRA_CART]') || text.includes('[GIDIRA_CATALOG]')) {
+    return 'New enquiry'
+  }
+
+  return text
+}
+
 /** One headline for sender; subtitle is preview only (no repeated name). */
 function newMessageActivityCopy(d: Record<string, unknown>): { title: string; message: string } {
   const sender = String(d.sender_name ?? '').trim()
   const explicitTitle = String(d.title ?? '').trim()
-  const rawPreview = String(d.preview ?? d.message ?? '').trim()
+  const rawPreview = humanizeNotificationMessage(String(d.preview ?? d.message ?? ''))
 
   const resolvedSender =
     sender ||
@@ -118,7 +138,7 @@ export function toNotificationDisplay(item: StoredNotification): NotificationDis
     id: item.id,
     type,
     title: String(d.title ?? d.sender_name ?? 'Notification'),
-    message: String(d.message ?? d.preview ?? ''),
+    message: humanizeNotificationMessage(String(d.message ?? d.preview ?? '')),
     tone: (d.tone as RealtimeNotificationTone) ?? 'info',
     href,
     isRead: item.read_at != null,
@@ -154,7 +174,7 @@ export function toUserNotificationDisplay(item: StoredNotification): Notificatio
     id: item.id,
     type,
     title: String(d.title ?? d.sender_name ?? 'Notification'),
-    message: String(d.message ?? d.preview ?? ''),
+    message: humanizeNotificationMessage(String(d.message ?? d.preview ?? '')),
     tone: (d.tone as RealtimeNotificationTone) ?? 'info',
     href,
     isRead: item.read_at != null,
