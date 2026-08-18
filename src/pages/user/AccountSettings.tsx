@@ -11,14 +11,14 @@ import {
   Phone,
   Save,
   Shield,
-  ShieldCheck,
   Smartphone,
+  Trash2,
   UserSquare2,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { changeUserPassword } from "@/api/userPassword"
-import { fetchUserSettings, patchUserSettings, type UserSettingsPayload } from "@/api/userSettings"
+import { deleteUserAccount, fetchUserSettings, patchUserSettings, type UserSettingsPayload } from "@/api/userSettings"
 import { disableTwoFactor, enableTwoFactor, fetchTwoFactorStatus } from "@/api/vendorTwoFactor"
 import { useAuth } from "@/auth/useAuth"
 import { TwoFactorSetupModal } from "@/components/sections/vendor/settings/TwoFactorSetupModal"
@@ -184,7 +184,7 @@ function ToggleRow({
 }
 
 export default function AccountSettings() {
-  const { user, refreshSession } = useAuth()
+  const { user, refreshSession, logout } = useAuth()
   const queryClient = useQueryClient()
 
   const [firstName, setFirstName] = React.useState("")
@@ -211,6 +211,7 @@ export default function AccountSettings() {
   const [twoFactorModalOpen, setTwoFactorModalOpen] = React.useState(false)
   const [twoFactorQr, setTwoFactorQr] = React.useState("")
   const [twoFactorSecret, setTwoFactorSecret] = React.useState("")
+  const [deletingAccount, setDeletingAccount] = React.useState(false)
 
   const settingsQuery = useQuery({
     queryKey: ["user-settings"],
@@ -444,6 +445,47 @@ export default function AccountSettings() {
     })
   }
 
+  async function handleDeleteAccount() {
+    if (deletingAccount) return
+
+    const result = await Swal.fire({
+      title: "Delete account?",
+      html: `<p class="text-sm text-left">This permanently deletes your Gidira account, profile, listings, messages, and related data. This cannot be undone.</p>
+        <p class="text-sm text-left mt-2">Type <strong>DELETE</strong> and enter your password to confirm.</p>
+        <input id="gidira-delete-confirm" class="swal2-input" placeholder="Type DELETE" autocomplete="off" />
+        <input id="gidira-delete-password" type="password" class="swal2-input" placeholder="Password" autocomplete="current-password" />`,
+      icon: "warning",
+      showCancelButton: true,
+      focusConfirm: false,
+      confirmButtonText: "Delete account",
+      confirmButtonColor: "#E42338",
+      preConfirm: () => {
+        const confirmation = (document.getElementById("gidira-delete-confirm") as HTMLInputElement | null)?.value.trim() ?? ""
+        const password = (document.getElementById("gidira-delete-password") as HTMLInputElement | null)?.value ?? ""
+        if (confirmation !== "DELETE") {
+          Swal.showValidationMessage("Type DELETE to confirm.")
+          return false
+        }
+        if (!password) {
+          Swal.showValidationMessage("Enter your password.")
+          return false
+        }
+        return { password }
+      },
+    })
+
+    if (!result.isConfirmed || !result.value?.password) return
+
+    setDeletingAccount(true)
+    try {
+      await deleteUserAccount(result.value.password as string)
+      await logout()
+    } catch (error) {
+      await alert.toast.error(getLaravelErrorMessage(error, "Could not delete your account."))
+      setDeletingAccount(false)
+    }
+  }
+
   const displayName =
     settingsQuery.data?.profile.name?.trim() ||
     user?.name?.trim() ||
@@ -461,7 +503,8 @@ export default function AccountSettings() {
   const busy =
     settingsQuery.isLoading ||
     saveAllMutation.isPending ||
-    uploadProfileImageMutation.isPending
+    uploadProfileImageMutation.isPending ||
+    deletingAccount
   const accountVerified = isUserAccountVerified(user)
 
   function onProfileImageChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -796,10 +839,14 @@ export default function AccountSettings() {
             </Button>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1 text-sm text-brand-red sm:justify-start"
+              className="inline-flex items-center justify-center gap-1 text-sm text-brand-red disabled:opacity-60 sm:justify-start"
+              disabled={busy || settingsQuery.isError}
+              onClick={() => {
+                void handleDeleteAccount()
+              }}
             >
-              <ShieldCheck className="size-4" />
-              Deactivate account
+              <Trash2 className="size-4" />
+              {deletingAccount ? "Deleting…" : "Delete account"}
             </button>
           </div>
         </section>

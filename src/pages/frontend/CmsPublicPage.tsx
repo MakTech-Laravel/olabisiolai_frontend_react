@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
@@ -30,6 +30,16 @@ export function CmsPublicPage({ config }: CmsPublicPageProps) {
 
   const hasContent = hasCmsHtmlContent(renderedHtml);
 
+  useEffect(() => {
+    if (!hasContent || typeof window === "undefined") return;
+    const id = window.location.hash.replace(/^#/, "");
+    if (!id) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasContent, renderedHtml]);
+
   return (
     <div className="w-full bg-muted">
       <div className={cn(container, "flex w-full flex-col gap-6 py-10 sm:gap-8 sm:py-14")}>
@@ -55,7 +65,7 @@ export function CmsPublicPage({ config }: CmsPublicPageProps) {
               className={cn(
                 "cms-public-content w-full max-w-none text-base leading-7 text-body-secondary [&::after]:table [&::after]:clear-both [&::after]:content-['']",
                 "[&_h1]:mb-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-ink-heading",
-                "[&_h2]:mb-3 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-ink-heading",
+                "[&_h2]:mb-3 [&_h2]:mt-6 [&_h2]:scroll-mt-24 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-ink-heading",
                 "[&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-ink-heading",
                 "[&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6",
                 "[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-chat-accent [&_blockquote]:pl-4 [&_blockquote]:italic",

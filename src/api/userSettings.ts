@@ -107,3 +107,22 @@ export async function patchUserSettings(
   }
   return resBody.data
 }
+
+type DeleteAccountApiEnvelope = {
+  success: boolean
+  message: string
+}
+
+/** `DELETE /user/account` — permanently deletes the authenticated customer or vendor. */
+export async function deleteUserAccount(password: string): Promise<void> {
+  const response = await request.delete<DeleteAccountApiEnvelope>('/user/account', {
+    data: {
+      password,
+      confirmation: 'DELETE',
+    },
+  })
+  const body = response.data
+  if (!body?.success) {
+    throw new Error(body?.message || 'Could not delete account')
+  }
+}
