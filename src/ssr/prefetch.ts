@@ -12,6 +12,7 @@ const CMS_BY_PATH: Record<string, CmsPageType> = {
   '/about': 'about_us',
   '/privacy-policy': 'privacy_policy',
   '/terms': 'terms_and_conditions',
+  '/delete-account': 'delete_account',
 }
 
 /**

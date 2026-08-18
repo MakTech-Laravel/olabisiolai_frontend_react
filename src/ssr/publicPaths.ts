@@ -17,6 +17,7 @@ const EXACT_SSR_PATHS = new Set([
   '/business-tips/pricing-your-services-right',
   '/terms',
   '/privacy-policy',
+  '/delete-account',
   '/cookies-policy',
   '/community-guidelines',
   '/vendor-agreement',

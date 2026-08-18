@@ -110,9 +110,9 @@ const FAQ_ITEMS: FaqItem[] = [
       "You can reach our support team through the Help Centre or via the contact details on the website.",
   },
   {
-    question: "Can I deactivate my account?",
+    question: "Can I delete my account?",
     answer:
-      "Yes. You can deactivate or delete your account at any time from your settings.",
+      "Yes. You can delete your account at any time from Settings → Account → Delete account, or visit the Delete Account page for step-by-step instructions.",
   },
   {
     question: "Does Gidira offer advertising or boosted visibility?",

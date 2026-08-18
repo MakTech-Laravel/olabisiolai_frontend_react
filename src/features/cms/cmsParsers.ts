@@ -6,7 +6,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-const CMS_TYPES: CmsPageType[] = ["terms_and_conditions", "privacy_policy", "about_us"];
+const CMS_TYPES: CmsPageType[] = ["terms_and_conditions", "privacy_policy", "about_us", "delete_account"];
 
 function isCmsPageType(value: string): value is CmsPageType {
   return (CMS_TYPES as string[]).includes(value);

@@ -1,4 +1,4 @@
-export type CmsPageType = "terms_and_conditions" | "privacy_policy" | "about_us";
+export type CmsPageType = "terms_and_conditions" | "privacy_policy" | "about_us" | "delete_account";
 
 export type CmsPageConfig = {
   type: CmsPageType;
@@ -33,6 +33,14 @@ export const CMS_PAGES: CmsPageConfig[] = [
     adminPath: "/admin/cms/terms-and-conditions",
     publicPath: "/terms",
     defaultTitle: "Terms & Conditions",
+  },
+  {
+    type: "delete_account",
+    slug: "delete-account",
+    label: "Delete Account",
+    adminPath: "/admin/cms/delete-account",
+    publicPath: "/delete-account",
+    defaultTitle: "Delete Account",
   },
 ];
 
