@@ -70,6 +70,7 @@ const footerColumns = [
     links: [
       { label: "Terms & Conditions", to: "/terms" },
       { label: "Privacy Policy", to: "/privacy-policy" },
+      { label: "Delete Account", to: "/delete-account" },
       { label: "Cookies Policy", to: "/cookies-policy" },
     ],
   },
@@ -450,15 +451,28 @@ export default function AccountSettings() {
 
     const result = await Swal.fire({
       title: "Delete account?",
-      html: `<p class="text-sm text-left">This permanently deletes your Gidira account, profile, listings, messages, and related data. This cannot be undone.</p>
-        <p class="text-sm text-left mt-2">Type <strong>DELETE</strong> and enter your password to confirm.</p>
-        <input id="gidira-delete-confirm" class="swal2-input" placeholder="Type DELETE" autocomplete="off" />
-        <input id="gidira-delete-password" type="password" class="swal2-input" placeholder="Password" autocomplete="current-password" />`,
+      width: 420,
+      html: `<div class="flex flex-col gap-3 text-left">
+        <p class="m-0 text-sm leading-6 text-body-secondary">This permanently deletes your Gidira account, profile, listings, messages, and related data. This cannot be undone.</p>
+        <p class="m-0 text-sm leading-6 text-body-secondary">Type <strong>DELETE</strong> and enter your password to confirm.</p>
+        <input id="gidira-delete-confirm" class="swal2-input m-0! w-full! max-w-none! box-border!" placeholder="Type DELETE" autocomplete="off" />
+        <input id="gidira-delete-password" type="password" class="swal2-input m-0! w-full! max-w-none! box-border!" placeholder="Password" autocomplete="current-password" />
+      </div>`,
       icon: "warning",
       showCancelButton: true,
       focusConfirm: false,
       confirmButtonText: "Delete account",
+      cancelButtonText: "Cancel",
       confirmButtonColor: "#E42338",
+      customClass: {
+        popup: "!w-[calc(100vw-2rem)] max-w-[420px] !p-5 sm:!p-6",
+        htmlContainer: "!mx-0 !mt-4 !mb-0 !overflow-visible !px-0",
+        actions: "!mt-5 flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end",
+        confirmButton:
+          "!m-0 !w-full rounded-lg px-4 py-3 text-sm font-semibold sm:!w-auto",
+        cancelButton:
+          "!m-0 !w-full rounded-lg px-4 py-3 text-sm font-medium sm:!w-auto",
+      },
       preConfirm: () => {
         const confirmation = (document.getElementById("gidira-delete-confirm") as HTMLInputElement | null)?.value.trim() ?? ""
         const password = (document.getElementById("gidira-delete-password") as HTMLInputElement | null)?.value ?? ""

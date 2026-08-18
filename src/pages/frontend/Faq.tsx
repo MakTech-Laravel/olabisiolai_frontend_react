@@ -112,7 +112,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Can I delete my account?",
     answer:
-      "Yes. You can delete your account at any time from Settings → Account → Delete account.",
+      "Yes. You can delete your account at any time from Settings → Account → Delete account, or visit the Delete Account page for step-by-step instructions.",
   },
   {
     question: "Does Gidira offer advertising or boosted visibility?",

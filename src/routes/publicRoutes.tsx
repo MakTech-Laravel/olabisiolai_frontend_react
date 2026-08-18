@@ -13,6 +13,7 @@ import About from '@/pages/frontend/About'
 import Contact from '@/pages/frontend/Contact'
 import Terms from '@/pages/frontend/Terms'
 import PrivacyPolicy from '@/pages/frontend/PrivacyPolicy'
+import DeleteAccount from '@/pages/frontend/DeleteAccount'
 import CareerJobDetail from '@/pages/frontend/CareerJobDetail'
 import CookiesPolicy from '@/pages/frontend/CookiesPolicy'
 import Careers from '@/pages/frontend/Careers'
@@ -85,6 +86,7 @@ export const publicRoutes: RouteObject = {
     },
     { path: '/terms', element: <Terms /> },
     { path: '/privacy-policy', element: <PrivacyPolicy /> },
+    { path: '/delete-account', element: <DeleteAccount /> },
     { path: '/cookies-policy', element: <CookiesPolicy /> },
     { path: '/community-guidelines', element: <CommunityGuidelines /> },
     { path: '/vendor-agreement', element: <VendorAgreement /> },
