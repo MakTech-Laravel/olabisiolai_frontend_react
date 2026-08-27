@@ -105,7 +105,7 @@ export default function BusinessCatalog() {
                         src={item.imageUrl}
                         alt={item.name}
                         className="rounded-none"
-                        fit="cover"
+                        fit="contain"
                       />
                     ) : (
                       <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />

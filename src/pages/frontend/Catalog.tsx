@@ -424,7 +424,7 @@ export default function CatalogDiscoveryPage() {
                     }}
                   >
                     {item.imageUrl ? (
-                      <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" fit="cover" />
+                      <BusinessCatalogImage src={item.imageUrl} alt={item.name} className="rounded-none" fit="contain" />
                     ) : (
                       <div className={cn(CATALOG_IMAGE_ASPECT_CLASS, 'w-full')} />
                     )}

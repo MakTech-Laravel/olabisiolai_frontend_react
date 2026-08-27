@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link, useNavigate } from 'react-router-dom'
 
 import { CatalogAddToCartControl } from '@/components/business/CatalogAddToCartControl'
+import { BusinessImageLightbox } from '@/components/business/BusinessImageLightbox'
 import {
   buildCatalogMessagePayload,
   prepareCatalogMessageWithImage,
@@ -54,8 +55,10 @@ export function CatalogItemDetailContent({
   const { requireAuthNavigate, isAuthReady, isAuthenticated } = useRequireAuthNavigate()
   const [loading, setLoading] = useState(false)
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const swipeStartX = useRef<number | null>(null)
   const swipeStartY = useRef<number | null>(null)
+  const didSwipe = useRef(false)
 
   const cart = useBuyerCatalogCart(enableCatalogCart ? businessInfoId : null)
   const cartQty = cart.qtyFor(item.id)
@@ -78,7 +81,7 @@ export function CatalogItemDetailContent({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!hasMultiplePhotos) return
+      if (lightboxOpen || !hasMultiplePhotos) return
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
         setPhotoIndex((current) => (current - 1 + photos.length) % photos.length)
@@ -90,7 +93,7 @@ export function CatalogItemDetailContent({
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [hasMultiplePhotos, photos.length])
+  }, [hasMultiplePhotos, lightboxOpen, photos.length])
 
   const priceLabel = formatCatalogPrice(item)
   const showDualPrice =
@@ -112,6 +115,7 @@ export function CatalogItemDetailContent({
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    didSwipe.current = false
     if (!hasMultiplePhotos) return
     swipeStartX.current = event.clientX
     swipeStartY.current = event.clientY
@@ -126,8 +130,14 @@ export function CatalogItemDetailContent({
     swipeStartY.current = null
 
     if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) < Math.abs(deltaY)) return
+    didSwipe.current = true
     if (deltaX < 0) goNext()
     else goPrev()
+  }
+
+  const openLightbox = () => {
+    if (!activePhoto || didSwipe.current) return
+    setLightboxOpen(true)
   }
 
   const handleMessageBusiness = () => {
@@ -224,10 +234,14 @@ export function CatalogItemDetailContent({
   const gallery = (
     <div className="space-y-3">
       <div
+        role={activePhoto ? 'button' : undefined}
+        tabIndex={activePhoto ? 0 : undefined}
+        aria-label={activePhoto ? `View full photo of ${item.name}` : undefined}
         className={cn(
-          'relative w-full select-none overflow-hidden bg-border-light',
+          'relative w-full select-none overflow-hidden bg-[#f3f4f6]',
           CATALOG_IMAGE_ASPECT_CLASS,
           'rounded-none lg:rounded-2xl',
+          activePhoto && 'cursor-zoom-in',
         )}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
@@ -235,13 +249,21 @@ export function CatalogItemDetailContent({
           swipeStartX.current = null
           swipeStartY.current = null
         }}
+        onClick={openLightbox}
+        onKeyDown={(event) => {
+          if (!activePhoto) return
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openLightbox()
+          }
+        }}
       >
         {activePhoto ? (
           <img
             src={activePhoto}
             alt={item.name}
             draggable={false}
-            className="size-full object-cover"
+            className="size-full object-contain"
           />
         ) : (
           <div className="grid size-full place-items-center bg-linear-to-br from-[#2e3b52] to-[#46587a] text-sm font-semibold uppercase tracking-wide text-white/80">
@@ -251,7 +273,7 @@ export function CatalogItemDetailContent({
 
         <span
           className={cn(
-            'absolute left-3 top-3 z-10 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm',
+            'pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm',
             item.type === 'service' ? 'text-chat-accent' : 'text-brand',
           )}
         >
@@ -282,10 +304,16 @@ export function CatalogItemDetailContent({
             >
               <ChevronRight className="size-5" aria-hidden />
             </button>
-            <span className="absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+            <span className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
               {photoIndex + 1}/{photos.length}
             </span>
           </>
+        ) : null}
+
+        {activePhoto ? (
+          <span className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+            Tap to expand
+          </span>
         ) : null}
       </div>
 
@@ -298,14 +326,18 @@ export function CatalogItemDetailContent({
               aria-label={`Show photo ${index + 1}`}
               aria-pressed={index === photoIndex}
               onClick={() => setPhotoIndex(index)}
+              onDoubleClick={() => {
+                setPhotoIndex(index)
+                setLightboxOpen(true)
+              }}
               className={cn(
-                'size-14 shrink-0 overflow-hidden rounded-xl border-2 transition-transform duration-200 sm:size-16',
+                'size-14 shrink-0 overflow-hidden rounded-xl border-2 bg-[#f3f4f6] transition-transform duration-200 sm:size-16',
                 index === photoIndex
                   ? 'scale-[1.02] border-chat-accent shadow-sm'
                   : 'border-border-light opacity-80 hover:scale-[1.02] hover:opacity-100',
               )}
             >
-              <img src={url} alt="" className="size-full object-cover" />
+              <img src={url} alt="" className="size-full object-contain" />
             </button>
           ))}
         </div>
@@ -421,6 +453,14 @@ export function CatalogItemDetailContent({
           </div>
         </div>
       ) : null}
+
+      <BusinessImageLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        photos={photos}
+        initialIndex={photoIndex}
+        businessName={item.name}
+      />
     </div>
   )
 }
