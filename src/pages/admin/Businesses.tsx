@@ -9,12 +9,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Crown,
+  CalendarPlus,
   Eye,
   Loader2,
   Search,
   Trash2,
 } from "lucide-react";
 import { MoveToPremiumModal } from "@/components/Modal/MoveToPremiumModal";
+import { UpgradeToYearlyModal } from "@/components/Modal/UpgradeToYearlyModal";
 import {
   changeAdminBusinessStatus,
   deleteAdminBusiness,
@@ -141,6 +143,7 @@ export default function BusinessTable() {
   const [planFilter, setPlanFilter] = useState("all");
   const [premiumSourceFilter, setPremiumSourceFilter] = useState("all");
   const [premiumTarget, setPremiumTarget] = useState<Business | null>(null);
+  const [yearlyUpgradeTarget, setYearlyUpgradeTarget] = useState<Business | null>(null);
   const [openingChatBusinessId, setOpeningChatBusinessId] = useState<number | null>(null);
   const [actionBusinessId, setActionBusinessId] = useState<number | null>(null);
   const [actionType, setActionType] = useState<"status" | "delete" | null>(null);
@@ -606,6 +609,16 @@ export default function BusinessTable() {
                             <Crown className="size-3" aria-hidden />
                             Move to Premium
                           </button>
+                        ) : b.subscriptionBillingPeriod !== "yearly" ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-60"
+                            title={`Upgrade ${b.name} monthly → yearly`}
+                            onClick={() => setYearlyUpgradeTarget(b)}
+                          >
+                            <CalendarPlus className="size-3" aria-hidden />
+                            Upgrade to Yearly
+                          </button>
                         ) : null}
                         <button
                           type="button"
@@ -747,6 +760,25 @@ export default function BusinessTable() {
             : null
         }
         onClose={() => setPremiumTarget(null)}
+      />
+
+      <UpgradeToYearlyModal
+        open={yearlyUpgradeTarget !== null}
+        business={
+          yearlyUpgradeTarget
+            ? {
+              id: yearlyUpgradeTarget.id,
+              name: yearlyUpgradeTarget.name,
+              vendorName: yearlyUpgradeTarget.vendorName,
+              vendorEmail: yearlyUpgradeTarget.vendorEmail,
+              subscriptionExpiresAt: yearlyUpgradeTarget.subscriptionExpiresAt
+                ? formatDate(yearlyUpgradeTarget.subscriptionExpiresAt)
+                : null,
+              subscriptionBillingPeriod: yearlyUpgradeTarget.subscriptionBillingPeriod,
+            }
+            : null
+        }
+        onClose={() => setYearlyUpgradeTarget(null)}
       />
 
       {deleteTarget ? (
