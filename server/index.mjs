@@ -1,6 +1,7 @@
 import express from 'express'
 import compression from 'compression'
 import fs from 'node:fs'
+import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -120,6 +121,55 @@ async function createServer() {
   app.disable('x-powered-by')
   app.use(compression())
 
+  // Dev: proxy API/storage to Laravel so the browser stays same-origin (avoids CORS / Network Error).
+  const laravelProxyTarget = (
+    process.env.SPA_SHELL_API_ORIGIN ||
+    process.env.VITE_SPA_SHELL_API_ORIGIN ||
+    'http://127.0.0.1:8000'
+  )
+    .trim()
+    .replace(/\/+$/, '')
+
+  app.use(['/api', '/storage', '/images', '/oauth'], (req, res) => {
+    let upstream
+    try {
+      upstream = new URL(req.originalUrl || req.url || '/', laravelProxyTarget)
+    } catch {
+      res.statusCode = 502
+      res.end('Bad Gateway')
+      return
+    }
+
+    const headers = { ...req.headers, host: upstream.host }
+    delete headers['accept-encoding']
+
+    const proxyReq = http.request(
+      {
+        protocol: upstream.protocol,
+        hostname: upstream.hostname,
+        port: upstream.port || (upstream.protocol === 'https:' ? 443 : 80),
+        path: `${upstream.pathname}${upstream.search}`,
+        method: req.method,
+        headers,
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode || 502, proxyRes.headers)
+        proxyRes.pipe(res)
+      },
+    )
+
+    proxyReq.on('error', (err) => {
+      console.error('[ssr] laravel proxy failed', err.message)
+      if (!res.headersSent) {
+        res.statusCode = 502
+        res.setHeader('content-type', 'application/json')
+        res.end(JSON.stringify({ message: 'Laravel API unreachable. Is php artisan serve running on :8000?' }))
+      }
+    })
+
+    req.pipe(proxyReq)
+  })
+
   /** @type {import('vite').ViteDevServer | undefined} */
   let vite
   /** @type {(url: string) => Promise<any>} */
@@ -223,7 +273,7 @@ async function createServer() {
         })
         .end(html)
     } catch (e) {
-      if (vite) vite.ssrFixStacktrace(/** @type {Error} */ (e))
+      if (vite) vite.ssrFixStacktrace(/** @type {Error} */(e))
       console.error('[ssr] render failed, falling back to CSR shell', e)
       try {
         let fallback = templateHtml
