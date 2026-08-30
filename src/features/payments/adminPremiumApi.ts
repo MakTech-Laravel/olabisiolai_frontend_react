@@ -32,6 +32,30 @@ export async function grantAdminPremium(body: GrantAdminPremiumBody): Promise<{ 
   return { message: (typeof root.message === "string" && root.message) || "Premium granted." };
 }
 
+export type UpgradeAdminPremiumToYearlyBody = {
+  business_id: number;
+  reason: string;
+  payment_handling?: GrantPremiumPaymentHandling;
+  payment_method?: GrantPremiumPaymentMethod;
+  payment_reference?: string;
+  amount?: number;
+};
+
+export async function upgradeAdminPremiumToYearly(
+  body: UpgradeAdminPremiumToYearlyBody,
+): Promise<{ message: string }> {
+  const res = await request.post("/admin/subscriptions/upgrade-to-yearly", body);
+  const root = asRecord(res.data);
+  if (!root || root.success !== true) {
+    throw new Error(
+      (typeof root?.message === "string" && root.message) || "Could not upgrade to yearly.",
+    );
+  }
+  return {
+    message: (typeof root.message === "string" && root.message) || "Upgraded to yearly premium.",
+  };
+}
+
 export type PremiumExpirationUrgency = "all" | "active" | "expiring_soon" | "expired";
 
 export type PremiumExpirationItem = {
@@ -47,6 +71,8 @@ export type PremiumExpirationItem = {
   status: string;
   status_label: string;
   is_trial: boolean;
+  billing_period: string | null;
+  package_key: string | null;
   expires_at: string | null;
   expires_at_label: string | null;
   days_remaining: number | null;
@@ -104,6 +130,8 @@ function parseItem(raw: unknown): PremiumExpirationItem | null {
     status: String(item.status ?? ""),
     status_label: String(item.status_label ?? item.status ?? ""),
     is_trial: Boolean(item.is_trial),
+    billing_period: item.billing_period != null ? String(item.billing_period) : null,
+    package_key: item.package_key != null ? String(item.package_key) : null,
     expires_at: item.expires_at != null ? String(item.expires_at) : null,
     expires_at_label: item.expires_at_label != null ? String(item.expires_at_label) : null,
     days_remaining:
