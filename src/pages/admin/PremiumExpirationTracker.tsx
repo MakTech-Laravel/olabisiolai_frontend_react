@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -12,6 +13,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { UpgradeToYearlyModal } from "@/components/Modal/UpgradeToYearlyModal";
 import { startAdminVendorConversation } from "@/features/business/adminBusinessInfoApi";
 import {
   fetchPremiumExpirationTracker,
@@ -76,6 +78,7 @@ export default function PremiumExpirationTracker() {
   const [urgency, setUrgency] = useState<PremiumExpirationUrgency>("all");
   const [daysAhead, setDaysAhead] = useState(14);
   const [messagingBusinessId, setMessagingBusinessId] = useState<number | null>(null);
+  const [yearlyUpgradeTarget, setYearlyUpgradeTarget] = useState<PremiumExpirationItem | null>(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -341,11 +344,22 @@ export default function PremiumExpirationTracker() {
                   </td>
                   <td className="px-6 py-3.5">
                     <div className="flex items-center justify-end gap-2">
+                      {item.billing_period !== "yearly" ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                          title="Upgrade monthly to yearly"
+                          onClick={() => setYearlyUpgradeTarget(item)}
+                        >
+                          <CalendarPlus className="size-3" aria-hidden />
+                          Upgrade to Yearly
+                        </button>
+                      ) : null}
                       <Link
-                        to="/admin/businesses"
+                        to={`/admin/businesses/${item.business_id}`}
                         className="inline-flex h-8 items-center rounded-md border border-gray-200 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                       >
-                        Businesses
+                        Details
                       </Link>
                       <button
                         type="button"
@@ -399,8 +413,8 @@ export default function PremiumExpirationTracker() {
                 onClick={() => setPage(p)}
                 disabled={listQuery.isFetching}
                 className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium ${pagination.current_page === p
-                    ? "bg-gray-900 text-white"
-                    : "border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  ? "bg-gray-900 text-white"
+                  : "border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700"
                   }`}
               >
                 {p}
@@ -417,6 +431,23 @@ export default function PremiumExpirationTracker() {
           </div>
         </div>
       </div>
+
+      <UpgradeToYearlyModal
+        open={yearlyUpgradeTarget !== null}
+        business={
+          yearlyUpgradeTarget
+            ? {
+              id: yearlyUpgradeTarget.business_id,
+              name: yearlyUpgradeTarget.business_name,
+              vendorName: yearlyUpgradeTarget.vendor_name,
+              vendorEmail: yearlyUpgradeTarget.vendor_email,
+              subscriptionExpiresAt: formatExpiry(yearlyUpgradeTarget),
+              subscriptionBillingPeriod: yearlyUpgradeTarget.billing_period,
+            }
+            : null
+        }
+        onClose={() => setYearlyUpgradeTarget(null)}
+      />
     </>
   );
 }
