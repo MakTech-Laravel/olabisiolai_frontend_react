@@ -19,6 +19,8 @@ export type AdminBusinessInfo = {
   plan: "free" | "premium";
   isManualPremium: boolean;
   subscriptionExpiresAt: string | null;
+  subscriptionPackageKey: string | null;
+  subscriptionBillingPeriod: string | null;
   joinDate: string;
 };
 
@@ -327,6 +329,10 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
     asBoolean(item.is_manual_premium) === true || asBoolean(item.is_manual_grant) === true;
   const subscriptionExpiresAt =
     pickString(item, ["subscription_expires_at_iso", "subscription_expires_at"], "") || null;
+  const subscriptionPackageKey =
+    pickString(item, ["subscription_package_key"], "") || null;
+  const subscriptionBillingPeriod =
+    pickString(item, ["subscription_billing_period"], "") || null;
 
   return {
     id,
@@ -343,6 +349,8 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
     plan,
     isManualPremium,
     subscriptionExpiresAt: subscriptionExpiresAt || null,
+    subscriptionPackageKey: subscriptionPackageKey || null,
+    subscriptionBillingPeriod: subscriptionBillingPeriod || null,
     joinDate,
   };
 }
