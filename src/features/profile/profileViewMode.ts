@@ -35,7 +35,8 @@ const CAPABILITIES: Record<ProfileViewMode, ProfileModeCapabilities> = {
     message: true,
     save: false,
     review: true,
-    report: true,
+    // Only customer accounts may report businesses (API enforces role=user).
+    report: false,
     ownerTools: false,
   },
   vendorOwner: {
