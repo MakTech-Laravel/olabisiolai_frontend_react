@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { BusinessReportDetailsModal } from "@/components/Modal/BusinessReportDetailsModal";
 import { ReviewDetailsModal } from "@/components/Modal/ReviewDetailsModal";
+import { ReviewReportDetailsModal } from "@/components/Modal/ReviewReportDetailsModal";
 import {
   adminDismissBusinessReport,
   adminListBusinessReports,
@@ -10,6 +11,13 @@ import {
   adminViewBusinessReport,
 } from "@/features/businessReports/adminBusinessReportApi";
 import type { BusinessReportDto, BusinessReportPagination } from "@/features/businessReports/types";
+import {
+  adminDismissReviewReport,
+  adminListReviewReports,
+  adminResolveReviewReport,
+  adminViewReviewReport,
+} from "@/features/reviewReports/adminReviewReportApi";
+import type { ReviewReportDto, ReviewReportPagination } from "@/features/reviewReports/types";
 import {
   adminDeleteReview,
   adminGetStatistics,
@@ -20,9 +28,9 @@ import {
 import type { ReviewDto, ReviewPagination, ReviewStatistics } from "@/features/reviews/types";
 import { alert, showError, showSuccess } from "@/lib/sweetAlert";
 
-type AdminTab = "all" | "flagged" | "reports";
+type AdminTab = "all" | "flagged" | "reports" | "review-reports";
 
-function BusinessReportStatusBadge({ status }: { status: BusinessReportDto["status"] }) {
+function ReportStatusBadge({ status }: { status: "pending" | "reviewed" | "dismissed" }) {
   const styles =
     status === "pending"
       ? "bg-amber-100 text-amber-800"
@@ -129,10 +137,12 @@ function FlagModal({
 export default function Reviews() {
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
   const [businessReports, setBusinessReports] = useState<BusinessReportDto[]>([]);
+  const [reviewReports, setReviewReports] = useState<ReviewReportDto[]>([]);
   const [stats, setStats] = useState<ReviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<ReviewPagination | null>(null);
   const [reportPagination, setReportPagination] = useState<BusinessReportPagination | null>(null);
+  const [reviewReportPagination, setReviewReportPagination] = useState<ReviewReportPagination | null>(null);
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<AdminTab>("all");
 
@@ -140,6 +150,8 @@ export default function Reviews() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<BusinessReportDto | null>(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedReviewReport, setSelectedReviewReport] = useState<ReviewReportDto | null>(null);
+  const [reviewReportModalOpen, setReviewReportModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [flagTargetId, setFlagTargetId] = useState<number | null>(null);
 
@@ -160,6 +172,9 @@ export default function Reviews() {
       setReviews(result.data);
       setPagination(result.pagination);
       setReportPagination(null);
+      setReviewReportPagination(null);
+      setBusinessReports([]);
+      setReviewReports([]);
     } catch {
       setReviews([]);
     } finally {
@@ -173,10 +188,29 @@ export default function Reviews() {
       const result = await adminListBusinessReports({ page: pg, per_page: 15 });
       setBusinessReports(result.data);
       setReportPagination(result.pagination);
+      setReviewReportPagination(null);
       setPagination(null);
       setReviews([]);
+      setReviewReports([]);
     } catch {
       setBusinessReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadReviewReports = useCallback(async (pg: number) => {
+    setLoading(true);
+    try {
+      const result = await adminListReviewReports({ page: pg, per_page: 15 });
+      setReviewReports(result.data);
+      setReviewReportPagination(result.pagination);
+      setReportPagination(null);
+      setPagination(null);
+      setReviews([]);
+      setBusinessReports([]);
+    } catch {
+      setReviewReports([]);
     } finally {
       setLoading(false);
     }
@@ -189,10 +223,12 @@ export default function Reviews() {
   useEffect(() => {
     if (activeTab === "reports") {
       void loadBusinessReports(page);
+    } else if (activeTab === "review-reports") {
+      void loadReviewReports(page);
     } else {
       void loadReviews(activeTab, page);
     }
-  }, [activeTab, page, loadReviews, loadBusinessReports]);
+  }, [activeTab, page, loadReviews, loadBusinessReports, loadReviewReports]);
 
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
@@ -263,7 +299,7 @@ export default function Reviews() {
       setBusinessReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       if (selectedReport?.id === updated.id) setSelectedReport(updated);
       void loadStats();
-      showSuccess("Report dismissed.");
+      showSuccess("Business report dismissed.");
     } catch {
       showError("Could not dismiss report.");
     } finally {
@@ -278,9 +314,49 @@ export default function Reviews() {
       setBusinessReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       if (selectedReport?.id === updated.id) setSelectedReport(updated);
       void loadStats();
-      showSuccess("Report marked as resolved.");
+      showSuccess("Business report resolved.");
     } catch {
       showError("Could not resolve report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleViewReviewReport = (report: ReviewReportDto) => {
+    setSelectedReviewReport(report);
+    setReviewReportModalOpen(true);
+    void adminViewReviewReport(report.id)
+      .then((fresh) => setSelectedReviewReport(fresh))
+      .catch(() => {
+        /* keep row snapshot */
+      });
+  };
+
+  const handleDismissReviewReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminDismissReviewReport(reportId);
+      setReviewReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      if (selectedReviewReport?.id === updated.id) setSelectedReviewReport(updated);
+      void loadStats();
+      showSuccess("Review report dismissed.");
+    } catch {
+      showError("Could not dismiss review report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleResolveReviewReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminResolveReviewReport(reportId);
+      setReviewReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      if (selectedReviewReport?.id === updated.id) setSelectedReviewReport(updated);
+      void loadStats();
+      showSuccess("Review report resolved.");
+    } catch {
+      showError("Could not resolve review report.");
     } finally {
       setProcessingId(null);
     }
@@ -309,11 +385,23 @@ export default function Reviews() {
   };
 
   const totalPages =
-    activeTab === "reports" ? (reportPagination?.last_page ?? 1) : (pagination?.last_page ?? 1);
+    activeTab === "reports"
+      ? (reportPagination?.last_page ?? 1)
+      : activeTab === "review-reports"
+        ? (reviewReportPagination?.last_page ?? 1)
+        : (pagination?.last_page ?? 1);
   const listTotal =
-    activeTab === "reports" ? (reportPagination?.total ?? 0) : (pagination?.total ?? 0);
+    activeTab === "reports"
+      ? (reportPagination?.total ?? 0)
+      : activeTab === "review-reports"
+        ? (reviewReportPagination?.total ?? 0)
+        : (pagination?.total ?? 0);
   const listCurrentPage =
-    activeTab === "reports" ? (reportPagination?.current_page ?? 1) : (pagination?.current_page ?? 1);
+    activeTab === "reports"
+      ? (reportPagination?.current_page ?? 1)
+      : activeTab === "review-reports"
+        ? (reviewReportPagination?.current_page ?? 1)
+        : (pagination?.current_page ?? 1);
 
   const positivePercent =
     stats && stats.total_reviews > 0
@@ -337,9 +425,11 @@ export default function Reviews() {
       <section className="mb-4 rounded-2xl border border-chat-border-subtle bg-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-chat-accent">Content Moderation</p>
         <h2 className="text-2xl font-semibold text-ink">Review Management</h2>
-        <p className="text-sm text-chat-meta">Monitor customer reviews and user-reported businesses across the platform</p>
+        <p className="text-sm text-chat-meta">
+          Monitor customer reviews, business reports, and review reports across the platform
+        </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Total Reviews</p>
             <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
@@ -365,6 +455,15 @@ export default function Reviews() {
             )}
           </article>
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Review Reports</p>
+            <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
+              {stats?.pending_review_reports != null ? stats.pending_review_reports : "—"}
+            </p>
+            {stats && (stats.pending_review_reports ?? 0) > 0 && (
+              <p className="mt-1 text-xs font-medium text-brand-red">Pending review</p>
+            )}
+          </article>
+          <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Approved Reviews</p>
             <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
               {stats ? stats.approved_reviews : "—"}
@@ -380,6 +479,7 @@ export default function Reviews() {
               { id: "all" as const, label: "All Reviews" },
               { id: "flagged" as const, label: "Flagged Reviews" },
               { id: "reports" as const, label: "Business Reports" },
+              { id: "review-reports" as const, label: "Review Reports" },
             ] as const
           ).map((tab) => (
             <button
@@ -395,6 +495,11 @@ export default function Reviews() {
               {tab.id === "reports" && stats && (stats.pending_business_reports ?? 0) > 0 && (
                 <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
                   {stats.pending_business_reports}
+                </span>
+              )}
+              {tab.id === "review-reports" && stats && (stats.pending_review_reports ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
+                  {stats.pending_review_reports}
                 </span>
               )}
             </button>
@@ -449,7 +554,7 @@ export default function Reviews() {
                         </td>
                         <td className="px-4 py-4 text-xs text-body-secondary">{report.created_at}</td>
                         <td className="px-4 py-4">
-                          <BusinessReportStatusBadge status={report.status} />
+                          <ReportStatusBadge status={report.status} />
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-2">
@@ -492,6 +597,105 @@ export default function Reviews() {
                                 </button>
                               </>
                             )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          ) : activeTab === "review-reports" ? (
+            <table className="w-full min-w-[960px] border-collapse">
+              <thead>
+                <tr className="border-b border-border-gray">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reporter</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Business</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Review</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reason</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-body-secondary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center">
+                      <Loader2 className="mx-auto size-6 animate-spin text-chat-accent" />
+                    </td>
+                  </tr>
+                ) : reviewReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-chat-meta">
+                      No review reports yet.
+                    </td>
+                  </tr>
+                ) : (
+                  reviewReports.map((report) => {
+                    const isProcessing = processingId === report.id;
+                    const isPending = report.status === "pending";
+                    return (
+                      <tr key={report.id} className="border-b border-border-light">
+                        <td className="px-4 py-4">
+                          <p className="text-base font-medium text-ink">{report.reporter?.name ?? "—"}</p>
+                          <p className="text-xs text-gray-500">{report.reporter?.email ?? ""}</p>
+                        </td>
+                        <td className="px-4 py-4 text-sm font-medium text-ink">
+                          {report.review?.business?.business_name ?? "—"}
+                        </td>
+                        <td className="max-w-xs px-4 py-4">
+                          <p className="text-sm font-medium text-ink">{report.review?.reviewer_name ?? "—"}</p>
+                          <p className="line-clamp-2 text-sm text-gray-600">
+                            {report.review?.review_text?.trim() || "—"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-ink">{report.reason_label}</td>
+                        <td className="px-4 py-4 text-xs text-body-secondary">{report.created_at}</td>
+                        <td className="px-4 py-4">
+                          <ReportStatusBadge status={report.status} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleViewReviewReport(report)}
+                              className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                              aria-label="View review report"
+                              disabled={isProcessing}
+                            >
+                              <Eye className="size-4 text-emerald-600" strokeWidth={2} />
+                            </button>
+                            {isPending ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResolveReviewReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Resolve review report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-emerald-600" />
+                                  ) : (
+                                    <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissReviewReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Dismiss review report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-stone-500" />
+                                  ) : (
+                                    <XCircle className="size-4 text-stone-500" strokeWidth={2} />
+                                  )}
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -626,7 +830,7 @@ export default function Reviews() {
           )}
         </div>
 
-        {(pagination || reportPagination) && totalPages > 1 && (
+        {(pagination || reportPagination || reviewReportPagination) && totalPages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tint-red/20 px-1 pb-0 pt-4">
             <p className="text-xs font-medium text-stone-700">
               Showing page {listCurrentPage} of {totalPages} ({listTotal} total)
@@ -712,6 +916,23 @@ export default function Reviews() {
         onResolve={
           selectedReport?.status === "pending"
             ? () => handleResolveReport(selectedReport.id)
+            : undefined
+        }
+      />
+
+      <ReviewReportDetailsModal
+        open={reviewReportModalOpen}
+        onClose={() => setReviewReportModalOpen(false)}
+        report={selectedReviewReport}
+        processing={selectedReviewReport != null && processingId === selectedReviewReport.id}
+        onDismiss={
+          selectedReviewReport?.status === "pending"
+            ? () => handleDismissReviewReport(selectedReviewReport.id)
+            : undefined
+        }
+        onResolve={
+          selectedReviewReport?.status === "pending"
+            ? () => handleResolveReviewReport(selectedReviewReport.id)
             : undefined
         }
       />
