@@ -1,4 +1,7 @@
+import { isAxiosError } from "axios";
+
 import { request } from "@/api/request";
+import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 
 export type BusinessReportReasonOption = {
   value: string;
@@ -50,13 +53,22 @@ export async function submitBusinessReport(
   businessId: number,
   payload: { reason: string; description?: string },
 ): Promise<string> {
-  const res = await request.post<ApiEnvelope<unknown>>(
-    `/user/businesses/${businessId}/report`,
-    payload,
-  );
-  const body = res.data;
-  if (body?.success === false) {
-    throw new Error(body.message ?? "Could not submit report.");
+  try {
+    const res = await request.post<ApiEnvelope<unknown>>(
+      `/user/businesses/${businessId}/report`,
+      payload,
+    );
+    const body = res.data;
+    if (body?.success === false) {
+      throw new Error(body.message ?? "Could not submit report.");
+    }
+    return body?.message ?? "Thank you for your report.";
+  } catch (error) {
+    if (isAxiosError(error)) {
+      throw new Error(
+        getLaravelErrorMessage(error, "Could not submit report. Please try again."),
+      );
+    }
+    throw error;
   }
-  return body?.message ?? "Thank you for your report.";
 }
