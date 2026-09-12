@@ -9,6 +9,7 @@ import {
   submitBusinessReport,
   type BusinessReportReasonOption,
 } from "@/features/business/businessReportApi";
+import { getLaravelErrorMessage } from "@/lib/laravelApiError";
 import { showError, showSuccess } from "@/lib/sweetAlert";
 import { cn } from "@/lib/utils";
 
@@ -66,9 +67,9 @@ export function ReportAbuseModal({
       onClose();
     },
     onError: (error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : "Could not submit your report. Please try again.";
-      void showError(message);
+      void showError(
+        getLaravelErrorMessage(error, "Could not submit your report. Please try again."),
+      );
     },
   });
 
