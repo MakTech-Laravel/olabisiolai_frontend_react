@@ -3,6 +3,7 @@ import { request } from "@/api/request";
 export type AdminSidebarCounts = {
   pending_verifications: number;
   pending_boosts: number;
+  pending_message_reports: number;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -34,5 +35,6 @@ export async function fetchAdminSidebarCounts(): Promise<AdminSidebarCounts> {
   return {
     pending_verifications: asNumber(data.pending_verifications),
     pending_boosts: asNumber(data.pending_boosts),
+    pending_message_reports: asNumber(data.pending_message_reports),
   };
 }
