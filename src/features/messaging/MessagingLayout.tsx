@@ -166,7 +166,9 @@ export function MessagingLayout({
   const emptyDescription =
     inboxScope === 'personal'
       ? 'Message a business from their page and your chats will appear here.'
-      : 'Customer enquiries for this business will appear here.'
+      : inboxScope === 'all'
+        ? 'Your conversations will appear here.'
+        : 'Customer enquiries for this business will appear here.'
 
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col gap-2 p-2 lg:h-full lg:p-4">

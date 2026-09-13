@@ -1,10 +1,11 @@
 import * as React from 'react'
-import { MoreHorizontal, Pencil } from 'lucide-react'
+import { Flag, MoreHorizontal, Pencil } from 'lucide-react'
 
 import { AttachmentPreview } from '@/components/chat/AttachmentPreview'
 import { CatalogCartCard } from '@/components/chat/CatalogCartCard'
 import { CatalogEnquiryCard } from '@/components/chat/CatalogEnquiryCard'
 import { MessageStatusIcon } from '@/components/chat/MessageStatusIcon'
+import { MessageReportModal } from '@/components/Modal/MessageReportModal'
 import { ReplyQuote } from '@/components/chat/ReplyQuote'
 import { Avatar } from '@/components/ui/Avatar'
 import { parseCartEnquiryBody } from '@/features/catalog/cartMessageContext'
@@ -42,6 +43,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   onScrollToParent,
 }: MessageBubbleProps) {
   const [menu, setMenu] = React.useState(false)
+  const [reportOpen, setReportOpen] = React.useState(false)
   const menuRef = React.useRef<HTMLDivElement>(null)
   const bubbleRef = React.useRef<HTMLDivElement>(null)
 
@@ -72,6 +74,7 @@ export const MessageBubble = React.memo(function MessageBubble({
   }, [menu])
 
   return (
+    <>
     <div
       ref={bubbleRef}
       className={cn(
@@ -206,9 +209,29 @@ export const MessageBubble = React.memo(function MessageBubble({
                 Delete
               </button>
             ) : null}
+            {!isOwn ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-destructive hover:underline"
+                onClick={() => {
+                  setReportOpen(true)
+                  setMenu(false)
+                }}
+              >
+                <Flag className="size-3" aria-hidden />
+                Report
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
     </div>
+    <MessageReportModal
+      open={reportOpen}
+      messageUuid={message.uuid}
+      preview={message.body}
+      onClose={() => setReportOpen(false)}
+    />
+    </>
   )
 })

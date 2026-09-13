@@ -95,7 +95,12 @@ export function ChatHeader({
                 status === 'online' ? 'bg-chat-online-dot' : 'bg-muted-foreground/40',
               )}
             />
-            <span className="text-xs font-semibold text-chat-online-text">
+            <span
+              className={cn(
+                'text-xs font-semibold',
+                status === 'online' ? 'text-chat-online-text' : 'text-muted-foreground',
+              )}
+            >
               {status === 'online'
                 ? 'Online'
                 : lastSeenAt
