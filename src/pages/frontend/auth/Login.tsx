@@ -12,6 +12,7 @@ import { env } from '@/config/env'
 import { setRefreshToken } from '@/auth/token'
 import { getUserRoles } from '@/auth/roles'
 import { resolvePostLoginPath } from '@/features/auth/service'
+import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -119,8 +120,7 @@ export default function Login() {
         { replace: true },
       )
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Login failed. Please try again.'
+      const message = getLaravelErrorMessage(err, 'Login failed. Please try again.')
       setError(message)
     } finally {
       setLoading(false)

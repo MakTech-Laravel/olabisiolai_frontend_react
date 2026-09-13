@@ -84,7 +84,7 @@ export default function DirectMessage() {
               </p>
             </div>
           ) : null}
-          <MessagingLayout selfUser={user} conversationQueryParam="c" inboxScope="personal" />
+          <MessagingLayout selfUser={user} conversationQueryParam="c" inboxScope="all" />
         </div>
       </div>
     </div>
