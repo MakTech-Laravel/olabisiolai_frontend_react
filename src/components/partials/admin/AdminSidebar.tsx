@@ -29,7 +29,7 @@ import { CMS_PAGES } from "@/features/cms/cmsConfig";
 import { fetchAdminSidebarCounts } from "@/features/dashboard/adminSidebarApi";
 import { cn } from "@/lib/utils";
 
-type SidebarBadgeKey = "pending_verifications" | "pending_boosts";
+type SidebarBadgeKey = "pending_verifications" | "pending_boosts" | "pending_message_reports";
 
 type SidebarItem = {
   label: string;
@@ -49,7 +49,7 @@ const staticItems: SidebarItem[] = [
   // { label: "Leads", to: "/admin/leads", icon: ListChecks, permission: "view orders" },
   { label: "Contact Us", to: "/admin/contact-us", icon: Mail },
   { label: "Messages", to: "/admin/messages", icon: MessageSquare, permission: "view orders" },
-  { label: "Reviews", to: "/admin/reviews", icon: Star },
+  { label: "Reviews", to: "/admin/reviews", icon: Star, badgeKey: "pending_message_reports" },
   { label: "Payments", to: "/admin/payments", icon: CircleDollarSign, permission: "view orders" },
   { label: "Premium Expiration", to: "/admin/premium-expiration", icon: Hourglass, permission: "view orders" },
   { label: "Subscription Plans", to: "/admin/subscription-plans", icon: CreditCard, permission: "view orders" },
