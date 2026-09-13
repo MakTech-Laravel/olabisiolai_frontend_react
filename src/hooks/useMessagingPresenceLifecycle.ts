@@ -8,7 +8,9 @@ import {
 const PING_INTERVAL_MS = 60_000
 
 /**
- * Keeps messaging presence fresh while inbox is open; marks offline on leave.
+ * Keeps messaging presence fresh while inbox is open; marks offline on tab close.
+ * Do not mark offline on visibilitychange — switching between two test browsers
+ * would otherwise flip the other user Offline immediately.
  */
 export function useMessagingPresenceLifecycle(enabled: boolean) {
   const offlineSent = React.useRef(false)
@@ -37,7 +39,6 @@ export function useMessagingPresenceLifecycle(enabled: boolean) {
     return () => {
       window.clearInterval(interval)
       window.removeEventListener('pagehide', onPageHide)
-      markOffline()
     }
   }, [enabled, markOffline])
 }

@@ -28,10 +28,12 @@ export default function Messages() {
   useEffect(() => {
     const hasBusiness = Number.isFinite(businessIdParam) && businessIdParam > 0;
     if (!scope && !hasBusiness) {
+      // Vendors must open their business inbox to see customer DMs about the shop.
+      // Defaulting everyone to personal hides those threads for the business owner.
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          next.set("scope", "personal");
+          next.set("scope", "all");
           return next;
         },
         { replace: true },
@@ -42,7 +44,9 @@ export default function Messages() {
   const inboxScope: MessagingInboxKey =
     Number.isFinite(businessIdParam) && businessIdParam > 0
       ? (`business:${businessIdParam}` as const)
-      : "personal";
+      : scope === "personal"
+        ? "personal"
+        : "all";
 
   const businessesQuery = useQuery({
     queryKey: ["user", "businesses", "messages-title"],
@@ -59,14 +63,18 @@ export default function Messages() {
   const pageTitle =
     inboxScope === "personal"
       ? "Messages"
-      : businessTitle
-        ? `${businessTitle} messages`
-        : "Business messages";
+      : inboxScope === "all"
+        ? "Messages"
+        : businessTitle
+          ? `${businessTitle} messages`
+          : "Business messages";
 
   const pageSubtitle =
     inboxScope === "personal"
       ? "Your personal conversations"
-      : "Customer enquiries for this business";
+      : inboxScope === "all"
+        ? "All conversations"
+        : "Customer enquiries for this business";
 
   const { starting, pendingPeer } = useStartDirectConversation({
     isAuthenticated,
