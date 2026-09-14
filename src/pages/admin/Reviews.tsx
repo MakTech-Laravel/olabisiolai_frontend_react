@@ -2,6 +2,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Eye, Flag, Loader2, ShieldAler
 import { useCallback, useEffect, useState } from "react";
 
 import { BusinessReportDetailsModal } from "@/components/Modal/BusinessReportDetailsModal";
+import { MessageReportDetailsModal } from "@/components/Modal/MessageReportDetailsModal";
 import { ReviewDetailsModal } from "@/components/Modal/ReviewDetailsModal";
 import { ReviewReportDetailsModal } from "@/components/Modal/ReviewReportDetailsModal";
 import {
@@ -11,6 +12,15 @@ import {
   adminViewBusinessReport,
 } from "@/features/businessReports/adminBusinessReportApi";
 import type { BusinessReportDto, BusinessReportPagination } from "@/features/businessReports/types";
+import {
+  adminDismissMessageReport,
+  adminEmailReportedUser,
+  adminListMessageReports,
+  adminResolveMessageReport,
+  adminSuspendReportedUser,
+  adminViewMessageReport,
+} from "@/features/messageReports/messageReportApi";
+import type { MessageReportDto, MessageReportPagination } from "@/features/messageReports/types";
 import {
   adminDismissReviewReport,
   adminListReviewReports,
@@ -28,7 +38,7 @@ import {
 import type { ReviewDto, ReviewPagination, ReviewStatistics } from "@/features/reviews/types";
 import { alert, showError, showSuccess } from "@/lib/sweetAlert";
 
-type AdminTab = "all" | "flagged" | "reports" | "review-reports";
+type AdminTab = "all" | "flagged" | "reports" | "review-reports" | "message-reports";
 
 function ReportStatusBadge({ status }: { status: "pending" | "reviewed" | "dismissed" }) {
   const styles =
@@ -138,11 +148,13 @@ export default function Reviews() {
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
   const [businessReports, setBusinessReports] = useState<BusinessReportDto[]>([]);
   const [reviewReports, setReviewReports] = useState<ReviewReportDto[]>([]);
+  const [messageReports, setMessageReports] = useState<MessageReportDto[]>([]);
   const [stats, setStats] = useState<ReviewStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<ReviewPagination | null>(null);
   const [reportPagination, setReportPagination] = useState<BusinessReportPagination | null>(null);
   const [reviewReportPagination, setReviewReportPagination] = useState<ReviewReportPagination | null>(null);
+  const [messageReportPagination, setMessageReportPagination] = useState<MessageReportPagination | null>(null);
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState<AdminTab>("all");
 
@@ -152,6 +164,8 @@ export default function Reviews() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReviewReport, setSelectedReviewReport] = useState<ReviewReportDto | null>(null);
   const [reviewReportModalOpen, setReviewReportModalOpen] = useState(false);
+  const [selectedMessageReport, setSelectedMessageReport] = useState<MessageReportDto | null>(null);
+  const [messageReportModalOpen, setMessageReportModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [flagTargetId, setFlagTargetId] = useState<number | null>(null);
 
@@ -173,8 +187,10 @@ export default function Reviews() {
       setPagination(result.pagination);
       setReportPagination(null);
       setReviewReportPagination(null);
+      setMessageReportPagination(null);
       setBusinessReports([]);
       setReviewReports([]);
+      setMessageReports([]);
     } catch {
       setReviews([]);
     } finally {
@@ -189,9 +205,11 @@ export default function Reviews() {
       setBusinessReports(result.data);
       setReportPagination(result.pagination);
       setReviewReportPagination(null);
+      setMessageReportPagination(null);
       setPagination(null);
       setReviews([]);
       setReviewReports([]);
+      setMessageReports([]);
     } catch {
       setBusinessReports([]);
     } finally {
@@ -206,11 +224,32 @@ export default function Reviews() {
       setReviewReports(result.data);
       setReviewReportPagination(result.pagination);
       setReportPagination(null);
+      setMessageReportPagination(null);
       setPagination(null);
       setReviews([]);
       setBusinessReports([]);
+      setMessageReports([]);
     } catch {
       setReviewReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadMessageReports = useCallback(async (pg: number) => {
+    setLoading(true);
+    try {
+      const result = await adminListMessageReports({ page: pg, per_page: 15 });
+      setMessageReports(result.data);
+      setMessageReportPagination(result.pagination);
+      setReportPagination(null);
+      setReviewReportPagination(null);
+      setPagination(null);
+      setReviews([]);
+      setBusinessReports([]);
+      setReviewReports([]);
+    } catch {
+      setMessageReports([]);
     } finally {
       setLoading(false);
     }
@@ -225,10 +264,12 @@ export default function Reviews() {
       void loadBusinessReports(page);
     } else if (activeTab === "review-reports") {
       void loadReviewReports(page);
+    } else if (activeTab === "message-reports") {
+      void loadMessageReports(page);
     } else {
       void loadReviews(activeTab, page);
     }
-  }, [activeTab, page, loadReviews, loadBusinessReports, loadReviewReports]);
+  }, [activeTab, page, loadReviews, loadBusinessReports, loadReviewReports, loadMessageReports]);
 
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
@@ -362,6 +403,88 @@ export default function Reviews() {
     }
   };
 
+  const handleViewMessageReport = (report: MessageReportDto) => {
+    setSelectedMessageReport(report);
+    setMessageReportModalOpen(true);
+    void adminViewMessageReport(report.id)
+      .then((fresh) => setSelectedMessageReport(fresh))
+      .catch(() => {
+        /* keep row snapshot */
+      });
+  };
+
+  const updateMessageReport = (updated: MessageReportDto) => {
+    setMessageReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    if (selectedMessageReport?.id === updated.id) setSelectedMessageReport(updated);
+  };
+
+  const handleDismissMessageReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminDismissMessageReport(reportId);
+      updateMessageReport(updated);
+      void loadStats();
+      showSuccess("Chat report dismissed.");
+    } catch {
+      showError("Could not dismiss chat report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleResolveMessageReport = async (reportId: number) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminResolveMessageReport(reportId);
+      updateMessageReport(updated);
+      void loadStats();
+      showSuccess("Chat report resolved.");
+    } catch {
+      showError("Could not resolve chat report.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleEmailReportedUser = async (
+    reportId: number,
+    payload: { subject: string; body: string },
+  ) => {
+    setProcessingId(reportId);
+    try {
+      const updated = await adminEmailReportedUser(reportId, payload);
+      updateMessageReport(updated);
+      void loadStats();
+      showSuccess("Email sent to reported user.");
+    } catch {
+      showError("Could not send email.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSuspendReportedUser = async (reportId: number, note: string) => {
+    const confirmed = await alert.confirm({
+      title: "Suspend this account?",
+      text: "The user will be logged out and will see Account suspended on login.",
+      confirmText: "Suspend",
+      icon: "warning",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed) return;
+    setProcessingId(reportId);
+    try {
+      const updated = await adminSuspendReportedUser(reportId, note);
+      updateMessageReport(updated);
+      void loadStats();
+      showSuccess("Reported user suspended.");
+    } catch {
+      showError("Could not suspend user.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleDelete = async (reviewId: number) => {
     const confirmed = await alert.confirmDelete("this review");
     if (!confirmed) return;
@@ -389,19 +512,25 @@ export default function Reviews() {
       ? (reportPagination?.last_page ?? 1)
       : activeTab === "review-reports"
         ? (reviewReportPagination?.last_page ?? 1)
-        : (pagination?.last_page ?? 1);
+        : activeTab === "message-reports"
+          ? (messageReportPagination?.last_page ?? 1)
+          : (pagination?.last_page ?? 1);
   const listTotal =
     activeTab === "reports"
       ? (reportPagination?.total ?? 0)
       : activeTab === "review-reports"
         ? (reviewReportPagination?.total ?? 0)
-        : (pagination?.total ?? 0);
+        : activeTab === "message-reports"
+          ? (messageReportPagination?.total ?? 0)
+          : (pagination?.total ?? 0);
   const listCurrentPage =
     activeTab === "reports"
       ? (reportPagination?.current_page ?? 1)
       : activeTab === "review-reports"
         ? (reviewReportPagination?.current_page ?? 1)
-        : (pagination?.current_page ?? 1);
+        : activeTab === "message-reports"
+          ? (messageReportPagination?.current_page ?? 1)
+          : (pagination?.current_page ?? 1);
 
   const positivePercent =
     stats && stats.total_reviews > 0
@@ -429,7 +558,7 @@ export default function Reviews() {
           Monitor customer reviews, business reports, and review reports across the platform
         </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Total Reviews</p>
             <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
@@ -464,6 +593,15 @@ export default function Reviews() {
             )}
           </article>
           <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Chat Reports</p>
+            <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
+              {stats?.pending_message_reports != null ? stats.pending_message_reports : "â€”"}
+            </p>
+            {stats && (stats.pending_message_reports ?? 0) > 0 && (
+              <p className="mt-1 text-xs font-medium text-brand-red">Pending review</p>
+            )}
+          </article>
+          <article className="rounded-xl border border-chat-border-subtle bg-background p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-chat-meta">Approved Reviews</p>
             <p className="mt-1 text-4xl font-semibold leading-10 text-ink">
               {stats ? stats.approved_reviews : "—"}
@@ -480,6 +618,7 @@ export default function Reviews() {
               { id: "flagged" as const, label: "Flagged Reviews" },
               { id: "reports" as const, label: "Business Reports" },
               { id: "review-reports" as const, label: "Review Reports" },
+              { id: "message-reports" as const, label: "Chat Reports" },
             ] as const
           ).map((tab) => (
             <button
@@ -500,6 +639,11 @@ export default function Reviews() {
               {tab.id === "review-reports" && stats && (stats.pending_review_reports ?? 0) > 0 && (
                 <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
                   {stats.pending_review_reports}
+                </span>
+              )}
+              {tab.id === "message-reports" && stats && (stats.pending_message_reports ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold text-white">
+                  {stats.pending_message_reports}
                 </span>
               )}
             </button>
@@ -704,6 +848,106 @@ export default function Reviews() {
                 )}
               </tbody>
             </table>
+          ) : activeTab === "message-reports" ? (
+            <table className="w-full min-w-[960px] border-collapse">
+              <thead>
+                <tr className="border-b border-border-gray">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reporter</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reported User</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Message</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Reason</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-body-secondary">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-body-secondary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center">
+                      <Loader2 className="mx-auto size-6 animate-spin text-chat-accent" />
+                    </td>
+                  </tr>
+                ) : messageReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-chat-meta">
+                      No chat reports yet.
+                    </td>
+                  </tr>
+                ) : (
+                  messageReports.map((report) => {
+                    const isProcessing = processingId === report.id;
+                    const isPending = report.status === "pending";
+                    return (
+                      <tr key={report.id} className="border-b border-border-light">
+                        <td className="px-4 py-4">
+                          <p className="text-base font-medium text-ink">{report.reporter?.name ?? "â€”"}</p>
+                          <p className="text-xs text-gray-500">{report.reporter?.email ?? ""}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-sm font-medium text-ink">{report.reported_user?.name ?? "â€”"}</p>
+                          <p className="text-xs text-gray-500">{report.reported_user?.email ?? ""}</p>
+                          <p className="text-xs text-body-secondary">Status: {report.reported_user?.status ?? "â€”"}</p>
+                        </td>
+                        <td className="max-w-sm px-4 py-4">
+                          <p className="line-clamp-2 text-sm text-gray-600">
+                            {report.message?.body?.trim() || "[Attachment/system message]"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-ink">{report.reason_label}</td>
+                        <td className="px-4 py-4 text-xs text-body-secondary">{report.created_at}</td>
+                        <td className="px-4 py-4">
+                          <ReportStatusBadge status={report.status} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleViewMessageReport(report)}
+                              className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                              aria-label="View chat report"
+                              disabled={isProcessing}
+                            >
+                              <Eye className="size-4 text-emerald-600" strokeWidth={2} />
+                            </button>
+                            {isPending ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResolveMessageReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Resolve chat report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-emerald-600" />
+                                  ) : (
+                                    <CheckCircle2 className="size-4 text-emerald-600" strokeWidth={2} />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissMessageReport(report.id)}
+                                  className="inline-flex size-7 items-center justify-center rounded-xl hover:bg-muted"
+                                  aria-label="Dismiss chat report"
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="size-4 animate-spin text-stone-500" />
+                                  ) : (
+                                    <XCircle className="size-4 text-stone-500" strokeWidth={2} />
+                                  )}
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           ) : (
             <table className="w-full min-w-[960px] border-collapse">
               <thead>
@@ -830,7 +1074,7 @@ export default function Reviews() {
           )}
         </div>
 
-        {(pagination || reportPagination || reviewReportPagination) && totalPages > 1 && (
+        {(pagination || reportPagination || reviewReportPagination || messageReportPagination) && totalPages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tint-red/20 px-1 pb-0 pt-4">
             <p className="text-xs font-medium text-stone-700">
               Showing page {listCurrentPage} of {totalPages} ({listTotal} total)
@@ -933,6 +1177,33 @@ export default function Reviews() {
         onResolve={
           selectedReviewReport?.status === "pending"
             ? () => handleResolveReviewReport(selectedReviewReport.id)
+            : undefined
+        }
+      />
+
+      <MessageReportDetailsModal
+        open={messageReportModalOpen}
+        onClose={() => setMessageReportModalOpen(false)}
+        report={selectedMessageReport}
+        processing={selectedMessageReport != null && processingId === selectedMessageReport.id}
+        onDismiss={
+          selectedMessageReport?.status === "pending"
+            ? () => handleDismissMessageReport(selectedMessageReport.id)
+            : undefined
+        }
+        onResolve={
+          selectedMessageReport?.status === "pending"
+            ? () => handleResolveMessageReport(selectedMessageReport.id)
+            : undefined
+        }
+        onEmail={
+          selectedMessageReport
+            ? (payload) => handleEmailReportedUser(selectedMessageReport.id, payload)
+            : undefined
+        }
+        onSuspend={
+          selectedMessageReport
+            ? (note) => handleSuspendReportedUser(selectedMessageReport.id, note)
             : undefined
         }
       />
