@@ -121,7 +121,7 @@ async function createServer() {
   app.disable('x-powered-by')
   app.use(compression())
 
-  // Dev: proxy API/storage to Laravel so the browser stays same-origin (avoids CORS / Network Error).
+  // Dev/prod: proxy API/storage/oauth to Laravel so the browser stays same-origin.
   const laravelProxyTarget = (
     process.env.SPA_SHELL_API_ORIGIN ||
     process.env.VITE_SPA_SHELL_API_ORIGIN ||
@@ -130,7 +130,16 @@ async function createServer() {
     .trim()
     .replace(/\/+$/, '')
 
-  app.use(['/api', '/storage', '/images', '/oauth'], (req, res) => {
+  /** Frontend static root — logos/avatars live here, not only on Laravel. */
+  const frontendStaticRoot = isProd
+    ? path.resolve(__dirname, '../dist/client')
+    : path.resolve(__dirname, '../public')
+
+  /**
+   * @param {import('http').IncomingMessage} req
+   * @param {import('http').ServerResponse} res
+   */
+  function proxyToLaravel(req, res) {
     let upstream
     try {
       upstream = new URL(req.originalUrl || req.url || '/', laravelProxyTarget)
@@ -163,11 +172,45 @@ async function createServer() {
       if (!res.headersSent) {
         res.statusCode = 502
         res.setHeader('content-type', 'application/json')
-        res.end(JSON.stringify({ message: 'Laravel API unreachable. Is php artisan serve running on :8000?' }))
+        res.end(
+          JSON.stringify({
+            message: 'Laravel API unreachable. Is php artisan serve running on :8000?',
+          }),
+        )
       }
     })
 
     req.pipe(proxyReq)
+  }
+
+  app.use(['/api', '/storage', '/oauth'], (req, res) => {
+    proxyToLaravel(req, res)
+  })
+
+  // Prefer frontend public/dist images (gidira logos, avatars). Fall back to Laravel
+  // for category icons / branding assets that only exist on the API host.
+  app.use('/images', (req, res, next) => {
+    const rawPath = (req.path || '/').split('?')[0]
+    const normalized = path.posix.normalize(rawPath).replace(/^(\.\.(\/|\\|$))+/, '')
+    const relativePath = normalized.startsWith('/') ? normalized.slice(1) : normalized
+    const imagesRoot = path.resolve(frontendStaticRoot, 'images')
+    const filePath = path.resolve(imagesRoot, relativePath)
+    const relFromRoot = path.relative(imagesRoot, filePath)
+
+    if (relFromRoot.startsWith('..') || path.isAbsolute(relFromRoot)) {
+      res.statusCode = 400
+      res.end('Bad Request')
+      return
+    }
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      res.sendFile(filePath, (err) => {
+        if (err) next(err)
+      })
+      return
+    }
+
+    proxyToLaravel(req, res)
   })
 
   /** @type {import('vite').ViteDevServer | undefined} */
