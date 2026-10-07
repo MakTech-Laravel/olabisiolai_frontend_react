@@ -145,6 +145,10 @@ export default function Service() {
     }
   };
 
+  // Only reuse navigation state when it belongs to this listing (prevents cross-business contact bleed).
+  const matchedStateData =
+    stateData !== null && businessId !== null && stateData.id === businessId ? stateData : null;
+
   const {
     data: business,
     isFetching: businessFetching,
@@ -156,7 +160,7 @@ export default function Service() {
     enabled: businessId !== null,
     staleTime: 5 * 60 * 1000,
     placeholderData:
-      stateData !== null ? toPublicBusinessPlaceholder(stateData) : undefined,
+      matchedStateData !== null ? toPublicBusinessPlaceholder(matchedStateData) : undefined,
   });
 
   const { data: reviewsResult, isLoading: reviewsLoading } = useQuery({
@@ -170,84 +174,82 @@ export default function Service() {
   const reviewsList = reviewsResult?.data ?? [];
   const pagination = reviewsResult?.pagination ?? { current_page: 1, last_page: 1, total: 0 };
 
-  const name = business?.name ?? stateData?.name ?? "";
-  const categoryLabel = business?.category ?? stateData?.category ?? "";
+  const name = business?.name ?? matchedStateData?.name ?? "";
+  const categoryLabel = business?.category ?? matchedStateData?.category ?? "";
   const categoryId = business?.categoryId ?? null;
   const subcategoryLabel = useMemo(() => {
     if (business) {
       return resolvePublicBusinessSubcategory(business);
     }
-    const fromState = stateData?.subcategory?.trim();
+    const fromState = matchedStateData?.subcategory?.trim();
     return fromState || null;
-  }, [business, stateData?.subcategory]);
+  }, [business, matchedStateData?.subcategory]);
   const boostActive = business?.boostStatus === "active";
   const isPremium = business?.isPremium ?? false;
-  const description = displayDescription || business?.description || stateData?.description || "";
+  const description = displayDescription || business?.description || matchedStateData?.description || "";
 
-  const rating = business?.rating ?? stateData?.rating ?? 0;
-  const reviewCount = business?.reviews ?? stateData?.reviews ?? 0;
-  const locationText = business?.location ?? stateData?.location ?? "";
-  const latitude = business?.latitude ?? stateData?.latitude ?? null;
-  const longitude = business?.longitude ?? stateData?.longitude ?? null;
-  const verified = business?.verified ?? stateData?.verified ?? false;
-  const memberSince = business?.memberSince ?? stateData?.memberSince ?? null;
+  const rating = business?.rating ?? matchedStateData?.rating ?? 0;
+  const reviewCount = business?.reviews ?? matchedStateData?.reviews ?? 0;
+  const locationText = business?.location ?? matchedStateData?.location ?? "";
+  const latitude = business?.latitude ?? matchedStateData?.latitude ?? null;
+  const longitude = business?.longitude ?? matchedStateData?.longitude ?? null;
+  const verified = business?.verified ?? matchedStateData?.verified ?? false;
+  const memberSince = business?.memberSince ?? matchedStateData?.memberSince ?? null;
   const responseTimeLabel = business?.responseTimeLabel ?? null;
   const photoLimit = isPremium ? PREMIUM_PHOTO_LIMIT : FREE_PHOTO_LIMIT;
-  const contactPhone = resolveBusinessContactPhone(
-    business?.whatsapp ?? stateData?.whatsapp,
-    business?.phone ?? stateData?.phone,
-  );
-  const whatsappUrl = buildBusinessWhatsAppUrl(
-    business?.whatsapp ?? stateData?.whatsapp,
-    business?.phone ?? stateData?.phone,
-  );
-  const socialAccounts =
-    business?.socialAccounts?.length
-      ? business.socialAccounts
-      : stateData?.socialAccounts ?? [];
+
+  // Once API business is present, trust its contact fields (null/empty = intentional), never stale nav state.
+  const displayPhone = business ? (business.phone ?? null) : (matchedStateData?.phone ?? null);
+  const displayWhatsapp = business ? (business.whatsapp ?? null) : (matchedStateData?.whatsapp ?? null);
+  const website = business ? (business.website ?? null) : (matchedStateData?.website ?? null);
+  const socialAccounts = business
+    ? (business.socialAccounts ?? [])
+    : (matchedStateData?.socialAccounts ?? []);
+
+  const contactPhone = resolveBusinessContactPhone(displayWhatsapp, displayPhone);
+  const whatsappUrl = buildBusinessWhatsAppUrl(displayWhatsapp, displayPhone);
 
   const coverPhotos = useMemo(() => {
     const fromApi = business?.coverPhotoUrls ?? [];
     if (fromApi.length > 0) return fromApi;
-    const fromState = stateData?.coverPhotoUrls ?? [];
+    const fromState = matchedStateData?.coverPhotoUrls ?? [];
     if (fromState.length > 0) return fromState;
-    const legacyImage = business?.image ?? stateData?.image;
+    const legacyImage = business?.image ?? matchedStateData?.image;
     return legacyImage && legacyImage !== FALLBACK_LOGO ? [legacyImage] : [];
-  }, [business, stateData]);
+  }, [business, matchedStateData]);
 
   const logoUrl =
     business?.logoUrl ??
-    stateData?.logoUrl ??
+    matchedStateData?.logoUrl ??
     business?.image ??
-    stateData?.image ??
+    matchedStateData?.image ??
     FALLBACK_LOGO;
 
-  const publicLogoUrl = business?.logoUrl ?? stateData?.logoUrl ?? null;
-  const website = business?.website ?? stateData?.website ?? null;
+  const publicLogoUrl = business?.logoUrl ?? matchedStateData?.logoUrl ?? null;
 
   const heroCover = coverPhotos[0] ?? FALLBACK_COVER;
-  const vendorUserUuid = business?.vendorUserUuid ?? stateData?.vendorUserUuid ?? null;
-  const vendorUserId = business?.vendorUserId ?? stateData?.vendorUserId ?? null;
+  const vendorUserUuid = business?.vendorUserUuid ?? matchedStateData?.vendorUserUuid ?? null;
+  const vendorUserId = business?.vendorUserId ?? matchedStateData?.vendorUserId ?? null;
   const { mode: profileMode, capabilities } = useProfileViewMode(vendorUserId);
   const isOwnerMode = profileMode === "vendorOwner";
   const resolvedIsFollowingVendor =
-    business?.isFollowing ?? stateData?.isFollowing ?? isFollowingVendor;
+    business?.isFollowing ?? matchedStateData?.isFollowing ?? isFollowingVendor;
 
   useEffect(() => {
-    setIsFollowingVendor(business?.isFollowing ?? stateData?.isFollowing ?? false);
-  }, [business?.isFollowing, stateData?.isFollowing, businessId]);
+    setIsFollowingVendor(business?.isFollowing ?? matchedStateData?.isFollowing ?? false);
+  }, [business?.isFollowing, matchedStateData?.isFollowing, businessId]);
 
   useEffect(() => {
     setDisplayName(name);
   }, [name]);
 
   useEffect(() => {
-    setDisplayDescription(business?.description ?? stateData?.description ?? "");
-  }, [business?.description, stateData?.description]);
+    setDisplayDescription(business?.description ?? matchedStateData?.description ?? "");
+  }, [business?.description, matchedStateData?.description]);
 
   useEffect(() => {
-    setFollowersCount(business?.followersCount ?? stateData?.followersCount ?? 0);
-  }, [business?.followersCount, stateData?.followersCount]);
+    setFollowersCount(business?.followersCount ?? matchedStateData?.followersCount ?? 0);
+  }, [business?.followersCount, matchedStateData?.followersCount]);
 
   const catalogItems = business?.catalogItems ?? [];
   const catalogLocked = business?.catalogLocked ?? !isPremium;
@@ -259,7 +261,8 @@ export default function Service() {
   const allReviewsPath = businessId ? `${businessProfilePath(businessId)}/reviews` : "/filters";
 
   const profileUnavailable =
-    businessId === null || (businessFetched && !businessFetching && !business && !stateData);
+    businessId === null ||
+    (businessFetched && !businessFetching && !business && !matchedStateData);
 
   const handleWriteReview = () => {
     if (!isAuthReady || businessId === null) return;
@@ -313,9 +316,9 @@ export default function Service() {
               isPremium={isPremium}
               verified={verified}
               boostActive={boostActive}
-              phone={business?.phone ?? stateData?.phone ?? null}
-              whatsapp={business?.whatsapp ?? stateData?.whatsapp ?? null}
-              website={business?.website ?? stateData?.website ?? null}
+              phone={displayPhone}
+              whatsapp={displayWhatsapp}
+              website={website}
               socialAccounts={socialAccounts}
               business={business}
               onDisplayNameChange={setDisplayName}
