@@ -95,8 +95,11 @@ export function buildUpdatePayload(
     lga: patch.lga ?? profile.lga,
     business_description: patch.business_description ?? profile.description,
     phone: patch.phone ?? profile.phone,
-    whatsapp: (patch.whatsapp ?? profile.whatsapp)?.trim() || undefined,
-    website: (patch.website ?? profile.website)?.trim() || undefined,
+    // When contact fields are explicitly patched (including empty), keep empty string so API can clear.
+    whatsapp:
+      "whatsapp" in patch ? (patch.whatsapp ?? "").trim() : profile.whatsapp?.trim() || undefined,
+    website:
+      "website" in patch ? (patch.website ?? "").trim() : profile.website?.trim() || undefined,
     full_address: (patch.street_address ?? profile.streetAddress)?.trim() || undefined,
     latitude: patch.latitude ?? profile.latitude ?? undefined,
     longitude: patch.longitude ?? profile.longitude ?? undefined,

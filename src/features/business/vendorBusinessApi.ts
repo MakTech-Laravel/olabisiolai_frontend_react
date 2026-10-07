@@ -190,10 +190,11 @@ function buildUpdateVendorBusinessJsonBody(
   }
 
   body.subcategory = payload.subcategory?.trim() ?? "";
-  if (payload.whatsapp?.trim()) {
+  // Send empty string to clear (backend normalizeClearableStrings → null). Omit only when undefined.
+  if (payload.whatsapp !== undefined) {
     body.whatsapp = payload.whatsapp.trim();
   }
-  if (payload.website?.trim()) {
+  if (payload.website !== undefined) {
     body.website = payload.website.trim();
   }
   if (payload.full_address?.trim()) {
@@ -238,8 +239,12 @@ function appendUpdateVendorBusinessFormData(
   formData.append("business_description", clampBusinessOverview(payload.business_description).trim());
   formData.append("phone", payload.phone.trim());
 
-  appendIfTruthy(formData, "whatsapp", payload.whatsapp);
-  appendIfTruthy(formData, "website", payload.website);
+  if (payload.whatsapp !== undefined) {
+    formData.append("whatsapp", payload.whatsapp.trim());
+  }
+  if (payload.website !== undefined) {
+    formData.append("website", payload.website.trim());
+  }
   appendIfTruthy(formData, "full_address", payload.full_address);
   if (payload.latitude != null && Number.isFinite(payload.latitude)) {
     formData.append("latitude", String(payload.latitude));

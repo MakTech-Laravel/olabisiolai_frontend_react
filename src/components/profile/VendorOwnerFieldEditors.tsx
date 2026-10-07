@@ -61,6 +61,8 @@ type OwnerEditButtonProps = {
   label?: string
   className?: string
   onProfileUpdated?: () => void
+  /** When set, load/save this business instead of the account active business. */
+  businessId?: number
 }
 
 function OwnerEditTrigger({
@@ -87,37 +89,76 @@ function OwnerEditTrigger({
   )
 }
 
-function useOwnerProfileEditor(onProfileUpdated?: () => void) {
+function useOwnerProfileEditor(onProfileUpdated?: () => void, businessId?: number) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState<VendorBusinessProfile | null>(null)
+  const loadGenerationRef = useRef(0)
+
+  useEffect(() => {
+    loadGenerationRef.current += 1
+    setOpen(false)
+    setProfile(null)
+    setLoading(false)
+  }, [businessId])
 
   async function openEditor() {
+    const generation = ++loadGenerationRef.current
+    const requestedBusinessId = businessId
     setOpen(true)
     setLoading(true)
     try {
-      const loaded = await fetchVendorBusinessProfile()
+      const loaded = await fetchVendorBusinessProfile(requestedBusinessId)
+      if (generation !== loadGenerationRef.current) return
+      if (
+        typeof requestedBusinessId === 'number' &&
+        Number.isFinite(requestedBusinessId) &&
+        requestedBusinessId > 0 &&
+        loaded.id !== requestedBusinessId
+      ) {
+        throw new Error('Loaded profile does not match this business page.')
+      }
       setProfile(loaded)
     } catch {
+      if (generation !== loadGenerationRef.current) return
       showError('Could not load your business profile for editing.')
       setOpen(false)
+      setProfile(null)
     } finally {
-      setLoading(false)
+      if (generation === loadGenerationRef.current) {
+        setLoading(false)
+      }
     }
   }
 
   async function saveProfile(patch: Parameters<typeof buildUpdatePayload>[1], successMessage: string): Promise<boolean> {
     if (!profile) return false
 
+    const targetBusinessId = businessId
+    if (
+      typeof targetBusinessId === 'number' &&
+      Number.isFinite(targetBusinessId) &&
+      targetBusinessId > 0 &&
+      profile.id !== targetBusinessId
+    ) {
+      showError('This editor is out of sync with the business page. Please close and try again.')
+      return false
+    }
+
     setLoading(true)
     try {
-      await updateVendorBusiness(buildUpdatePayload(profile, patch))
+      const payload = buildUpdatePayload(profile, patch)
+      if (typeof targetBusinessId === 'number' && Number.isFinite(targetBusinessId) && targetBusinessId > 0) {
+        payload.business_id = targetBusinessId
+      }
+      await updateVendorBusiness(payload)
       showSuccess(successMessage)
       setOpen(false)
       onProfileUpdated?.()
       await queryClient.invalidateQueries({ queryKey: ['business'] })
       await queryClient.invalidateQueries({ queryKey: ['vendor', 'business'] })
+      await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
       return true
     } catch (error) {
       showError(getVendorBusinessUpdateError(error, 'Could not save changes. Please try again.'))
@@ -134,13 +175,17 @@ export function VendorOwnerLocationEditButton({
   label = 'Location',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
   const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
   const parsedLocations = useMemo(
     () => parseVendorLocationOptions(formOptions?.locations),
     [formOptions?.locations],
   )
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [state, setState] = useState('')
   const [lga, setLga] = useState('')
   const [city, setCity] = useState('')
@@ -274,10 +319,14 @@ export function VendorOwnerCategoryEditButton({
   label = 'Category',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
   const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
   const categories = formOptions?.categories ?? []
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [categoryId, setCategoryId] = useState('')
   const [subcategory, setSubcategory] = useState('')
 
@@ -376,12 +425,16 @@ export function VendorOwnerDetailsEditButton({
   label = 'details',
   className,
   onProfileUpdated,
+  businessId,
   onNameSaved,
   onDescriptionSaved,
 }: VendorOwnerDetailsEditButtonProps) {
   const { data: formOptions, isPending: formOptionsLoading } = useVendorBusinessFormOptions()
   const categories = formOptions?.categories ?? []
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [businessName, setBusinessName] = useState('')
   const [businessDescription, setBusinessDescription] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -524,9 +577,13 @@ export function VendorOwnerContactEditButton({
   label = 'Contact details',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
   const CONTACT_SOCIAL_PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'tiktok', 'linkedin', 'x']
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [phone, setPhone] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [website, setWebsite] = useState('')
@@ -643,8 +700,12 @@ export function VendorOwnerServicesEditButton({
   label = 'Products/Services',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [servicesText, setServicesText] = useState('')
 
   useEffect(() => {
@@ -689,8 +750,12 @@ export function VendorOwnerHoursEditButton({
   label = 'Business hours',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const [hours, setHours] = useState<BusinessHourEntry[]>([])
 
   useEffect(() => {
@@ -745,9 +810,13 @@ export function VendorOwnerGalleryEditButton({
   label = 'Photos',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
   const { photoLimit } = useVendorSubscriptionAccess()
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const [keepPaths, setKeepPaths] = useState<string[]>([])
   const [existingUrls, setExistingUrls] = useState<string[]>([])
@@ -893,8 +962,12 @@ export function VendorOwnerLogoEditButton({
   label = 'Business logo',
   className,
   onProfileUpdated,
+  businessId,
 }: OwnerEditButtonProps) {
-  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(onProfileUpdated)
+  const { open, setOpen, loading, profile, openEditor, saveProfile } = useOwnerProfileEditor(
+    onProfileUpdated,
+    businessId,
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -987,13 +1060,16 @@ export function VendorOwnerLogoEditButton({
 export function VendorOwnerPhotoGrid({
   coverPhotos,
   onProfileUpdated,
+  businessId,
   addSlot,
 }: {
   coverPhotos: string[]
   photoLimit: number
   onProfileUpdated?: () => void
+  businessId?: number
   addSlot?: React.ReactNode
 }) {
+  const queryClient = useQueryClient()
   const [removingIndex, setRemovingIndex] = useState<number | null>(null)
 
   async function removePhotoAt(index: number) {
@@ -1004,15 +1080,31 @@ export function VendorOwnerPhotoGrid({
 
     setRemovingIndex(index)
     try {
-      const profile = await fetchVendorBusinessProfile()
+      const profile = await fetchVendorBusinessProfile(businessId)
+      if (
+        typeof businessId === 'number' &&
+        Number.isFinite(businessId) &&
+        businessId > 0 &&
+        profile.id !== businessId
+      ) {
+        showError('Could not remove photo for this business page. Please refresh and try again.')
+        return
+      }
       const keepPaths = profile.coverPhotoPaths.filter((_, i) => i !== index)
       if (keepPaths.length < 1) {
         showError('Please keep at least one gallery photo.')
         return
       }
-      await updateVendorBusiness(buildUpdatePayload(profile, { keep_cover_paths: keepPaths }))
+      const payload = buildUpdatePayload(profile, { keep_cover_paths: keepPaths })
+      if (typeof businessId === 'number' && Number.isFinite(businessId) && businessId > 0) {
+        payload.business_id = businessId
+      }
+      await updateVendorBusiness(payload)
       showSuccess('Photo removed.')
       onProfileUpdated?.()
+      await queryClient.invalidateQueries({ queryKey: ['business'] })
+      await queryClient.invalidateQueries({ queryKey: ['vendor', 'business'] })
+      await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
     } catch (error) {
       showError(getVendorBusinessUpdateError(error, 'Could not remove photo.'))
     } finally {
