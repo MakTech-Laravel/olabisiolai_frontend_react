@@ -15,7 +15,7 @@ export default function RedirectToOwnerBusinessProfile() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['vendor', 'business', 'profile-redirect'],
-    queryFn: fetchVendorBusinessProfile,
+    queryFn: () => fetchVendorBusinessProfile(),
     retry: false,
   })
 

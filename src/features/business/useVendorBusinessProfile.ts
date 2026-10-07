@@ -7,7 +7,7 @@ import {
 export function useVendorBusinessProfile() {
   return useQuery({
     queryKey: ["vendor", "business", "profile"],
-    queryFn: fetchVendorBusinessProfile,
+    queryFn: () => fetchVendorBusinessProfile(),
     retry: (failureCount, error) => {
       if (error instanceof VendorBusinessNotFoundError) return false;
       return failureCount < 2;
