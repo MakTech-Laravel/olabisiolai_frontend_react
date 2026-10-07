@@ -242,7 +242,7 @@ export default function VendorSubscriptionPayPage() {
 
   const { data: ownerBusiness } = useQuery({
     queryKey: ["vendor", "business", "profile"],
-    queryFn: fetchVendorBusinessProfile,
+    queryFn: () => fetchVendorBusinessProfile(),
     enabled: canFetchPackages,
     retry: false,
   });
