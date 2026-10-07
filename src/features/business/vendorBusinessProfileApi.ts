@@ -173,9 +173,15 @@ export class VendorBusinessNotFoundError extends Error {
   }
 }
 
-export async function fetchVendorBusinessProfile(): Promise<VendorBusinessProfile> {
+export async function fetchVendorBusinessProfile(
+  businessId?: number,
+): Promise<VendorBusinessProfile> {
   try {
-    const res = await request.get("/vendor/business/show");
+    const path =
+      typeof businessId === "number" && Number.isFinite(businessId) && businessId > 0
+        ? `/vendor/business/show/${businessId}`
+        : "/vendor/business/show";
+    const res = await request.get(path);
     const root = asRecord(res.data);
 
     if (!root) {
