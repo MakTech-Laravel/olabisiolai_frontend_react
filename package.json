@@ -8,13 +8,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "node api.js && node server/index.mjs",
-    "build": "node api.js && npm run build:client && npm run build:server",
+    "dev": "node server/index.mjs",
+    "build": "npm run build:client && npm run build:server",
     "build:client": "tsc -b && cross-env NODE_ENV=production vite build --outDir dist/client",
     "build:server": "cross-env NODE_ENV=production vite build --ssr src/entry-server.tsx --outDir dist/server",
     "lint": "eslint .",
     "preview": "cross-env NODE_ENV=production node server/index.mjs",
-    "start": "node api.js && cross-env NODE_ENV=production node server/index.mjs"
+    "start": "cross-env NODE_ENV=production node server/index.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",
