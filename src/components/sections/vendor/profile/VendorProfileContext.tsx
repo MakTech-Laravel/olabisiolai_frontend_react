@@ -272,7 +272,12 @@ export function VendorProfileProvider({ children }: { children: ReactNode }) {
         throw new Error("Please keep or add at least one gallery photo.");
       }
 
+      if (!profile?.id) {
+        throw new Error("No business profile found.");
+      }
+
       return updateVendorBusiness({
+        business_id: profile.id,
         category_id: draft.categoryId,
         subcategory: draft.subcategory.trim() || undefined,
         location_id: draft.locationId,
