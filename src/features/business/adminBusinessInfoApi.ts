@@ -8,6 +8,10 @@ export type AdminBusinessInfo = {
   name: string;
   vendorName: string;
   vendorEmail: string;
+  /** Business contact phone from `business_infos.phone`. */
+  phone: string;
+  /** Vendor account phone (`users.phone`), when present. */
+  vendorPhone: string;
   category: string;
   type: string;
   location: string;
@@ -325,6 +329,12 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
     );
   const vendorName = pickString(vendorObj ?? {}, ["name"], pickString(item, ["vendor_name"], "—"));
   const vendorEmail = pickString(vendorObj ?? {}, ["email"], pickString(item, ["vendor_email"], ""));
+  const phone =
+    pickString(item, ["phone_formatted", "phone"], "") ||
+    pickString(item, ["business_phone"], "");
+  const vendorPhone =
+    pickString(vendorObj ?? {}, ["phone_formatted", "phone"], "") ||
+    pickString(item, ["vendor_phone"], "");
   const isManualPremium =
     asBoolean(item.is_manual_premium) === true || asBoolean(item.is_manual_grant) === true;
   const subscriptionExpiresAt =
@@ -339,6 +349,8 @@ function parseBusiness(raw: unknown, index: number): AdminBusinessInfo | null {
     name,
     vendorName,
     vendorEmail,
+    phone,
+    vendorPhone,
     category,
     type,
     location,
