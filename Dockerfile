@@ -1,5 +1,6 @@
 # ─── Stage 1: Build ──────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+# Pin to 22.23.4+ (Hostinger/Node security release); floating 22-alpine can lag.
+FROM node:22.23.4-alpine AS builder
 
 WORKDIR /app
 
@@ -40,7 +41,7 @@ COPY . .
 RUN npm run build
 
 # ─── Stage 2: Node SSR server ────────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 
 WORKDIR /app
 
