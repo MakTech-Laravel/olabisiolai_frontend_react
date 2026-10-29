@@ -278,11 +278,19 @@ export function BusinessCatalogSection({
           {visibleItems.map((item, index) => {
             const qty = cart.qtyFor(item.id)
             return (
-              <button
+              <article
                 key={item.id}
-                type="button"
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${item.name}`}
                 onClick={() => openItem(item)}
-                className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    openItem(item)
+                  }
+                }}
+                className="relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
               >
                 <div
                   className="relative shrink-0"
@@ -304,7 +312,7 @@ export function BusinessCatalogSection({
                   )}
                   <span
                     className={cn(
-                      'absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
+                      'pointer-events-none absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
                       item.type === 'service' ? 'text-chat-accent' : 'text-brand',
                     )}
                   >
@@ -342,7 +350,7 @@ export function BusinessCatalogSection({
                     saleClassName="font-heading text-[15px] font-bold"
                   />
                 </div>
-              </button>
+              </article>
             )
           })}
         </div>

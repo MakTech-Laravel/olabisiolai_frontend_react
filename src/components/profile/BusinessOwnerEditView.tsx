@@ -54,6 +54,7 @@ type BusinessOwnerEditViewProps = {
   onDisplayNameChange: (value: string) => void
   onDisplayDescriptionChange: (value: string) => void
   onProfileUpdated: () => void
+  onOpenPhotoAt?: (index: number) => void
 }
 
 function OwnerEditButton({
@@ -101,7 +102,15 @@ function ContactRowIcon({ icon }: { icon: ContactRow['icon'] }) {
   return <Icon className="size-4 opacity-100" aria-hidden />
 }
 
-function AspectCover({ src, className }: { src: string; className?: string }) {
+function AspectCover({
+  src,
+  className,
+  onClick,
+}: {
+  src: string
+  className?: string
+  onClick?: () => void
+}) {
   return (
     <BusinessCatalogImage
       src={src}
@@ -109,6 +118,7 @@ function AspectCover({ src, className }: { src: string; className?: string }) {
       className={className}
       aspectClassName={businessPageHeroAspect}
       fit="cover"
+      onClick={onClick}
     />
   )
 }
@@ -147,6 +157,7 @@ export function BusinessOwnerEditView({
   onDisplayNameChange,
   onDisplayDescriptionChange,
   onProfileUpdated,
+  onOpenPhotoAt,
 }: BusinessOwnerEditViewProps) {
   const name = displayName || businessName
   const about = displayBusinessOverview(displayDescription || business?.description || '')
@@ -168,7 +179,11 @@ export function BusinessOwnerEditView({
     <div className={businessPageOwnerOuter}>
       <div id="owner-details" className={cn('scroll-mt-28 space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-3', businessPageSectionX)}>
         <div className="relative">
-          <AspectCover src={heroCover} className={businessPageHero} />
+          <AspectCover
+            src={heroCover}
+            className={businessPageHero}
+            onClick={coverPhotos.length > 0 && onOpenPhotoAt ? () => onOpenPhotoAt(0) : undefined}
+          />
           <div className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-black/5 lg:rounded-2xl" aria-hidden />
           {isPremium ? (
             <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[#9A6B1F] to-[#C99A3F] px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white lg:left-5 lg:top-5">
@@ -299,6 +314,7 @@ export function BusinessOwnerEditView({
           photoLimit={photoLimit}
           businessId={businessId}
           onProfileUpdated={onProfileUpdated}
+          onOpenPhotoAt={onOpenPhotoAt}
           addSlot={
             !atPhotoCap ? (
               <div className="edit-only aspect-square rounded-[13px] border-[1.5px] border-dashed border-[#cfdae6] bg-[#fbfcfe] lg:rounded-xl">

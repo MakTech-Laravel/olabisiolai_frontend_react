@@ -43,19 +43,20 @@ export function BusinessCatalogImage({
       )}
     >
       {!loaded ? (
-        <div className="absolute inset-0 animate-pulse bg-border-light" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 animate-pulse bg-border-light" aria-hidden />
       ) : null}
       <img
         src={src}
         alt={alt}
         className={cn(
-          "absolute inset-0 block size-full",
+          "pointer-events-none absolute inset-0 block size-full",
           fit === "cover" ? "object-cover" : "m-auto max-h-full max-w-full object-contain",
           imageClassName,
         )}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
       />
     </Wrapper>
   );

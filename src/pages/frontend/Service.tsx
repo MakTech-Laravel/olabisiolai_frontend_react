@@ -324,6 +324,10 @@ export default function Service() {
               onDisplayNameChange={setDisplayName}
               onDisplayDescriptionChange={setDisplayDescription}
               onProfileUpdated={refreshBusinessProfile}
+              onOpenPhotoAt={(index) => {
+                setPhotoIndex(index)
+                setLightboxOpen(true)
+              }}
             />
           ) : (
             <BusinessPublicPageView

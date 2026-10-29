@@ -136,7 +136,12 @@ export function CatalogItemDetailContent({
   }
 
   const openLightbox = () => {
-    if (!activePhoto || didSwipe.current) return
+    if (!activePhoto) return
+    // Ignore the click that follows a horizontal swipe gesture only.
+    if (didSwipe.current) {
+      didSwipe.current = false
+      return
+    }
     setLightboxOpen(true)
   }
 

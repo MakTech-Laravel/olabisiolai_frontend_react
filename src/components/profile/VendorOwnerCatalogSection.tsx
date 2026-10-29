@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock, Pencil, Plus, Trash2 } from 'lucide-react'
 
@@ -30,6 +30,7 @@ import { CatalogPriceDisplay } from '@/components/catalog/CatalogPriceDisplay'
 import { CATALOG_IMAGE_ASPECT_CLASS, CATALOG_IMAGE_UPLOAD_HINT } from '@/lib/businessImageLayout'
 import { buildVendorPremiumInfoPath } from '@/hooks/useVendorSubscriptionAccess'
 import { businessPageCatalogGrid } from '@/lib/businessPageLayout'
+import { catalogItemDetailPath } from '@/lib/catalogItemDetail'
 import { getLaravelErrorMessage } from '@/lib/laravelApiError'
 import alert, { showError, showSuccess } from '@/lib/sweetAlert'
 import { cn } from '@/lib/utils'
@@ -86,7 +87,11 @@ function CatalogEditControls({
   onDelete: () => void
 }) {
   return (
-    <div className="edit-only absolute right-2 top-2 flex gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
+    <div
+      className="edit-only absolute right-2 top-2 z-10 flex gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
       <button
         type="button"
         onClick={onEdit}
@@ -113,6 +118,7 @@ export function VendorOwnerCatalogSection({
   onProfileUpdated,
   layout = 'default',
 }: VendorOwnerCatalogSectionProps) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editor, setEditor] = useState<EditorState>(emptyEditor)
@@ -632,7 +638,35 @@ export function VendorOwnerCatalogSection({
             {items.map((item, index) => (
               <article
                 key={item.id}
-                className="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${item.name}`}
+                onClick={() =>
+                  navigate(catalogItemDetailPath(item.id), {
+                    state: {
+                      from: window.location.pathname,
+                      item,
+                      businessInfoId: businessId,
+                      showMessageBusiness: false,
+                      enableCatalogCart: false,
+                    },
+                  })
+                }
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(catalogItemDetailPath(item.id), {
+                      state: {
+                        from: window.location.pathname,
+                        item,
+                        businessInfoId: businessId,
+                        showMessageBusiness: false,
+                        enableCatalogCart: false,
+                      },
+                    })
+                  }
+                }}
+                className="group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
               >
                 <div
                   className="relative shrink-0"
@@ -652,7 +686,7 @@ export function VendorOwnerCatalogSection({
                   )}
                   <span
                     className={cn(
-                      'absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
+                      'pointer-events-none absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
                       item.type === 'service' ? 'text-chat-accent' : 'text-brand',
                     )}
                   >

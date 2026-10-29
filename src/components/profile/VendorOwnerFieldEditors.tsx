@@ -1062,12 +1062,15 @@ export function VendorOwnerPhotoGrid({
   onProfileUpdated,
   businessId,
   addSlot,
+  onOpenPhotoAt,
 }: {
   coverPhotos: string[]
   photoLimit: number
   onProfileUpdated?: () => void
   businessId?: number
   addSlot?: React.ReactNode
+  /** When set, tapping a photo opens the expand/lightbox view. */
+  onOpenPhotoAt?: (index: number) => void
 }) {
   const queryClient = useQueryClient()
   const [removingIndex, setRemovingIndex] = useState<number | null>(null)
@@ -1116,12 +1119,26 @@ export function VendorOwnerPhotoGrid({
     <div className={businessPageOwnerPhotoGrid}>
       {coverPhotos.map((src, index) => (
         <div key={`${src}-${index}`} className="relative aspect-square overflow-hidden rounded-[13px] lg:rounded-xl">
-          <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+          {onOpenPhotoAt ? (
+            <button
+              type="button"
+              className="size-full cursor-zoom-in"
+              onClick={() => onOpenPhotoAt(index)}
+              aria-label={`Expand photo ${index + 1}`}
+            >
+              <img src={src} alt="" className="pointer-events-none size-full object-cover" loading="lazy" />
+            </button>
+          ) : (
+            <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+          )}
           <button
             type="button"
             disabled={removingIndex === index}
-            onClick={() => void removePhotoAt(index)}
-            className="edit-only absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-60"
+            onClick={(event) => {
+              event.stopPropagation()
+              void removePhotoAt(index)
+            }}
+            className="edit-only absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-60"
             aria-label={`Remove photo ${index + 1}`}
           >
             <X className="size-3.5" />

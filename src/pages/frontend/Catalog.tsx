@@ -411,11 +411,19 @@ export default function CatalogDiscoveryPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((item, index) => (
-                <button
+                <article
                   key={item.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${item.name}`}
                   onClick={() => openItem(item)}
-                  className="flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      openItem(item)
+                    }
+                  }}
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_2px_rgba(16,22,32,0.05)] transition-[transform,box-shadow] duration-200 hover:scale-[1.01] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chat-accent"
                 >
                   <div
                     className="relative"
@@ -430,14 +438,14 @@ export default function CatalogDiscoveryPage() {
                     )}
                     <span
                       className={cn(
-                        'absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
+                        'pointer-events-none absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide',
                         item.type === 'service' ? 'text-chat-accent' : 'text-brand',
                       )}
                     >
                       {item.type}
                     </span>
                     {item.isBoosted ? (
-                      <span className="absolute right-2 top-2 rounded-full bg-ink/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-ink/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                         Trending
                       </span>
                     ) : null}
@@ -475,7 +483,7 @@ export default function CatalogDiscoveryPage() {
                       ) : null}
                     </div>
                   </div>
-                </button>
+                </article>
               ))}
             </div>
           )}
