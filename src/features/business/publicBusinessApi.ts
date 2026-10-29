@@ -141,12 +141,17 @@ export function resolvePublicBusinessSubcategory(
 export const NO_CATEGORY_LABEL = 'No category yet'
 export const NO_LOCATION_LABEL = 'No location yet'
 
-function parseBusiness(raw: unknown, idx: number): PublicBusiness | null {
-  const r = rec(raw);
-  if (!r) return null;
+function parseBusiness(raw: unknown, _idx = 0): PublicBusiness | null {
+  const outer = rec(raw);
+  if (!outer) return null;
 
-  const id = num(r.id ?? r.business_id, idx + 1);
-  const name = str(r.business_name ?? r.name, `Business ${id}`);
+  // Some payloads nest the listing under `business` — never invent ids from row index.
+  const r = rec(outer.business) ?? outer;
+  const idRaw = num(r.id ?? r.business_id ?? outer.id ?? outer.business_id, NaN);
+  if (!Number.isFinite(idRaw) || idRaw <= 0) return null;
+  const id = Math.trunc(idRaw);
+
+  const name = str(r.business_name ?? r.name ?? outer.business_name ?? outer.name, `Business ${id}`);
 
   const catObj = rec(r.category);
   const categoryId = num(catObj?.id ?? r.category_id, NaN);

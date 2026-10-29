@@ -136,12 +136,7 @@ export function CatalogItemDetailContent({
   }
 
   const openLightbox = () => {
-    if (!activePhoto) return
-    // Ignore the click that follows a horizontal swipe gesture only.
-    if (didSwipe.current) {
-      didSwipe.current = false
-      return
-    }
+    if (!activePhoto || didSwipe.current) return
     setLightboxOpen(true)
   }
 
@@ -238,23 +233,28 @@ export function CatalogItemDetailContent({
 
   const gallery = (
     <div className="space-y-3">
-      <div
-        role={activePhoto ? 'button' : undefined}
-        tabIndex={activePhoto ? 0 : undefined}
+      <button
+        type="button"
+        disabled={!activePhoto}
         aria-label={activePhoto ? `View full photo of ${item.name}` : undefined}
         className={cn(
-          'relative w-full select-none overflow-hidden bg-[#f3f4f6]',
+          'relative block w-full select-none overflow-hidden bg-[#f3f4f6] text-left',
           CATALOG_IMAGE_ASPECT_CLASS,
           'rounded-none lg:rounded-2xl',
           activePhoto && 'cursor-zoom-in',
+          !activePhoto && 'cursor-default',
         )}
         onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
+        onPointerUp={(event) => {
+          onPointerUp(event)
+          // Open on pointer-up for mobile WebViews that drop click after touch.
+          if (!didSwipe.current) openLightbox()
+        }}
         onPointerCancel={() => {
           swipeStartX.current = null
           swipeStartY.current = null
+          didSwipe.current = false
         }}
-        onClick={openLightbox}
         onKeyDown={(event) => {
           if (!activePhoto) return
           if (event.key === 'Enter' || event.key === ' ') {
@@ -268,7 +268,7 @@ export function CatalogItemDetailContent({
             src={activePhoto}
             alt={item.name}
             draggable={false}
-            className="size-full object-contain"
+            className="pointer-events-none size-full object-contain"
           />
         ) : (
           <div className="grid size-full place-items-center bg-linear-to-br from-[#2e3b52] to-[#46587a] text-sm font-semibold uppercase tracking-wide text-white/80">
@@ -287,28 +287,34 @@ export function CatalogItemDetailContent({
 
         {hasMultiplePhotos ? (
           <>
-            <button
-              type="button"
-              aria-label="Previous photo"
+            <span
+              role="presentation"
               onClick={(event) => {
+                event.preventDefault()
                 event.stopPropagation()
                 goPrev()
               }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerUp={(event) => event.stopPropagation()}
+              aria-label="Previous photo"
               className="absolute left-2 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70 sm:size-10"
             >
               <ChevronLeft className="size-5" aria-hidden />
-            </button>
-            <button
-              type="button"
-              aria-label="Next photo"
+            </span>
+            <span
+              role="presentation"
               onClick={(event) => {
+                event.preventDefault()
                 event.stopPropagation()
                 goNext()
               }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerUp={(event) => event.stopPropagation()}
+              aria-label="Next photo"
               className="absolute right-2 top-1/2 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70 sm:size-10"
             >
               <ChevronRight className="size-5" aria-hidden />
-            </button>
+            </span>
             <span className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
               {photoIndex + 1}/{photos.length}
             </span>
@@ -320,7 +326,7 @@ export function CatalogItemDetailContent({
             Tap to expand
           </span>
         ) : null}
-      </div>
+      </button>
 
       {hasMultiplePhotos ? (
         <div className="flex gap-2 overflow-x-auto px-4 pb-1 [-webkit-overflow-scrolling:touch] scrollbar-hide sm:px-0">

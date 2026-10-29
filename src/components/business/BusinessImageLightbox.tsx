@@ -196,7 +196,7 @@ export function BusinessImageLightbox({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[110] flex flex-col bg-black/92"
+      className="fixed inset-0 z-[200] flex flex-col bg-black/92"
       role="dialog"
       aria-modal="true"
       aria-label={title}

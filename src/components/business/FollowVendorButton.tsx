@@ -63,14 +63,21 @@ export function FollowVendorButton({
       return
     }
 
+    const safeBusinessId = Math.trunc(Number(businessId))
+    const safeFollowingUserId = Math.trunc(Number(followingUserId))
+    if (!Number.isFinite(safeBusinessId) || safeBusinessId <= 0 || !Number.isFinite(safeFollowingUserId) || safeFollowingUserId <= 0) {
+      showError('The selected business id is invalid.')
+      return
+    }
+
     setLoading(true)
     try {
-      const result = await toggleFollow(followingUserId!, businessId)
+      const result = await toggleFollow(safeFollowingUserId, safeBusinessId)
       setIsFollowing(result.following)
       onFollowChange?.(result.following, result.followers_count)
       patchListingFollowStateInCache(queryClient, {
-        businessId,
-        followingUserId: followingUserId!,
+        businessId: result.business_info_id ?? safeBusinessId,
+        followingUserId: safeFollowingUserId,
         following: result.following,
         followersCount: result.followers_count,
       })
