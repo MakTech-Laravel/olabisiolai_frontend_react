@@ -114,14 +114,14 @@ export function CatalogItemDetailContent({
     setPhotoIndex((current) => (current + 1) % photos.length)
   }
 
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     didSwipe.current = false
     if (!hasMultiplePhotos) return
     swipeStartX.current = event.clientX
     swipeStartY.current = event.clientY
   }
 
-  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!hasMultiplePhotos || swipeStartX.current === null || swipeStartY.current === null) return
 
     const deltaX = event.clientX - swipeStartX.current
