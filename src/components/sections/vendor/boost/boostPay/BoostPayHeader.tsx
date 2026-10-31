@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { isBoostPaymentCheckout } from "@/features/boost/boostCheckoutSession";
 
 type BoostPayHeaderProps = {
-  variant?: "boost" | "subscription";
+  variant?: "boost" | "subscription" | "verification";
   /** Subscription checkout: return to owner business listing instead of vendor dashboard. */
   backTo?: string;
 };
@@ -12,6 +12,7 @@ type BoostPayHeaderProps = {
 export function BoostPayHeader({ variant = "boost", backTo }: BoostPayHeaderProps) {
   const navigate = useNavigate();
   const isSubscription = variant === "subscription";
+  const isVerification = variant === "verification";
 
   return (
     <>
@@ -21,15 +22,21 @@ export function BoostPayHeader({ variant = "boost", backTo }: BoostPayHeaderProp
           navigate(
             isSubscription
               ? (backTo ?? "/user/profile")
-              : isBoostPaymentCheckout()
-                ? "/vendor/boost"
-                : "/vendor/boost/configure",
+              : isVerification
+                ? "/vendor/verification"
+                : isBoostPaymentCheckout()
+                  ? "/vendor/boost"
+                  : "/vendor/boost/configure",
           )
         }
         className="inline-flex items-center gap-1 text-sm font-inter text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        {isSubscription ? "Back to business profile" : "Back to Configure"}
+        {isSubscription
+          ? "Back to business profile"
+          : isVerification
+            ? "Back to verification"
+            : "Back to Configure"}
       </button>
 
       <div className="space-y-1">
@@ -37,7 +44,9 @@ export function BoostPayHeader({ variant = "boost", backTo }: BoostPayHeaderProp
         <p className="text-base font-inter text-muted-foreground">
           {isSubscription
             ? "Complete payment to activate your premium plan. Verification is purchased separately."
-            : "Complete your transaction to activate your business visibility boost."}
+            : isVerification
+              ? "Complete payment to unlock document upload for business verification."
+              : "Complete your transaction to activate your business visibility boost."}
         </p>
       </div>
     </>
