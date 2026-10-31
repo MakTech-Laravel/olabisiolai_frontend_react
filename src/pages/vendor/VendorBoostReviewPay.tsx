@@ -459,6 +459,18 @@ export default function VendorBoostReviewPayPage() {
       return;
     }
 
+    if (
+      isVerification &&
+      packagesData?.packages?.length &&
+      !packagesData.packages.some((p) => p.id === packageId)
+    ) {
+      showError(
+        "This verification package is not available right now. Go back and choose an active plan.",
+      );
+      navigate("/vendor/verification", { replace: true });
+      return;
+    }
+
     if (!getAccessToken()) {
       showError("Your session expired. Please sign in again.");
       navigate("/login", { replace: true, state: { from: "/vendor/review-pay" } });
@@ -692,7 +704,7 @@ export default function VendorBoostReviewPayPage() {
   return (
     <div className="container mx-auto p-2 md:p-4">
       <div className="space-y-4">
-        <BoostPayHeader />
+        <BoostPayHeader variant={isVerification ? "verification" : "boost"} />
 
         <PurchaseEmailVerificationBlock profile={emailVerificationProfile} />
 

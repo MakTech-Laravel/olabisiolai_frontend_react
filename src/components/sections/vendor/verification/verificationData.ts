@@ -72,23 +72,36 @@ export const whyVerifyItems = [
     },
 ];
 
-/** Overlay API prices onto static plan cards (admin-configurable). */
+/**
+ * Overlay API prices onto static plan cards (admin-configurable).
+ * Only keep tiers the API still exposes as active — otherwise checkout
+ * fails with "The selected package id is invalid."
+ */
 export function plansWithApiPricing(
     staticPlans: Plan[],
     apiPackages: VerificationPackage[] | undefined,
 ): Plan[] {
-    if (!apiPackages?.length) return staticPlans;
-    return staticPlans.map((plan) => {
-        const fromApi = apiPackages.find((p) => p.id === plan.id);
-        if (!fromApi) return plan;
-        return {
-            ...plan,
-            title: fromApi.title?.trim() || plan.title,
-            amount: fromApi.amount,
-            description: fromApi.description?.trim() || plan.description,
-            perks: fromApi.perks?.length ? fromApi.perks : plan.perks,
-        };
-    });
+    if (apiPackages === undefined) {
+        return staticPlans;
+    }
+
+    if (apiPackages.length === 0) {
+        return staticPlans;
+    }
+
+    return staticPlans
+        .filter((plan) => apiPackages.some((p) => p.id === plan.id))
+        .map((plan) => {
+            const fromApi = apiPackages.find((p) => p.id === plan.id);
+            if (!fromApi) return plan;
+            return {
+                ...plan,
+                title: fromApi.title?.trim() || plan.title,
+                amount: fromApi.amount,
+                description: fromApi.description?.trim() || plan.description,
+                perks: fromApi.perks?.length ? fromApi.perks : plan.perks,
+            };
+        });
 }
 
 export const processSteps = [
