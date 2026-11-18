@@ -17,6 +17,11 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
