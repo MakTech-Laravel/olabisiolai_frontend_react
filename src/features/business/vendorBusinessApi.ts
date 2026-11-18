@@ -1,5 +1,6 @@
 import { request } from "@/api/request";
 import axios from "axios";
+import { ensureVendorMode } from "@/api/userMode";
 import {
   appendBusinessHoursToFormData,
   serializeBusinessHoursForApi,
@@ -343,6 +344,8 @@ function assertVendorBusinessUpdateSuccess(body: VendorBusinessUpdateEnvelope | 
 }
 
 export async function updateVendorBusiness(payload: UpdateVendorBusinessPayload): Promise<unknown> {
+  await ensureVendorMode();
+
   const coverPhotos = filterValidBusinessImageFiles(payload.cover_photos ?? []);
   const normalizedPayload: UpdateVendorBusinessPayload = {
     ...payload,
