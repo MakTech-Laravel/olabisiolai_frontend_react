@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import { request } from '@/api/request'
 import type { AuthUser } from '@/auth/types'
+import { getStoredAuthUser, setStoredAuthUser } from '@/auth/token'
 
 type LaravelEnvelope<T> = {
   success?: boolean
@@ -26,8 +27,23 @@ function assertModeSuccess(body: LaravelEnvelope<ProfileModeSwitchData> | undefi
 
 export async function switchToVendorMode(): Promise<ProfileModeSwitchData> {
   const response = await request.post<LaravelEnvelope<ProfileModeSwitchData>>('/user/mode/vendor')
+  const result = assertModeSuccess(response.data, 'Could not create your business page. Please try again.')
+  setStoredAuthUser(result.user)
+  return result
+}
 
-  return assertModeSuccess(response.data, 'Could not create your business page. Please try again.')
+/**
+ * Vendor business show/update APIs require role=vendor.
+ * Call this before create-extra / edit / update so user-role sessions do not get 403 Forbidden.
+ */
+export async function ensureVendorMode(currentUser?: AuthUser | null): Promise<AuthUser> {
+  const known = currentUser ?? getStoredAuthUser()
+  if (known?.role === 'vendor') {
+    return known
+  }
+
+  const result = await switchToVendorMode()
+  return result.user
 }
 
 /** @deprecated Customer mode switching is no longer supported. */
