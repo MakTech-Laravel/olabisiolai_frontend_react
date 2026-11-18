@@ -4,7 +4,7 @@ import { Loader2, Store } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { fetchUserBusinesses, createUserBusiness } from '@/api/userBusinesses'
-import { getProfileModeErrorMessage, switchToVendorMode } from '@/api/userMode'
+import { ensureVendorMode, getProfileModeErrorMessage, switchToVendorMode } from '@/api/userMode'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { showError, showSuccess, alert } from '@/lib/sweetAlert'
@@ -54,6 +54,8 @@ export function CreateBusinessPageButton({
     try {
       if (businessCount > 0) {
         await createUserBusiness()
+        const vendorUser = await ensureVendorMode(user)
+        setUser(vendorUser)
         showSuccess('Your new business page is ready.')
       } else {
         const result = await switchToVendorMode()
