@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { createUserBusiness, fetchUserBusinesses, setActiveBusinessId as updateActiveBusinessId } from '@/api/userBusinesses'
+import { ensureVendorMode, getProfileModeErrorMessage } from '@/api/userMode'
 import { fetchFollowStats } from '@/api/follows'
 import { fetchUserReferrals } from '@/api/referrals'
 import { fetchUserSettings } from '@/api/userSettings'
@@ -38,7 +39,7 @@ function profileHandle(user: { email?: string | null; name?: string | null }, lo
 }
 
 export default function UnifiedProfile() {
-  const { user } = useAuth()
+  const { user, setUser } = useAuth()
   const queryClient = useQueryClient()
   const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Guest'
 
@@ -154,12 +155,14 @@ export default function UnifiedProfile() {
     setIsAddingBusiness(true)
     try {
       const created = await createUserBusiness()
+      const vendorUser = await ensureVendorMode(user)
+      setUser(vendorUser)
       await queryClient.invalidateQueries({ queryKey: ['user', 'businesses'] })
       await persistActiveBusiness(created.id)
       setManageBusiness(created)
       showSuccess('Your new business page is ready.')
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Could not create another business page.')
+      showError(getProfileModeErrorMessage(error, 'Could not create another business page.'))
     } finally {
       setIsAddingBusiness(false)
     }

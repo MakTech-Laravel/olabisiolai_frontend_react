@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 
 import { request } from "@/api/request";
+import { ensureVendorMode } from "@/api/userMode";
 import {
   parseBusinessHours,
   parseBusinessHoursDisplay,
@@ -177,6 +178,7 @@ export async function fetchVendorBusinessProfile(
   businessId?: number,
 ): Promise<VendorBusinessProfile> {
   try {
+    await ensureVendorMode();
     const path =
       typeof businessId === "number" && Number.isFinite(businessId) && businessId > 0
         ? `/vendor/business/show/${businessId}`
